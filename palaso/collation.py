@@ -1,8 +1,10 @@
 """Module to handle sort tailorings"""
 
-import xml.sax, sys, palaso.reggen
+import xml.sax, sys, palaso.reggen, PyICU, struct
 from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
+
+class Duplicate(Exception) : pass
 
 class LDMLHandler(xml.sax.ContentHandler) :
     def startDocument(self) :
@@ -10,8 +12,11 @@ class LDMLHandler(xml.sax.ContentHandler) :
         self.text = ""
         self.textelement = ""
         self.reorders = []
-    def startElement(self, tag, attributes) :
-        if tag == 'collation' :
+    def startElementNS(self, nsname, tag, attributes) :
+        ns = 'www.palaso.org/ldml/0.1'
+        if nsname[0] == ns and nsname[1] == 'reorder' :
+            self.currcollation.reorders.append((attributes.getValueByQName(attributes.getQNameByName((ns, 'match'))), attributes.getValueByQName(attributes.getQNameByName((ns, 'reorder')))))
+        elif tag == 'collation' :
             self.currcollation = Collation(attributes.get('type'))
             self.collations.append(self.currcollation)
         elif tag == 'settings' :
@@ -24,14 +29,7 @@ class LDMLHandler(xml.sax.ContentHandler) :
             self.text += unichr(attributes.get('hex'))
         elif tag == 'reset' :
             self.resetattr = attributes.get('before')
-
-    def startElementNS(self, name, qname, attrs) :
-        ns = 'www.palaso.org/ldml/0.1'
-        if name[0] != ns : return
-        if name[1] == 'reorder' :
-            self.reorders.append((attrs.getValueByQName(attrs.getQNameByName((ns, 'match'))), attrs.getValueByQName(attrs.getQNameByName((ns, 'reorder')))))
-
-    def endElement(self, tag) :
+    def endElementNS(self, nsname, tag) :
         self.text = self.text.strip()
         if tag == 'reset' :
             if self.textelement :
@@ -47,10 +45,8 @@ class LDMLHandler(xml.sax.ContentHandler) :
             for c in self.text :
                 self.currelement = self.currelement.addElement(c, tag[0])
         self.text = ''
-
     def characters(self, data) :
         self.text += data
-
     def asLDML(self, sax) :
         sax.startElement('collations', AttributesImpl({}))
         for c in self.collations :
@@ -62,6 +58,7 @@ class Collation :
         self.settings = {}
         self.rules = []
         self.type = type
+        self.reorders = []
     def addrule(self, rule) :
         self.rules.append(rule)
     def addreset(self, value, isSpecial) :
@@ -82,7 +79,7 @@ class Collation :
             res += "\n"
         return res
     def asLDML(self, sax) :
-        sax.startElement('collation', AttributesImpl({'type' : self.type}))
+        sax.startElement('collation', AttributesImpl({'type' : self.type} if self.type else {}))
         if len(self.settings) > 0 :
             sax.startElement('settings', AttributesImpl(self.settings))
             sax.endElement('settings')
@@ -91,6 +88,36 @@ class Collation :
             r.asLDML(sax)
         sax.endElement('rules')
         sax.endElement('collation')
+    def flattenOrders(self) :
+        tailor = self.asICU()
+        basic = PyICU.RuleBasedCollator(tailor)
+        results = {}
+        for r in self.reorders :
+            for b, s in palaso.reggen.expand_sub(r[0], r[1]) :
+                if results.has_key(b) :
+                    raise Duplicate('string %s matched by two regular expressions' % (b))
+                results[b] = (s, basic.getCollationKey(b))
+        return results      # early return for testing at the moment
+
+def strkey(dat) :
+    keyinfo = []
+    keyinfo_size = 0
+    line = ""
+    st = dat.getByteArray()
+    for b in st.rstrip('\000').split('\001') :
+        if len(b) % 2 : b += "\000"
+        keyinfo.append([struct.unpack('>H', x+(y or "\000")) for (x, y) in zip(b[::2], b[1::2])])
+        if len(keyinfo[-1]) > keyinfo_size : keyinfo_size = len(keyinfo[-1])
+    for k in range(keyinfo_size) :
+        line += '['
+        s = []
+        for e in keyinfo :
+            if (len(e) <= k) :
+                s.append("0000")
+            else :
+                s.append("%04X" % e[k])
+        line += ".".join(s) + "]"
+    return line
 
 class Element :
     icu_relation_map = {
@@ -135,11 +162,18 @@ class Element :
 def test(filename) :
     print filename
     handler = LDMLHandler()
-    xml.sax.parse(filename, handler)
+    parser = xml.sax.make_parser()
+    parser.setContentHandler(handler)
+    parser.setFeature(xml.sax.handler.feature_namespaces, 1)
+    parser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
+    parser.parse(filename)
     outsax = XMLGenerator()
     for c in handler.collations :
         print "---------- %s ----------" % (c.type)
         print c.asICU().encode('utf-8')
+        if len(c.reorders) > 0 :
+            for a, b in c.flattenOrders().items() :
+                print "%s = %s : %s" % (b[0], a, strkey(b[1]))
     handler.asLDML(outsax)
 
 if __name__ == "__main__" :
