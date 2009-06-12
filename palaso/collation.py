@@ -91,7 +91,6 @@ class Collation :
     def flattenOrders(self) :
         types = 'i', 'p', 's', 't', 'q'
         tailor = self.asICU()
-        basic = PyICU.RuleBasedCollator(tailor)
         results = []
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1]) :
