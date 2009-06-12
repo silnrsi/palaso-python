@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ldml>
+	<identity>
+		<version number="$Revision: 1.2 $"/>
+		<generation date="$Date: 2009/05/05 23:28:47 $"/>
+		<language type="unk"/> 
+	</identity>
+	<collations>
+		<collation type="standard">
+            <special xmlns:palaso="www.palaso.org/ldml/0.1">
+                <palaso:reorder palaso:match="([A-C])([a-c])" palaso:reorder="\2\1"/>
+            </special>
+			<rules>
+				<reset>c</reset>
+                <s>C</s>
+                <s>D</s>
+                <p>b</p>
+                <s>B</s>
+                <p>a</p>
+				<s>A</s>
+			</rules>
+		</collation>
+	</collations>
+</ldml>
