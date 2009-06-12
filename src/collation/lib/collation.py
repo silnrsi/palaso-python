@@ -7,7 +7,8 @@ from xml.sax.saxutils import XMLGenerator
 class Duplicate(Exception) : pass
 
 class LDMLHandler(xml.sax.ContentHandler) :
-    def startDocument(self) :
+    def __init__(self, *args) :
+        xml.sax.ContentHandler.__init__(self, *args)
         self.collations = []
         self.text = ""
         self.textelement = ""
@@ -127,7 +128,7 @@ class Element :
         return res
     def asLDML(self, sax) :
         tag = 'reset' if self.relation == 'r' else self.relation
-        sax.startElement(tag , AttributesImpl({}))
+        sax.startElement(tag, AttributesImpl({}))
         if self.special :
             sax.startElement(self.special, AttributesImpl({}))
             sax.endElement(self.special)
