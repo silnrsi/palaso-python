@@ -17,13 +17,8 @@ __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
 
 
 def _utf8_recoder(f,enc):
-    if enc == 'utf-8': return f
-    
-    stream = codecs.lookup(enc)
-    csv = codecs.lookup('utf-8')
-    return codecs.StreamRecoder(f,csv.encode,csv.decode,
-            stream.streamreader,stream.streamwriter)
-
+    return f if enc in ('utf_8','U8','UTF','utf8') 
+            else codecs.EncodedFile(f,'utf_8',enc) 
 
 class reader:
     def __init__(self, f, dialect=excel, encoding='utf-8', *args, **kwds):
