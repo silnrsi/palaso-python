@@ -1,6 +1,6 @@
 """Module to handle sort tailorings"""
 
-import xml.sax, sys, palaso.reggen, PyICU, struct
+import xml.sax, sys, palaso.reggen
 from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
 
@@ -12,8 +12,9 @@ class LDMLHandler(xml.sax.ContentHandler) :
         self.text = ""
         self.textelement = ""
         self.reorders = []
-    def startElementNS(self, nsname, tag, attributes) :
+    def startElementNS(self, nsname, qname, attributes) :
         ns = 'www.palaso.org/ldml/0.1'
+        tag = nsname[1]
         if nsname[0] == ns and nsname[1] == 'reorder' :
             self.currcollation.reorders.append((attributes.getValueByQName(attributes.getQNameByName((ns, 'match'))), attributes.getValueByQName(attributes.getQNameByName((ns, 'reorder')))))
         elif tag == 'collation' :
@@ -29,7 +30,8 @@ class LDMLHandler(xml.sax.ContentHandler) :
             self.text += unichr(attributes.get('hex'))
         elif tag == 'reset' :
             self.resetattr = attributes.get('before')
-    def endElementNS(self, nsname, tag) :
+    def endElementNS(self, nsname, qname) :
+        tag = nsname[1]
         self.text = self.text.strip()
         if tag == 'reset' :
             if self.textelement :
@@ -59,8 +61,6 @@ class Collation :
         self.rules = []
         self.type = type
         self.reorders = []
-    def addrule(self, rule) :
-        self.rules.append(rule)
     def addreset(self, value, isSpecial) :
         element = Element(self)
         if isSpecial :
@@ -89,35 +89,14 @@ class Collation :
         sax.endElement('rules')
         sax.endElement('collation')
     def flattenOrders(self) :
+        types = 'i', 'p', 's', 't', 'q'
         tailor = self.asICU()
         basic = PyICU.RuleBasedCollator(tailor)
-        results = {}
+        results = []
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1]) :
-                if results.has_key(b) :
-                    raise Duplicate('string %s matched by two regular expressions' % (b))
-                results[b] = (s, basic.getCollationKey(b))
-        return results      # early return for testing at the moment
-
-def strkey(dat) :
-    keyinfo = []
-    keyinfo_size = 0
-    line = ""
-    st = dat.getByteArray()
-    for b in st.rstrip('\000').split('\001') :
-        if len(b) % 2 : b += "\000"
-        keyinfo.append([struct.unpack('>H', x+(y or "\000")) for (x, y) in zip(b[::2], b[1::2])])
-        if len(keyinfo[-1]) > keyinfo_size : keyinfo_size = len(keyinfo[-1])
-    for k in range(keyinfo_size) :
-        line += '['
-        s = []
-        for e in keyinfo :
-            if (len(e) <= k) :
-                s.append("0000")
-            else :
-                s.append("%04X" % e[k])
-        line += ".".join(s) + "]"
-    return line
+                e = self.addreset(b, 0)
+                e.addElement(s, 'i')
 
 class Element :
     icu_relation_map = {
@@ -170,10 +149,10 @@ def test(filename) :
     outsax = XMLGenerator()
     for c in handler.collations :
         print "---------- %s ----------" % (c.type)
-        print c.asICU().encode('utf-8')
         if len(c.reorders) > 0 :
-            for a, b in c.flattenOrders().items() :
-                print "%s = %s : %s" % (b[0], a, strkey(b[1]))
+            c.flattenOrders()
+        print c.asICU().encode('utf-8')
+
     handler.asLDML(outsax)
 
 if __name__ == "__main__" :
