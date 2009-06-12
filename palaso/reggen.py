@@ -81,7 +81,6 @@ class MatchObj :
 
 def _iterate(pattern, data, match) :
     """ Takes a pattern list from the parser and returns a list of match objects that corresponds to the strings that the pattern reflects, including group extraction"""
-    res = []
     for s in _rec_proc(pattern, data, 0, match) :
         yield s
 
@@ -118,7 +117,7 @@ def _proc(pattern, data, match) :
         for s in _iterate(pattern, data[1][1], match) :
             if data[1][0] :
                 s.endpos.insert(data[1][0], len(s.string))
-                yield s
+            yield s
     elif op == 'in' :           # ('in', [contents])
         for r in data[1] :
             for c in _chars(r) :
@@ -127,7 +126,8 @@ def _proc(pattern, data, match) :
                 yield s
     elif op == 'branch' :       # ('branch', (None, [[contents1], [contents2], ...]))
         for d in data[1][1] :
-            yield _iterate(pattern, d, match)
+            for s in _iterate(pattern, d, match) :
+                yield s
     else :
         raise SyntaxError, "Unprocessable regular expression operator: " + op
 
