@@ -1,0 +1,135 @@
+#
+# Copyright (C) 2009 SIL International. All rights reserved.
+#
+# Provides python definitions of the common types and defines for the 
+# engine and compiler.
+#
+# Author: Tim Eves
+#
+# History:
+#   10-Jun-2009     tse     converted to python ctypes and added the
+#                            status_check function for the ctypes errcheck 
+#                            protocol.
+# History of TECKit_Common.h this is based on:
+#   16-Sep-2006     jk      updated version to 2.4 (adding new 
+#                            compiler APIs for Bob E)
+#   23-May-2005     jk      patch for 64-bit architectures (thanks to 
+#                            Ulrik P)
+#   18-Mar-2005     jk      updated minor version for 2.3 (engine unchanged,
+#                            XML option in compiler)
+#   23-Sep-2003     jk      updated for version 2.1 - extended status values
+#   xx-xxx-2002     jk      version 2.0 initial release
+#
+
+from __future__ import with_statement
+
+from ctypes import *
+
+currentTECKitVersion = 0x00020004   # 16.16 version number
+
+Status_NoError = 0
+
+# positive values are informational status values */
+# low byte is the basic status of the conversion process */
+StatusMask_Basic        = 0x000000FF
+Status_OutputBufferFull = 1  # ConvertBuffer or Flush: output buffer full, so not all input was processed 
+Status_NeedMoreInput    = 2  # ConvertBuffer: processed all input data, ready for next chunk 
+
+# only returned in version 2.1 or later, with DontUseReplacementChar option
+Status_UnmappedChar     = 3  # ConvertBuffer or Flush: stopped at unmapped character 
+
+# additional warning status in 2.1, only returned if 2.1-specific options are used
+# one byte of the status value is used for warning flags
+StatusMask_Warning      = 0x0000FF00
+Status_UsedReplacement  = 0x00000100 # ConvertBuffer or Flush: used default replacement character during mapping 
+
+# negative values are errors
+Status_InvalidForm          = -1  # inForm or outForm parameter doesn't match mapping (bytes/Unicode mismatch) 
+Status_ConverterBusy        = -2  # can't initiate a conversion, as the converter is already in the midst of an operation 
+Status_InvalidConverter     = -3  # converter object is corrupted (or not really a TECkit_Converter at all) 
+Status_InvalidMapping       = -4  # compiled mapping data is not recognizable 
+Status_BadMappingVersion    = -5  # compiled mapping is not a version we can handle 
+Status_Exception            = -6  # an internal error has occurred 
+Status_NameNotFound         = -7  # couldn't find the requested name in the compiled mapping 
+Status_IncompleteChar       = -8  # bad input data (lone surrogate, incomplete UTF8 sequence) 
+Status_CompilationFailed    = -9  # mapping compilation failed (syntax errors, etc) 
+Status_OutOfMemory          = -10 # unable to allocate required memory 
+
+#
+#  encoding form constants for TECkit_CreateConverter and TECkit_Compile
+#
+
+EncodingFormMask = 0x000F
+Form_Unspecified    = 0  # invalid as argument to TECkit_CreateConverter 
+Form_Bytes          = 1
+Form_UTF8           = 2
+Form_UTF16BE        = 3
+Form_UTF16LE        = 4
+Form_UTF32BE        = 5
+Form_UTF32LE        = 6
+
+
+class CompilationError(StandardError): pass
+class ConverterBusy(RuntimeError): pass
+class MappingVersionError(ValueError): pass
+class FullBuffer(Exception): pass
+class EmptyBuffer(Exception): pass
+
+# Define some 'typedefs' these make the argtypes list slight less opaque.
+converter = c_void_p
+mapping   = c_char_p
+nameid    = c_uint16
+status    = c_long
+c_bool    = c_ubyte
+
+# ctypes errcheck function ensure nothing is wrong.
+def status_code(s,f,args):
+    if   s >= 0:
+        w = s & StatusMask_Warning      # Not really sure how to handle warnings
+        s = c_int8(s).value
+        if   s == Status_NoError:          return args
+        elif s == Status_OutputBufferFull: raise FullBuffer
+        elif s == Status_NeedMoreInput:    raise EmptyBuffer
+    elif s == Status_InvalidForm:      raise ValueError('inForm or outForm parameter does not match mapping: %r' % args[0])
+    elif s == Status_ConverterBusy:    raise ConverterBusy('cannot initiate conversion: %r busy' % args[0])
+    elif s == Status_InvalidConverter: raise TypeError('converter object is unrecongizable: %r' % args[0]) 
+    elif s == Status_InvalidMapping:   raise TypeError('mapping data is unrecognizable: %r' % args[0]) 
+    elif s == Status_BadMappingVersion:raise MappingVersionError('TECKit: cannot handle this mapping version')
+    elif s == Status_Exception:        raise RuntimeError('TECkit: an internal error has occurred')
+    elif s == Status_NameNotFound:     raise IndexError('TECkit: nameID index out of range')
+    elif s == Status_IncompleteChar:   raise UnicodeDecodeError('bad UTF data (lone surrogate, incomplete UTF8 sequence)') 
+    elif s == Status_CompilationFailed:raise CompilationError('mapping compilation failed')
+    elif s == Status_OutOfMemory:      raise MemoryError('TECkit: allocation failed in: %r' % func)
+    else: raise RuntimeError('unknown status code %s returned' % status)
+
+def ENUM(base_type, names, values=None):
+    if not values and type(names) != dict:
+            values = range(len(names)))
+    
+    val_dict = dict(zip(names,values)) if values else names
+    
+    
+
+class Enum (c_int):
+    __slots__ = ['_names']
+    def __init__(self,names,values=None):
+        if not values and type(names) != dict:
+            values = range(len(names)))
+        
+        self._names = dict(zip(names,values)) if values else names
+    
+    def __getattr__(self,name):
+        try:
+            return self.__names[name]
+        except KeyError:
+            raise AttributeError('%r object has no attribute %r' % (self,name))
+    def __str
+
+class Flags (Enum):
+
+    def __init__(self,names,values=None):
+        if not values and type(names) != dict:
+            values = range(len(names)))
+        
+        bit_names = zip(names,values) if values else names.items()
+        self.__names = dict((nm,1 << p) for nm,p in bit_names)
