@@ -1,13 +1,13 @@
 #!/usr/bin/python2.6
 
-import palaso.collation, xml.sax, sys, codecs
+import palaso.collation.tailor, xml.sax, sys, codecs
 
 class Flattener(xml.sax.saxutils.XMLFilterBase) :
     def __init__(self, *args) :
 #        super(Flattener, self).__init__(*args)
         xml.sax.saxutils.XMLFilterBase.__init__(self, *args)
         self.processing = 0
-        self.ldmlhandler = palaso.collation.LDMLHandler()
+        self.ldmlhandler = palaso.collation.tailor.LDMLHandler()
     def startElementNS(self, nsname, qname, attributes) :
         if nsname[1] == 'collations' :
             self.processing = 1
