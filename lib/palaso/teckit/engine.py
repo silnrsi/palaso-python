@@ -19,7 +19,7 @@ from _engine import \
     InputIsComplete
 from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
-    FullBuffer, EmptyBuffer
+    FullBuffer, EmptyBuffer, flags
 
 
 class Mapping(object):
@@ -29,9 +29,9 @@ class Mapping(object):
     
     def __getattr__(self, name):
         try:
-            nid = _engine.nameID[name]
+            nid = getattr(_engine.NameID,name)
             nlen = _engine.getMappingName(self.__table, len(self.__table), nid)
-        except (KeyError, IndexError):
+        except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
         nlen = _engine.getMappingName(self.__table, len(self.__table), nid, buf, nlen)
@@ -60,10 +60,13 @@ class Converter(object):
     
     
     def __getattr__(self, name):
-        nid = nameID[name]
-        nlen = _engine.getMappingName(self, nid)
+        try:
+            nid = getattr(_engine.NameID,name)
+            nlen = _engine.getConverterName(self, nid)
+        except (AttributeError,IndexError):
+            raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = _engine.getMappingName(self, nid, buf, nlen)
+        nlen = _engine.getConverterName(self, nid, buf, nlen)
         return str(buf[:nlen])
     
     
@@ -71,13 +74,13 @@ class Converter(object):
     def sourceFlags(self):
         if not self.__flags:
             self.__flags = _engine.getConverterFlags(self.__converter)
-        return self.__flags[0]
+        return Form(self.__flags[0])
     
     @property
     def targetFlags(self):
         if not self.__flags:
             self.__flags = _engine.getMappingFlags(self.__converter)
-        return self.__flags[1]
+        return Form(self.__flags[1])
     
     
     def reset(self):
