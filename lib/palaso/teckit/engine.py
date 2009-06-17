@@ -26,7 +26,6 @@ class Mapping(object):
     def __init__(self, path):
         with open(path, 'rb') as mf:
             self.__table = mf.read()
-            self.__flags = None
     
     def __getattr__(self, name):
         try:
@@ -40,17 +39,11 @@ class Mapping(object):
     
     @property
     def lhsFlags(self):
-        print self.__flags
-        if not self.__flags:
-            self.__flags = _engine.getMappingFlags(self.__table, len(self.__table))
-            print 'got flags =', self.__flags
-        return self.__flags[0]
+        return _engine.getMappingFlags(self.__table, len(self.__table))[0]
     
     @property
     def rhsFlags(self):
-        if not self.__flags:
-            self.__flags = _engine.getMappingFlags(self.__table, len(self.__table))
-        return self.__flags[1]
+        return _engine.getMappingFlags(self.__table, len(self.__table))[1]
 
 
 class Converter(object):
