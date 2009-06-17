@@ -26,18 +26,19 @@
 from ctypes import *
 from ctypes.util import find_library
 from _common import *
+from itertools import chain, count
 
-# formFlags bits for normalization; if none are set, then this side of the mapping is normalization-form-agnostic on input, and may generate an unspecified mixture 
-Flags_ExpectsNFC = 0x00000001	# expects fully composed text (NC) 
-Flags_ExpectsNFD = 0x00000002	# expects fully decomposed text (NCD) 
-Flags_GeneratesNFC = 0x00000004	# generates fully composed text (NC) 
-Flags_GeneratesNFD = 0x00000008	# generates fully decomposed text (NCD) 
-
-# if VisualOrder is set, this side of the mapping deals with visual-order rather than logical-order text (only relevant for bidi scripts) 
-Flags_VisualOrder = 0x00008000	# visual rather than logical order 
-
-# if Unicode is set, the encoding is Unicode on this side of the mapping 
-Flags_Unicode = 0x00010000	# this is Unicode rather than a byte encoding 
+# formFlags bits for normalization; if none are set, then this side of the 
+#  mapping is normalization-form-agnostic on input, and may generate an 
+#  unspecified mixture 
+Form = FLAGS(c_uint32,
+            'expectsNFC',   # expects fully composed text (NC) 
+            'expectsNFD',   # expects fully decomposed text (NCD) 
+            'generatesNFC', # generates fully composed text (NC) 
+            'generatesNFD', # generates fully decomposed text (NCD)
+            [None]*11,      # 11 unused bits here
+            'visualOrder',  # visual rather than logical order
+            'unicode')      # this is Unicode rather than a byte encoding
 
 # required names
 NameID_LHS_Name = 0         # "source" or LHS encoding name, e.g. "SIL-EEG_URDU-2001"
