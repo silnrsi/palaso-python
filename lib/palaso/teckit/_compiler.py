@@ -28,8 +28,10 @@ from _common import *
 
 
 Opts_FormMask   = 0x0000000F    # see TECkit_Common.h for encoding form constants
-Opts_Compress   = 0x00000010    # generate compressed mapping table
-Opts_XML        = 0x00000020    # instead of a compiled binary table, generate an XML representation of the mapping
+Opts = ENUM(
+    Compress=0x10    # generate compressed mapping table
+    XML     =0x20)   # instead of a compiled binary table, generate an XML 
+                     #   representation of the mapping
 
 teckit_error_fn = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, c_uint32)
 
