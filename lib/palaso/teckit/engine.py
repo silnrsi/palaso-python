@@ -12,11 +12,7 @@ from __future__ import with_statement
 
 import _engine
 from _engine import getVersion
-from _engine import \
-    UseReplacementCharSilently, \
-    UseReplacementCharWithWarning, \
-    DontUseReplacementChar, \
-    InputIsComplete
+from _engine import Option
 from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
     FullBuffer, EmptyBuffer, flags
@@ -28,13 +24,14 @@ class Mapping(object):
             self.__table = mf.read()
     
     def __getattr__(self, name):
+        from _engine import getMappingName
         try:
             nid = getattr(_engine.NameID,name)
-            nlen = _engine.getMappingName(self.__table, len(self.__table), nid)
+            nlen = getMappingName(self.__table, len(self.__table), nid)
         except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = _engine.getMappingName(self.__table, len(self.__table), nid, buf, nlen)
+        nlen = getMappingName(self.__table, len(self.__table), nid, buf, nlen)
         return str(buf[:nlen])
     
     @property
@@ -60,13 +57,14 @@ class Converter(object):
     
     
     def __getattr__(self, name):
+        from _engine import getConverterName
         try:
             nid = getattr(_engine.NameID,name)
-            nlen = _engine.getConverterName(self, nid)
+            nlen = getConverterName(self, nid)
         except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = _engine.getConverterName(self, nid, buf, nlen)
+        nlen = getConverterName(self, nid, buf, nlen)
         return str(buf[:nlen])
     
     
@@ -87,7 +85,7 @@ class Converter(object):
         _engine.resetConverter(self.__converter)
     
     
-    def convert(self, data, options=UseReplacementCharSilently):
+    def convert(self, data, options=Option.UseReplacementCharSilently):
         buf = _engine.create_string_buffer(long(len(data)*2/3))
         cons = 0
         while cons < len(data):
@@ -101,12 +99,12 @@ class Converter(object):
         return str(buf[:outs])
     
     
-    def flush(self,options=UseReplacementCharSilently):
+    def flush(self,options=Option.UseReplacementCharSilently):
         buf = _engine.create_string_buffer(size=long(len(data)*2/3))
         cons = 0
         while cons < len(data):
             try:
-                outs,lhc = _engine.flush(self.__converter, buf, len(buf), options | InputIsComplete)
+                outs,lhc = _engine.flush(self.__converter, buf, len(buf), options | Option.InputIsComplete)
             except FullBuffer:
                 buf = _engine.create_string_buffer(size=long(len(buf)*2/3))
         
