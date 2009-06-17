@@ -24,6 +24,7 @@
 from __future__ import with_statement
 
 from ctypes import *
+from itertools import chain,count
 
 currentTECKitVersion = 0x00020004   # 16.16 version number
 
@@ -102,34 +103,29 @@ def status_code(s,f,args):
     elif s == Status_OutOfMemory:      raise MemoryError('TECkit: allocation failed in: %r' % func)
     else: raise RuntimeError('unknown status code %s returned' % status)
 
-def ENUM(base_type, names, values=None):
-    if not values and type(names) != dict:
-            values = range(len(names)))
-    
-    val_dict = dict(zip(names,values)) if values else names
-    
-    
 
-class Enum (c_int):
-    __slots__ = ['_names']
-    def __init__(self,names,values=None):
-        if not values and type(names) != dict:
-            values = range(len(names)))
+def FLAGS(ctype, *flags):
+    names = chain(['_reserved_'],('_reserved_%n_' % n for n in count(1)))
+    
+    class _BITS(Structure):
+        _pack_ = 0
+        _fields_ = [(n, ctype, 1) if isinstance(n,(str,unicode)) else (names.next(),ctype,len(n)) for n in flags]
+    
+    class _FLAGS(Union):
+        _fields_    = [('bits', _BITS), ('value', ctype)]
+        _anonymous_ = ('bits',)
+    
+        def __init__(self, *value,**bits):
+            print bits
+            print value
+            Union.__init__(self,**bits)
+            if len(value) == 1:
+                self.value = value[0]
         
-        self._names = dict(zip(names,values)) if values else names
-    
-    def __getattr__(self,name):
-        try:
-            return self.__names[name]
-        except KeyError:
-            raise AttributeError('%r object has no attribute %r' % (self,name))
-    def __str
-
-class Flags (Enum):
-
-    def __init__(self,names,values=None):
-        if not values and type(names) != dict:
-            values = range(len(names)))
+        @property
+        def _as_parameter_(self): return self.value
         
-        bit_names = zip(names,values) if values else names.items()
-        self.__names = dict((nm,1 << p) for nm,p in bit_names)
+    return _FLAGS
+
+
+
