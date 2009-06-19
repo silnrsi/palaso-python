@@ -5,6 +5,7 @@ from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
 
 class Duplicate(Exception) : pass
+class Multiple(Exception) : pass
 
 class LDMLHandler(xml.sax.ContentHandler) :
     def __init__(self, *args) :
@@ -19,12 +20,12 @@ class LDMLHandler(xml.sax.ContentHandler) :
         if nsname[0] == ns and nsname[1] == 'reorder' :
             self.currcollation.reorders.append((attributes.getValueByQName(attributes.getQNameByName((ns, 'match'))), attributes.getValueByQName(attributes.getQNameByName((ns, 'reorder')))))
         elif tag == 'collation' :
-            self.currcollation = Collation(attributes.get('type'))
+            self.currcollation = Collation(attributes.get('alt'))
             self.collations.append(self.currcollation)
         elif tag == 'settings' :
             for q in attributes.getNames() :
                 v = attributes.getValue(q)
-                self.currcollation.settings[q] = v
+                self.currcollation.settings[q[1]] = v
         elif tag in ('first_variable', 'last_variable', 'first_tertiary_ignorable', 'last_tertiary_ignorable', 'first_secondary_ignorable', 'last_secondary_ignorable', 'first_primary_ignorable', 'last_primary_ignorable', 'first_non_ignorable', 'last_non_ignorable', 'first_trailing', 'last_trailing') :
             self.textelement = tag
         elif tag == 'cp' :
@@ -57,6 +58,7 @@ class LDMLHandler(xml.sax.ContentHandler) :
         sax.endElement('collations')
 
 class Collation :
+    icu_relation_values = {'r' : 0, 'p' : 1, 's' : 2, 't' : 3, 'q' : 4, 'i' : 5}
     def __init__(self, type) :
         self.settings = {}
         self.rules = []
@@ -89,14 +91,37 @@ class Collation :
             r.asLDML(sax)
         sax.endElement('rules')
         sax.endElement('collation')
-    def flattenOrders(self) :
+    def getElements(self) :
+        allstr = set()
+        for r in self.rules :
+            for e in r :
+                for i in range(0, len(e.string)) :
+                    allstr.add(e.string[0:i+1])
+        return allstr
+    def flattenOrders(self, debug = 0) :
         types = 'i', 'p', 's', 't', 'q'
         tailor = self.asICU()
         results = []
         for r in self.reorders :
-            for b, s in palaso.reggen.expand_sub(r[0], r[1]) :
-                e = self.addreset(b, 0)
-                e.addElement(s, 'i')
+            for b, s in palaso.reggen.expand_sub(r[0], r[1], debug=debug) :
+                e = self.addreset(s, 0)
+                e.addElement(b, 'i')
+                if debug :
+                    print ("%s -> %s" % (b, s)).encode("utf-8")
+    def testPrimaryMultiple(self) :
+        ces = set()
+        res = []
+        for r in self.rules :
+            min = 10
+            ok = (len(r.string) <= 1 or r.string in ces)
+            for e in r :
+                if e.relation != 'r' and e.string != '':
+                    ces.add(e.string)
+                val = self.icu_relation_values.get(e.relation, 0)
+                if val > 0 and val < min : min = val
+            if not ok and min == 1 :
+                res.append(r.string)
+        return res
 
 class Element :
     icu_relation_map = {
@@ -111,6 +136,7 @@ class Element :
         self.special = None
         self.string = ""
         self.child = None
+    def __iter__(self) : return ElementIter(self)
     def addElement(self, string, type) :
         element = Element(self)
         element.string = string
@@ -120,7 +146,7 @@ class Element :
     def asICU(self) :
         res = Element.icu_relation_map[self.relation]
         if self.special :
-            res += "[" + self.special.sub('_', ' ') + "]"
+            res += "[" + self.special.replace('_', ' ') + "]"
         else :
             res += self.string
         if self.child :
@@ -138,7 +164,18 @@ class Element :
         if self.child :
             self.child.asLDML(sax)
 
-def test(filename) :
+class ElementIter :
+    def __init__(self, start) :
+        self.curr = start
+    def __iter__(self) : return self
+    def next(self) :
+        res = self.curr
+        if not res : raise StopIteration()
+        self.curr = res.child
+        return res
+
+if __name__ == "__main__" :
+    filename = sys.argv[1]
     print filename
     handler = LDMLHandler()
     parser = xml.sax.make_parser()
@@ -154,7 +191,4 @@ def test(filename) :
         print c.asICU().encode('utf-8')
 
     handler.asLDML(outsax)
-
-if __name__ == "__main__" :
-    test(sys.argv[1])
 

@@ -95,8 +95,9 @@ def _rec_proc(pattern, data, index, match) :
 def _proc(pattern, data, match) :
     op = data[0]
     if op == 'literal' :        # ('literal', charcode)
-        match.string += unichr(data[1])
-        yield match
+        s = match.copy()
+        s.string += unichr(data[1])
+        yield s
     elif op == 'max_repeat' :   # ('max_repeat', (min, max, [contents]))
         if data[1][0] :
             subdata = data[1][2] * data[1][0]
@@ -141,9 +142,12 @@ def _chars(rdata) :
     else :
         raise SyntaxError, "Unrecognised character group operator: " + op
 
-def expand_sub(string, template) :
+def expand_sub(string, template, debug=0) :
     pattern = sre_parse.parse(string)
     template = sre_parse.parse_template(template, pattern)
+    if debug :
+        print pattern
+        print template
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         yield (s.string, sre_parse.expand_template(template, s))
     
