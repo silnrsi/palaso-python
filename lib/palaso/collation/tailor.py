@@ -22,6 +22,7 @@ class LDMLHandler(xml.sax.ContentHandler) :
         elif tag == 'collation' :
             self.currcollation = Collation(attributes.get('alt'))
             self.collations.append(self.currcollation)
+            self.currcontext = None
         elif tag == 'settings' :
             for q in attributes.getNames() :
                 v = attributes.getValue(q)
@@ -32,6 +33,8 @@ class LDMLHandler(xml.sax.ContentHandler) :
             self.text += unichr(attributes.get('hex'))
         elif tag == 'reset' :
             self.resetattr = attributes.get('before')
+        elif tag == 'x' :
+            self.currcontext = Context()
     def endElementNS(self, nsname, qname) :
         tag = nsname[1]
         self.text = self.text.strip()
@@ -44,10 +47,16 @@ class LDMLHandler(xml.sax.ContentHandler) :
                 self.currelement.addbefore(self.resetattr[0])
                 self.resetattr = None
         elif tag in ('p', 's', 't', 'q', 'i') :
-            self.currelement = self.currelement.addElement(self.text, tag)
+            self.currelement = self.currelement.addElement(self.text, tag, self.currcontext)
         elif tag in ('pc', 'sc', 'tc', 'qc', 'ic') :
             for c in self.text :
-                self.currelement = self.currelement.addElement(c, tag[0])
+                self.currelement = self.currelement.addElement(c, tag[0], self.currcontext)
+        elif tag == 'x' :
+            self.currcontext = None
+        elif tag == 'context' :
+            self.currcontext.context = self.text
+        elif tag == 'extend' :
+            self.currcontext.extend = self.text
         self.text = ''
     def characters(self, data) :
         self.text += data
@@ -105,7 +114,7 @@ class Collation :
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1], debug=debug) :
                 e = self.addreset(s, 0)
-                e.addElement(b, 'i')
+                e.addElement(b, 'i', None)
                 if debug :
                     print ("%s -> %s" % (b, s)).encode("utf-8")
     def testPrimaryMultiple(self) :
@@ -136,23 +145,43 @@ class Element :
         self.special = None
         self.string = ""
         self.child = None
+        self.context = None
     def __iter__(self) : return ElementIter(self)
-    def addElement(self, string, type) :
+    def addElement(self, string, type, context) :
         element = Element(self)
         element.string = string
         element.relation = type
+        element.context = context
         self.child = element
         return element
     def asICU(self) :
         res = Element.icu_relation_map[self.relation]
+        if self.context and self.context.context :
+            res += self.context.context + "|"
         if self.special :
             res += "[" + self.special.replace('_', ' ') + "]"
         else :
             res += self.string
+        if self.context and self.context.extend :
+            res += "/" + self.context.extend
         if self.child :
             res += self.child.asICU()
         return res
-    def asLDML(self, sax) :
+    def asLDML(self, sax, currcontext) :
+        if currcontext and not self.context :
+            if currcontext.extend :
+                sax.startElement('extend')
+                sax.characters(currcontext.extend)
+                sax.endElement('extend')
+            sax.endElement('x')
+        if not currcontext and self.context :
+            sax.startElement('x')
+            if self.context.context :
+                sax.startElement('context')
+                sax.characters(self.context.context)
+                sax.endElement('context')
+        currcontext = self.context
+
         tag = 'reset' if self.relation == 'r' else self.relation
         sax.startElement(tag, AttributesImpl({}))
         if self.special :
@@ -161,6 +190,7 @@ class Element :
         else :
             sax.characters(self.string)
         sax.endElement(tag)
+
         if self.child :
             self.child.asLDML(sax)
 
@@ -173,6 +203,11 @@ class ElementIter :
         if not res : raise StopIteration()
         self.curr = res.child
         return res
+
+class Context : 
+    def __init__(self) :
+        self.context = None
+        self.extend = None
 
 if __name__ == "__main__" :
     filename = sys.argv[1]
