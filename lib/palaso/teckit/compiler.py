@@ -10,9 +10,9 @@
 #
 
 import _compiler
-from _compiler import CompilationError, Mapping, \
+from _compiler import CompilationError, Opt, \
                       getUnicodeName, getTECkitName, getUnicodeValue
-
+from engine import Mapping
 
 
 def _err_fn(user_data, msg, param, line):
@@ -21,10 +21,10 @@ def _err_fn(user_data, msg, param, line):
 
 
 class _Compiled(Mapping):
-    def __init__(self, txt, compression=True):
+    def __init__(self, txt, opts=Opt.Compress):
         if txt:
-            (tbl, tbl_len) = _compiler.compile(txt, len(txt), compression,
-                teckit_error_fn(_err_fn, ), None)
+            (tbl, tbl_len) = _compiler.compileOpt(txt, len(txt),
+                teckit_error_fn(_err_fn, ), None, opts)
             self.__table = tbl
         else:
             self.__table = None

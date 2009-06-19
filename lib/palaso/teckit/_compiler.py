@@ -28,8 +28,10 @@ from _common import *
 
 
 Opts_FormMask   = 0x0000000F    # see TECkit_Common.h for encoding form constants
-Opts_Compress   = 0x00000010    # generate compressed mapping table
-Opts_XML        = 0x00000020    # instead of a compiled binary table, generate an XML representation of the mapping
+Opt = ENUM(
+    Compress=0x10,   # generate compressed mapping table
+    XML     =0x20)   # instead of a compiled binary table, generate an XML 
+                     #   representation of the mapping
 
 teckit_error_fn = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, c_uint32)
 
@@ -49,7 +51,7 @@ compile = prototype(('TECkit_Compile',libteckit_compile),paramflags)
 compile.err_check = status_code
 
 prototype = CFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn, c_void_p, POINTER(c_char_p), POINTER(c_size_t), c_uint32)
-parmflags = (1,'txt'),(1,'len'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen'),(1,'opts')
+paramflags = (1,'txt'),(1,'len'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen'),(1,'opts')
 compileOpt = prototype(('TECkit_CompileOpt',libteckit_compile),paramflags)
 compileOpt.err_check = status_code
 
