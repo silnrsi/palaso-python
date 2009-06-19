@@ -12,45 +12,35 @@ from __future__ import with_statement
 
 import _engine
 from _engine import getVersion
-from _engine import \
-    UseReplacementCharSilently, \
-    UseReplacementCharWithWarning, \
-    DontUseReplacementChar, \
-    InputIsComplete
+from _engine import Option
 from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
-    FullBuffer, EmptyBuffer
+    FullBuffer, EmptyBuffer, flags
 
 
 class Mapping(object):
     def __init__(self, path):
         with open(path, 'rb') as mf:
             self.__table = mf.read()
-            self.__flags = None
     
     def __getattr__(self, name):
+        from _engine import getMappingName
         try:
-            nid = _engine.nameID[name]
-            nlen = _engine.getMappingName(self.__table, len(self.__table), nid)
-        except (KeyError, IndexError):
+            nid = getattr(_engine.NameID,name)
+            nlen = getMappingName(self.__table, len(self.__table), nid)
+        except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = _engine.getMappingName(self.__table, len(self.__table), nid, buf, nlen)
+        nlen = getMappingName(self.__table, len(self.__table), nid, buf, nlen)
         return str(buf[:nlen])
     
     @property
     def lhsFlags(self):
-        print self.__flags
-        if not self.__flags:
-            self.__flags = _engine.getMappingFlags(self.__table, len(self.__table))
-            print 'got flags =', self.__flags
-        return self.__flags[0]
+        return _engine.getMappingFlags(self.__table, len(self.__table))[0]
     
     @property
     def rhsFlags(self):
-        if not self.__flags:
-            self.__flags = _engine.getMappingFlags(self.__table, len(self.__table))
-        return self.__flags[1]
+        return _engine.getMappingFlags(self.__table, len(self.__table))[1]
 
 
 class Converter(object):
@@ -67,10 +57,14 @@ class Converter(object):
     
     
     def __getattr__(self, name):
-        nid = nameID[name]
-        nlen = _engine.getMappingName(self, nid)
+        from _engine import getConverterName
+        try:
+            nid = getattr(_engine.NameID,name)
+            nlen = getConverterName(self, nid)
+        except (AttributeError,IndexError):
+            raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = _engine.getMappingName(self, nid, buf, nlen)
+        nlen = getConverterName(self, nid, buf, nlen)
         return str(buf[:nlen])
     
     
@@ -78,20 +72,20 @@ class Converter(object):
     def sourceFlags(self):
         if not self.__flags:
             self.__flags = _engine.getConverterFlags(self.__converter)
-        return self.__flags[0]
+        return Form(self.__flags[0])
     
     @property
     def targetFlags(self):
         if not self.__flags:
             self.__flags = _engine.getMappingFlags(self.__converter)
-        return self.__flags[1]
+        return Form(self.__flags[1])
     
     
     def reset(self):
         _engine.resetConverter(self.__converter)
     
     
-    def convert(self, data, options=UseReplacementCharSilently):
+    def convert(self, data, options=Option.UseReplacementCharSilently):
         buf = _engine.create_string_buffer(long(len(data)*2/3))
         cons = 0
         while cons < len(data):
@@ -105,12 +99,12 @@ class Converter(object):
         return str(buf[:outs])
     
     
-    def flush(self,options=UseReplacementCharSilently):
+    def flush(self,options=Option.UseReplacementCharSilently):
         buf = _engine.create_string_buffer(size=long(len(data)*2/3))
         cons = 0
         while cons < len(data):
             try:
-                outs,lhc = _engine.flush(self.__converter, buf, len(buf), options | InputIsComplete)
+                outs,lhc = _engine.flush(self.__converter, buf, len(buf), options | Option.InputIsComplete)
             except FullBuffer:
                 buf = _engine.create_string_buffer(size=long(len(buf)*2/3))
         

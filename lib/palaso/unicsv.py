@@ -17,8 +17,8 @@ __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
 
 
 def _utf8_recoder(f,enc):
-    return f if enc in ('utf_8','U8','UTF','utf8') 
-            else codecs.EncodedFile(f,'utf_8',enc) 
+    return (f if enc in ('utf_8','U8','UTF','utf8') 
+              else codecs.EncodedFile(f,'utf_8',enc))
 
 class reader:
     def __init__(self, f, dialect=excel, encoding='utf-8', *args, **kwds):

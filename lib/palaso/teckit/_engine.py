@@ -26,30 +26,32 @@
 from ctypes import *
 from ctypes.util import find_library
 from _common import *
+from itertools import chain, count
 
-# formFlags bits for normalization; if none are set, then this side of the mapping is normalization-form-agnostic on input, and may generate an unspecified mixture 
-Flags_ExpectsNFC = 0x00000001	# expects fully composed text (NC) 
-Flags_ExpectsNFD = 0x00000002	# expects fully decomposed text (NCD) 
-Flags_GeneratesNFC = 0x00000004	# generates fully composed text (NC) 
-Flags_GeneratesNFD = 0x00000008	# generates fully decomposed text (NCD) 
+# formFlags bits for normalization; if none are set, then this side of the 
+#  mapping is normalization-form-agnostic on input, and may generate an 
+#  unspecified mixture 
+flags = FLAGS(c_uint32,
+            'expectsNFC',   # expects fully composed text (NFC) 
+            'expectsNFD',   # expects fully decomposed text (NCD) 
+            'generatesNFC', # generates fully composed text (NFC) 
+            'generatesNFD', # generates fully decomposed text (NCD)
+            [None]*11,      # 11 unused bits here
+            'visualOrder',  # visual rather than logical order
+            'unicode')      # this is Unicode rather than a byte encoding
 
-# if VisualOrder is set, this side of the mapping deals with visual-order rather than logical-order text (only relevant for bidi scripts) 
-Flags_VisualOrder = 0x00008000	# visual rather than logical order 
-
-# if Unicode is set, the encoding is Unicode on this side of the mapping 
-Flags_Unicode = 0x00010000	# this is Unicode rather than a byte encoding 
-
+NameID = ENUM(
 # required names
-NameID_LHS_Name = 0         # "source" or LHS encoding name, e.g. "SIL-EEG_URDU-2001"
-NameID_RHS_Name = 1         # "destination" or RHS encoding name, e.g. "UNICODE-3-1"
-NameID_LHS_Description = 2  # source encoding description, e.g. "SIL East Eurasia Group Extended Urdu (Mac OS)"
-NameID_RHS_Description = 3  # destination description, e.g. "Unicode 3.1"
+    'lhsName',       # "source" or LHS encoding name, e.g. "SIL-EEG_URDU-2001"
+    'rhsName',        # "destination" or RHS encoding name, e.g. "UNICODE-3-1"
+    'lhsDescription', # source encoding description, e.g. "SIL East Eurasia Group Extended Urdu (Mac OS)"
+    'rhsDescription', # destination description, e.g. "Unicode 3.1"
 # additional recommended names (parallel to UTR-22)
-NameID_Version      = 4     # "1.0b1"
-NameID_Contact      = 5     # "mailto:jonathan_kew@sil.org"
-NameID_RegAuthority = 6     # "SIL International"
-NameID_RegName      = 7     # "Greek (Galatia)"
-NameID_Copyright    = 8     # "(c)2002 SIL International"
+    'version',        # "1.0b1"
+    'contact',        # "mailto:jonathan_kew@sil.org"
+    'regAuthority',   # "SIL International"
+    'regName',        # "Greek (Galatia)"
+    'copyright')       # "(c)2002 SIL International"
 # additional name IDs may be defined in the future
 
 
@@ -57,8 +59,9 @@ NameID_Copyright    = 8     # "(c)2002 SIL International"
 #	encoding form options for TECkit_CreateConverter
 #
 Form_NormalizationMask = 0x0F00
-Form_NFC = 0x0100
-Form_NFD = 0x0200
+Form = ENUM(Form,
+    NFC = 0x0100,
+    NFD = 0x0200)
 
 #
 #	end of text value for TECkit_DataSource functions to return
@@ -90,7 +93,7 @@ paramflags = (1,'converter'),(1,'nameID'),(1,'nameBuffer',None),(1,'bufferSize',
 getConverterName = prototype(('TECkit_GetConverterName', libteckit), paramflags)
 getConverterName.errcheck = status_code
 
-prototype = CFUNCTYPE(status, converter, POINTER(c_uint32), POINTER(c_uint32))
+prototype = CFUNCTYPE(status, converter, POINTER(flags), POINTER(flags))
 paramflags = (1,'converter'),(2,'sourceFlags'),(2,'targetFlags')
 getConverterFlags = prototype(('TECkit_GetConverterFlags', libteckit), paramflags)
 getConverterFlags.errcheck = status_code
@@ -130,7 +133,7 @@ paramflags = (1,'mapping'),(1,'mappingSize'),(1,'nameID'),(1,'nameBuffer',None),
 getMappingName = prototype(('TECkit_GetMappingName',libteckit),paramflags)
 getMappingName.errcheck = status_code
 
-prototype = CFUNCTYPE(status, mapping, c_size_t, POINTER(c_uint32), POINTER(c_uint32))
+prototype = CFUNCTYPE(status, mapping, c_size_t, POINTER(flags), POINTER(flags))
 paramflags = (1,'mapping'),(1,'mappingSize'),(2,'lhsFlags'),(2,'rhsFlags')
 getMappingFlags = prototype(('TECkit_GetMappingFlags', libteckit), paramflags)
 getMappingFlags.errcheck = status_code
@@ -157,12 +160,12 @@ getVersion = prototype(('TECkit_GetVersion', libteckit))
 #
 
 OptionsMask_UnmappedBehavior = 0x000F
-UseReplacementCharSilently    = 0x00
-UseReplacementCharWithWarning = 0x01
-DontUseReplacementChar        = 0x02
-
 OptionsMask_InputComplete = 0x0100
-InputIsComplete     = 0x0100
+Option = ENUM(
+    UseReplacementCharSilently=0,
+    UseReplacementCharWithWarning=1,
+    DontUseReplacementChar=2,
+    InputIsComplete=0x100)
 
 #
 # Convert text from a buffer in memory, with options
@@ -181,17 +184,4 @@ prototype = CFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t), 
 paramflags = (1,'converter'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inOptions'),(2,'lookaheadCount')
 flushOpt = prototype(('TECkit_FlushOpt',libteckit),paramflags)
 flushOpt.errcheck = status_code
-
-nameID = {
-    'lhsName':NameID_LHS_Name,
-    'rhsName':NameID_RHS_Name,
-    'lhsDescription':NameID_LHS_Description,
-    'rhsDescription':NameID_RHS_Description,
-# additional recommended names (parallel to UTR-22) 
-    'version':NameID_Version,
-    'contact':NameID_Contact,
-    'regAuthority':NameID_RegAuthority,
-    'regName':NameID_RegName,
-    'copyright':NameID_Copyright
-    }
 
