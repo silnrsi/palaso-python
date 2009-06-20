@@ -1,6 +1,6 @@
 """Module to handle sort tailorings"""
 
-import xml.sax, sys, palaso.reggen
+import xml.sax, sys, palaso.reggen, unicodedata, re
 from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
 
@@ -35,9 +35,10 @@ class LDMLHandler(xml.sax.ContentHandler) :
             self.resetattr = attributes.get('before')
         elif tag == 'x' :
             self.currcontext = Context()
+        self.text = ''
     def endElementNS(self, nsname, qname) :
         tag = nsname[1]
-        self.text = self.text.strip()
+        # self.text = self.text.strip()
         if tag == 'reset' :
             if self.textelement :
                 self.currelement = self.currcollation.addreset(self.textelement, 1)
@@ -83,11 +84,16 @@ class Collation :
         self.rules.append(element)
         return element
     def asICU(self) :
+        strengths = {'primary' : '1', 'secondary' : '2', 'tertiary' : '3', 'quaternary' : '4'}
         res = ""
         for k, v in self.settings.items() :
-            res = res + "[" + k + " " + v + "]"
+            if k == 'backwards' and v == 'on' : v = '2'
+            if k == 'hiraganaQuarternary' : k = 'hiraganaQ'
+            if k == 'strength' : v = strengths[v]
+            res = res + "[" + k + " " + v + "]\n"
         for r in self.rules :
-            res += r.asICU()
+            for e in r :
+                res += e.asICU()
             res += "\n"
         return res
     def asLDML(self, sax) :
@@ -140,6 +146,8 @@ class Element :
         't' : '<<<',
         'q' : '=',
         'i' : '=' }
+    icu_protect = set([s for s in ' !"#$%^&\'()*+,-./:;<=>?[\\]^_`{|}~@'])
+    icu_categories = set(['Zs', 'Zl', 'Zp', 'Cc', 'Cf'])
     def __init__(self, parent) :
         self.parent = parent
         self.special = None
@@ -155,17 +163,21 @@ class Element :
         self.child = element
         return element
     def asICU(self) :
-        res = Element.icu_relation_map[self.relation]
+        res = unicode(Element.icu_relation_map[self.relation])
         if self.context and self.context.context :
             res += self.context.context + "|"
         if self.special :
-            res += "[" + self.special.replace('_', ' ') + "]"
+            command = self.special.replace('non_ignorable', 'regular')
+            res += "[" + command.replace('_', ' ') + "]"
         else :
-            res += self.string
+            str = self.string
+            for s in self.string :
+                if s in self.icu_protect or unicodedata.category(s) in self.icu_categories :
+                    str = "'" + re.sub("['(]", "\\\1", str) + "'"
+                    break
+            res += str
         if self.context and self.context.extend :
             res += "/" + self.context.extend
-        if self.child :
-            res += self.child.asICU()
         return res
     def asLDML(self, sax, currcontext) :
         if currcontext and not self.context :
