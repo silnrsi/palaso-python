@@ -23,21 +23,32 @@ with console() :
         ldmlparser.setFeature(xml.sax.handler.feature_namespaces, 1)
         ldmlparser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
         ldmlparser.parse(options.ldml)
-        collation = handler.collations[0]
-        for c in handler.collations :
-            if c.type == options.alt :
-                collation = c
-                break
-
-        collation.flattenOrders(debug=options.z)
-        tailor = collation.asICU()
+        if str:
+            if len(handler.collations) :
+                collation = handler.collations[0]
+                for c in handler.collations :
+                    if c.type == options.alt :
+                        collation = c
+                        break
+                collation.flattenOrders(debug=options.z)
+                tailor = collation.asICU()
+            else :
+                tailor = ""
     else :
         tailor = ""
-    icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
-    if options.z :
-        print tailor.encode("utf-8")
-        if collation :
+    if str :
+        if options.z :
+            print tailor.encode("utf-8")
+        icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
+
+        print "%s : %s" % (pprint.pformat(str), palaso.collation.icu.strkey(icuCollation.getCollationKey(str)))
+    else :
+        print options.ldml
+        sys.stderr.write(options.ldml + "\n")
+        for collation in handler.collations: 
+            print "--- %s ---" % (collation.type)
+            tailor = collation.asICU()
+            if options.z : print tailor.encode("utf-8")
+            icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
             for s in sorted(collation.getElements()) :
                 print "%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s)))
-
-    print "%s : %s" % (pprint.pformat(str), palaso.collation.icu.strkey(icuCollation.getCollationKey(str)))
