@@ -27,10 +27,11 @@ class TestEngine(unittest.TestCase):
                          [('upkdu|Gm:',
                            u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038')])
 
+def suite():
+    return unittest.TestSuite(
+        [doctest.DocFileTest('test_mapping.doctest'),
+         unittest.TestLoader().loadTestsFromTestCase(TestEngine)])
 
 if __name__ == '__main__':
-    suite = unittest.TestSuite(
-            [doctest.DocFileTest('test_mapping.txt'), 
-             unittest.TestLoader().loadTestsFromTestCase(TestEngine)])
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.TextTestRunner(verbosity=2).run(suite())
 
