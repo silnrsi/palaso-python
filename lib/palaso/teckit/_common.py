@@ -103,8 +103,8 @@ def status_code(s,f,args):
         w = s & StatusMask_Warning      # Not really sure how to handle warnings
         s = c_int8(s).value
         if   s == Status.NoError:          return args
-        elif s == Status.OutputBufferFull: raise FullBuffer
-        elif s == Status.NeedMoreInput:    raise EmptyBuffer
+        elif s == Status.OutputBufferFull: raise FullBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
+        elif s == Status.NeedMoreInput:    raise EmptyBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
     elif s == Status.InvalidForm:      raise ValueError('inForm or outForm parameter does not match mapping: %r' % args[0])
     elif s == Status.ConverterBusy:    raise ConverterBusy('cannot initiate conversion: %r busy' % args[0])
     elif s == Status.InvalidConverter: raise TypeError('converter object is unrecongizable: %r' % args[0]) 
