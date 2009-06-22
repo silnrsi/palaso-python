@@ -117,8 +117,14 @@ class Collation :
         types = 'i', 'p', 's', 't', 'q'
         tailor = self.asICU()
         results = []
+        inputs = set()
+        outputs = set()
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1], debug=debug) :
+                inputs.add(b)
+                outputs.add(s)
+                if s in inputs : raise Duplicate("Output of %s -> %s" % (b, s))
+                if b in outputs: raise Duplicate("Input of %s -> %s" % (b, s))
                 e = self.addreset(s, 0)
                 e.addElement(b, 'i', None)
                 if debug :
