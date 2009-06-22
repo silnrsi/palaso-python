@@ -40,6 +40,9 @@ with console() :
         if options.z :
             print tailor.encode("utf-8")
         icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
+        if options.z :
+            for s in sorted(collation.getElements()) :
+                print "%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s)))
 
         print "%s : %s" % (pprint.pformat(str), palaso.collation.icu.strkey(icuCollation.getCollationKey(str)))
     else :
