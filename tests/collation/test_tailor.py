@@ -28,5 +28,8 @@ class TestCollation(unittest.TestCase) :
     def test_my(self) :
         self.sortldml('my-reg1.xml', 'my-reg1.txt')
 
+    def test_kht(self) :
+        self.sortldml('kht.xml', 'kht_words.txt')
+
 if __name__ == "__main__" :
     unittest.main()
