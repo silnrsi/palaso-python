@@ -46,7 +46,7 @@ copyright were never included in the tec mapping.
 >>> m.version; m.contact; m.regAuthority
 '7'
 'mailto:martin_hosken@sil.org'
-'nun'
+'none'
 >>> m.regName
 Traceback (most recent call last):
     ...

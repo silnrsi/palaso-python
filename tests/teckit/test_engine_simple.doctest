@@ -1,0 +1,36 @@
+These are some fairly simple tests of the engine module object
+
+>>> from palaso.teckit.engine import *
+
+---- Test with silipa93.tec ----
+Make an encoder and decoder
+>>> m = Mapping('data/silipa93.tec')
+>>> enc = Converter(m); dec = Converter(m,forward=False)
+
+Test forward direction
+>>> res = enc.convert('D"\xe2s i\xf9z ?\xab tHEstH',finished=True)
+>>> res == u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0'
+True
+>>> print res
+ðĩs iːz ʔə tʰɛstʰ
+
+Test reverse direction
+>>> dec.convert(u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0',finished=True)
+'D"\xe2s i\xf9z ?\xab tHEstH'
+
+
+---- Test with academy.tec ----
+Make an encoder and decoder
+>>> m = Mapping('data/academy.tec')
+>>> enc = Converter(m); dec = Converter(m,forward=False)
+
+Test forward direction
+>>> res = enc.convert('upkdu|Gm:',finished=True)
+>>> res == u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038'
+True
+>>> print res
+ကစုိကရ္ဝား
+
+Test reverse direction
+>>> dec.convert(u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038',finished=True)
+'upkdu|Gm:'
