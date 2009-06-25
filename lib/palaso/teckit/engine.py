@@ -23,10 +23,10 @@ class Mapping(str):
     def __new__(cls, path):
         with open(path, 'rb') as mf:
             data = mf.read()
-        return str.__new__(cls,data)
+        return str.__new__(cls, data)
     
-    def __init__(self, *args):
-        self.__args = args
+    def __init__(self, path):
+        self._repr_args = repr(path)
         
     def __getattr__(self, name):
         from _engine import getMappingName
@@ -38,12 +38,10 @@ class Mapping(str):
         buf  = _engine.create_string_buffer(nlen)
         nlen = getMappingName(self, len(self), nid, buf, nlen)
         return str(buf[:nlen])
-    
-#    def __len__(self):  return len(self.__table)
-#    
+
     def __str__(self):  return self.lhsName + ' <-> ' + self.rhsName
     
-    def __repr__(self): return 'Mapping(%r)' % self.__args
+    def __repr__(self): return 'Mapping(%s)' % self._repr_args 
     
     @property
     def lhsFlags(self):
@@ -67,15 +65,11 @@ class Converter(object):
         source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
         target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
         self.__converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self.__flags = None
-        self.__residue = ''
+        self.__flags    = None
+        self.__residue  = ''
 
     
     def __del__(self):
-        self.close()
-    
-    
-    def close(self):
         _engine.disposeConverter(self.__converter)
     
     
@@ -83,11 +77,11 @@ class Converter(object):
         from _engine import getConverterName
         try:
             nid = getattr(_engine.NameID,name)
-            nlen = getConverterName(self, nid)
+            nlen = getConverterName(self.__converter, nid)
         except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = getConverterName(self, nid, buf, nlen)
+        nlen = getConverterName(self.__converter, nid, buf, nlen)
         return str(buf[:nlen])
     
     
@@ -122,14 +116,15 @@ class Converter(object):
         out = 0
         while True:
             try:
-                print 'trying with buffer size %d' % len(buf)
+                #print 'trying with buffer size %d' % len(buf)
                 cons,outs,lhc = _engine.convertBufferOpt(self.__converter, data, len(data), buf, len(buf), options)
                 if finished:
                     self.reset()
                 break
             except FullBuffer, (cons,outs,lhc):
-                print (cons,outs,lhc)
-                print repr(unicode(str(buf[:outs]),'utf-8') + self.flush(finished,options))
+                #print 'conv:',(cons,outs,lhc)
+                outstr = self.flush(finished,options)
+                #print 'conv:',repr(unicode(str(buf[:outs]),'utf-8') + outstr)
                 buf=_engine.create_string_buffer(long(len(buf)*3/2))
             except EmptyBuffer, (cons,outs,lhc):
                 break
@@ -151,8 +146,8 @@ class Converter(object):
                     self.reset()
                 break
             except FullBuffer:
-                print (cons,outs,lhc)
-                print repr(unicode(str(buf[:outs]),'utf-8'))
+                #print 'flush:',(cons,outs,lhc)
+                #print 'flush:',repr(unicode(str(buf[:outs]),'utf-8'))
                 buf=_engine.create_string_buffer(long(len(buf)*3/2))
 
         buf = str(buf[:outs])
