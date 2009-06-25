@@ -50,7 +50,7 @@ paramflags = (1,'txt'),(1,'len'),(1,'doCompression'),(1,'errFunc'),(1,'userData'
 compile = prototype(('TECkit_Compile',libteckit_compile),paramflags)
 compile.err_check = status_code
 
-prototype = CFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn, c_void_p, POINTER(c_char_p), POINTER(c_size_t), c_uint32)
+prototype = CFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t), c_uint32)
 paramflags = (1,'txt'),(1,'len'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen'),(1,'opts')
 compileOpt = prototype(('TECkit_CompileOpt',libteckit_compile),paramflags)
 compileOpt.err_check = status_code
