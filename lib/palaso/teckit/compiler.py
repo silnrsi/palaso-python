@@ -27,6 +27,7 @@ class _Compiled(Mapping):
                                         _tc.teckit_error_fn(_err_fn, ), 
                                         None, opts)
         buf = super(Mapping,cls).__new__(cls,tbl[:tbl_len])
+        _tc.disposeCompiled(tbl)
         buf.__table = tbl
         return buf
 
@@ -36,9 +37,6 @@ class _Compiled(Mapping):
             res.append(repr(arg[:20] + '...'
                             if isinstance(arg, str) else arg))
         self._repr_args = ','.join(res)
-            
-    def __del__(self):
-        _tc.disposeCompiled(self.__table)
 
 
 compile = _Compiled
