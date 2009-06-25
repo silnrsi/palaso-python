@@ -18,6 +18,10 @@ Test reverse direction
 >>> dec.convert(u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0',finished=True)
 'D"\xe2s i\xf9z ?\xab tHEstH'
 
+Test clean-up of the engines
+>>> del enc
+>>> del dec
+
 
 ---- Test with academy.tec ----
 Make an encoder and decoder
@@ -34,3 +38,7 @@ True
 Test reverse direction
 >>> dec.convert(u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038',finished=True)
 'upkdu|Gm:'
+
+Test clean-up of the engines
+>>> del enc
+>>> del dec
