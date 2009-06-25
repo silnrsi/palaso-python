@@ -10,7 +10,7 @@
 #
 
 import _compiler as _tc
-from _compiler import CompilationError, Opt, \
+from _compiler import CompilationError, \
                       getUnicodeName, getTECkitName, getUnicodeValue
 from engine import Mapping
 
@@ -22,10 +22,10 @@ def _err_fn(user_data, msg, param, line):
 
 
 class _Compiled(Mapping):
-    def __new__(cls,  txt, opts=Opt.Compress):
-        (tbl, tbl_len) = _tc.compileOpt(txt, len(txt), 
+    def __new__(cls,  txt, compress=True):
+        (tbl, tbl_len) = _tc.compile(txt, len(txt), compress,
                                         _tc.teckit_error_fn(_err_fn, ), 
-                                        None, opts)
+                                        None)
         buf = super(Mapping,cls).__new__(cls,tbl[:tbl_len])
         _tc.disposeCompiled(tbl)
         buf.__table = tbl
@@ -39,7 +39,16 @@ class _Compiled(Mapping):
         self._repr_args = ','.join(res)
 
 
-compile = _Compiled
+def translate(txt):
+    (tbl, tbl_len) = _tc.compileOpt(txt, len(txt), 
+                                    _tc.teckit_error_fn(_err_fn, ), None,
+                                    _tc.Opt.XML)
+    xml_doc = str(tbl[:tbl_len])
+    _tc.disposeCompiled(tbl)
+    
+    return xml_doc
 
+
+compile = _Compiled
 
 getVersion = _tc.getCompilerVersion

@@ -2,14 +2,14 @@ from __future__ import with_statement
 
 import unittest
 import os.path
-from palaso.teckit.compiler import compile, Opt
+from palaso.teckit.compiler import compile
 from palaso.teckit.engine   import Converter, Form, Mapping
 
 class TestCompiler:
     def test_compilation(self):
         ref_map = Mapping(os.path.join('data',self.reference_file))
         source = open(os.path.join('data',self.source_file),'rb').read()
-        com_map = compile(source, Opt.Compress if self.compress else 0)
+        com_map = compile(source, self.compress)
         self.assertEqual(str(com_map), str(ref_map))
         self.assertEqual(com_map, ref_map,
                          'compiled %r (%scompressed) does not match reference %r' % 
