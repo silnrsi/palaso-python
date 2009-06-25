@@ -13,6 +13,12 @@ Check left and right sides encoding info
 'Unicode'
 'Unicode'
 
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/silipa93.tec')"
+'SIL-IPA93-2001 <-> Unicode'
+
+
 Check extended info from UTR-22 these are optional and may through an AttributeError
 if not included in the mapping
 >>> m.version; m.contact; m.regAuthority; m.regName
@@ -40,13 +46,18 @@ Check left and right sides encoding info
 'Unicode'
 'Unicode'
 
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/academy.tec')"
+'SIL-Academy-2001 <-> Unicode'
+
 Check extended info from UTR-22 these are optional and may raise an
 AttributeError if not included in the mapping, in this case regName and 
 copyright were never included in the tec mapping.
 >>> m.version; m.contact; m.regAuthority
 '7'
 'mailto:martin_hosken@sil.org'
-'nun'
+'none'
 >>> m.regName
 Traceback (most recent call last):
     ...
