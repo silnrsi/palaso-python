@@ -23,11 +23,11 @@ class CompileGreekMapping(TestCompiler):
     source_file    = 'SILGreek2004-04-27.map'
 
 class CompileGreekMappingUncrompressed(unittest.TestCase, CompileGreekMapping):
-    reference_file = 'SILGreek2004-04-27.uncompressed.tec.orig'
+    reference_file = 'SILGreek2004-04-27.uncompressed.reference.tec'
     compress       = False
 
 class CompileGreekMappingCompressed(unittest.TestCase, CompileGreekMapping):
-    reference_file = 'SILGreek2004-04-27.tec.orig'
+    reference_file = 'SILGreek2004-04-27.reference.tec'
     compress       = True
 
 
