@@ -11,5 +11,6 @@ def console(ctrlc=sys.exit) :
             raise
     except KeyboardInterrupt as e :
         ctrlc(1)
-    finally :
-        sys.stdout.close()
+# don't want to close otherwise post mortem debugging fails
+#    finally :
+#        sys.stdout.close()

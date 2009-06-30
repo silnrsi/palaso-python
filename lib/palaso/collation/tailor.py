@@ -3,9 +3,13 @@
 import xml.sax, sys, palaso.reggen, unicodedata, re
 from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
+import warnings
 
-class Duplicate(Exception) : pass
-class Multiple(Exception) : pass
+class Duplicate(RuntimeError) : 
+    def __init__(self, str) :
+        RuntimeError.__init__(self, str.encode('utf-8'))
+
+class Multiple(RuntimeError) : pass
 
 class LDMLHandler(xml.sax.ContentHandler) :
     def __init__(self, *args) :
@@ -74,15 +78,22 @@ class Collation :
         self.rules = []
         self.type = type
         self.reorders = []
-    def addreset(self, value, isSpecial) :
+        self.flattened = 0
+    def addreset(self, value, isSpecial, flattenrule=0) :
         element = Element(self)
         if isSpecial :
             element.special = value
         else :
             element.string = value
         element.relation = 'r'
+        element.flattenrule = flattenrule
         self.rules.append(element)
         return element
+    def addIdentity(self, reset, *values) :
+        if not len(values) : return
+        e = self.addreset(reset, 0, flattenrule=1)
+        for i in values :
+            e = e.addElement(i, 'i', None, flattenrule=1)
     def asICU(self) :
         strengths = {'primary' : '1', 'secondary' : '2', 'tertiary' : '3', 'quaternary' : '4'}
         res = ""
@@ -114,21 +125,35 @@ class Collation :
                     allstr.add(e.string[0:i+1])
         return allstr
     def flattenOrders(self, debug = 0) :
+        if self.flattened : return
         types = 'i', 'p', 's', 't', 'q'
         tailor = self.asICU()
         results = []
-        inputs = set()
-        outputs = set()
+        inputs = {}
+        outputs = {}
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1], debug=debug) :
-                inputs.add(b)
-                outputs.add(s)
-                if s in inputs : raise Duplicate("Output of %s -> %s" % (b, s))
-                if b in outputs: raise Duplicate("Input of %s -> %s" % (b, s))
-                e = self.addreset(s, 0)
-                e.addElement(b, 'i', None)
+                if b == s : continue
+                for bi in inputs :
+                    if b != bi and b.find(bi) != -1 :
+                        warnings.warn(("Input %s masked by %s" % (b, bi)).encode("utf-8"), UserWarning)
+                        break
+                inputs[b] = s
+                if s in outputs :
+                    outputs[s].append(b)
+                else :
+                    outputs[s] = [b]
+                self.addIdentity(s, b)
                 if debug :
                     print ("%s -> %s" % (b, s)).encode("utf-8")
+
+        for r in self.rules :
+            if r.flattenrule : continue
+            for e in r :
+                if e.relation == 'r' or e.string in outputs : continue
+                idents = (o for o in longestReplace(e.string, outputs) if o != e.string)
+                self.addIdentity(e.string, *idents)
+        self.flattened = 1
     def testPrimaryMultiple(self) :
         ces = set()
         res = []
@@ -160,12 +185,14 @@ class Element :
         self.string = ""
         self.child = None
         self.context = None
+        self.flattenrule = 0
     def __iter__(self) : return ElementIter(self)
-    def addElement(self, string, type, context) :
+    def addElement(self, string, type, context, flattenrule=0) :
         element = Element(self)
         element.string = string
         element.relation = type
         element.context = context
+        element.flattenrule = flattenrule
         self.child = element
         return element
     def asICU(self) :
@@ -226,6 +253,29 @@ class Context :
     def __init__(self) :
         self.context = None
         self.extend = None
+
+def overlap(base, str) :
+    run = range(0, len(str))
+    return (base.find(str) != -1 or 
+        base.endswith(tuple(str[0:i] for i in run)) or
+        base.startswith(tuple(str[-i:] for i in run)))
+
+def longestReplace(s, d) :
+    for i in range(1, len(s)+1) :
+        if not s[0:i] in d :
+            break
+    if i > 1 :
+        for a in d[s[0:i-1]] :
+            if i < len(s) :
+                for y in longestReplace(s[i-1:], d) :
+                    yield a + y
+            else :
+                yield a
+    elif len(s) == 1 :
+        yield s
+    else :
+        for y in longestReplace(s[i:], d) :
+            yield s[0:i] + y
 
 if __name__ == "__main__" :
     filename = sys.argv[1]

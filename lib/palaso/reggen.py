@@ -1,7 +1,7 @@
 
 """Module to generate strings from a regexp"""
 
-import sre_parse
+import sre_parse, sre_constants
 
 class MatchObj :
     def __init__(self, pattern, str) :
@@ -9,6 +9,7 @@ class MatchObj :
         self.pattern = pattern
         self.startpos = [0]
         self.endpos = [0]
+        self.patient = -1
     def __copy__(self) :
         res = MatchObj(self.pattern, self.string)
         res.startpos = self.startpos[:]
@@ -21,7 +22,7 @@ class MatchObj :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return self.endpos[groupid]
             else :
-                return -1
+                return self.patient
         else :
             return len(self.string) - 1
     def start(groupid = 0) :
@@ -29,7 +30,7 @@ class MatchObj :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return self.startpos[groupid]
             else :
-                return -1
+                return self.patient
         else :
             return 0
     def span(groupid = 0) :
@@ -37,7 +38,7 @@ class MatchObj :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return (self.startpos[groupid], self.endpos[groupid])
             else :
-                return (-1, -1)
+                return (self.patient, self.patient)
         else :
             return (0, len(self.string) - 1)
     def group(self, groupid = 0, *groupids) :
@@ -58,6 +59,7 @@ class MatchObj :
             return self.string
         elif group == None :
             return None
+        if not self.patient and group >= len(self.endpos) : return ''
         return self.string[self.startpos[group]:self.endpos[group]]
     def groups(self, default = None) :
         res = []
@@ -99,19 +101,16 @@ def _proc(pattern, data, match) :
         s.string += unichr(data[1])
         yield s
     elif op == 'max_repeat' :   # ('max_repeat', (min, max, [contents]))
-        if data[1][0] :
-            subdata = data[1][2] * data[1][0]
-        else :
-            subdata = []
+        subdata = [data[1][2][0]] * data[1][1]
+        for n in range(data[1][1] - data[1][0], 0, -1) :
+            for s in _rec_proc(pattern, subdata, 0, match) :
+                yield s
+            del subdata[-1]
         if len(subdata) > 0 :
             for s in _rec_proc(pattern, subdata, 0, match) :
                 yield s
         else :
             yield match
-        for n in range(0, data[1][1] - data[1][0]) :
-            subdata.extend(data[1][2])
-            for s in _rec_proc(pattern, subdata, 0, match) :
-                yield s
     elif op == 'subpattern' :   # ('subpattern', (index | None, [contents]))
         if data[1][0] :
             match.startpos.insert(data[1][0], len(match.string))
@@ -130,7 +129,7 @@ def _proc(pattern, data, match) :
             for s in _iterate(pattern, d, match) :
                 yield s
     else :
-        raise SyntaxError, "Unprocessable regular expression operator: " + op
+        raise SyntaxError("Unprocessable regular expression operator: %" % (op.str()))
 
 def _chars(rdata) :
     op = rdata[0]
@@ -149,6 +148,7 @@ def expand_sub(string, template, debug=0) :
         print pattern
         print template
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
+        s.patient = 0
         yield (s.string, sre_parse.expand_template(template, s))
     
 def invert(string) :
@@ -156,7 +156,7 @@ def invert(string) :
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         yield s.string
 
-def test() :
+if __name__ == "__main__" :
     tests=[
         ('([ab])([cd])', r'\2\1'),
         (u'([\u1000-\u1003])([\u103C-\u103D]?)([\u102F\u1030])([\u1000-\u1003]\u103A)', r'\1\2\4\3')
@@ -166,6 +166,3 @@ def test() :
         print (t[0] + "\t" + t[1]).encode('utf-8')
         for s in expand_sub(t[0], t[1]) :
             print (s[0] + "\t" + s[1]).encode('utf-8')
-
-if __name__ == "__main__" :
-    test()
