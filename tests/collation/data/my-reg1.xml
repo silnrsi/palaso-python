@@ -8,12 +8,14 @@
 	<collations>
 		<collation type="standard">
             <special xmlns:palaso="www.palaso.org/ldml/0.1">
-                <palaso:reorder palaso:match="([&#x102B;-&#x102D;&#x102F;&#x1031;]|&#x1031;&#x102C;|&#x1031;&#x102B;|&#x102D;&#x102F;)([&#x1000;-&#x1021;]|&#x1004;&#x103A;)([&#x1039;&#x103A;])" palaso:reorder="\2\3\1"/>
-                <palaso:reorder palaso:match="(&#x1023;)((?:(?:[&#x1000;-&#x1021;]|&#x1004;&#x103A;)(?:[&#x1039;&#x103A;]))?)" palaso:reorder="&#x1021;\2&#x102D;"/>
-                <palaso:reorder palaso:match="(&#x1025;)((?:(?:[&#x1000;-&#x1021;]|&#x1004;&#x103A;)(?:[&#x1039;&#x103A;]))?)" palaso:reorder="&#x1021;\2&#x102F;"/>
-                <palaso:reorder palaso:match="(&#x1027;)((?:(?:[&#x1000;-&#x1021;]|&#x1004;&#x103A;)(?:[&#x1039;&#x103A;]))?)" palaso:reorder="&#x1021;\2&#x1031;"/>
-                <palaso:reorder palaso:match="(&#x1029;)((?:&#x1031;&#x102C;)?)((?:(?:[&#x1000;-&#x1021;]|&#x1004;&#x103A;)(?:[&#x1039;&#x103A;]))?)" palaso:reorder="&#x1021;\3&#x1031;&#x102C;"/>
-                <palaso:reorder palaso:match="(&#x102A;)((?:(?:[&#x1000;-&#x1021;]|&#x1004;&#x103A;)(?:[&#x1039;&#x103A;]))?)" palaso:reorder="&#x1021;\2&#x1031;&#x102C;&#x103A;"/>
+                <palaso:reorder palaso:match="(&#x1029;)(&#x1031;&#x102C;)?((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\4\5&#x1031;&#x102C;"/>
+                <palaso:reorder palaso:match="(&#x102A;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1031;&#x102C;&#x103A;"/>
+                <palaso:reorder palaso:match="(&#x1023;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102D;"/>
+                <palaso:reorder palaso:match="(&#x1024;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102E;"/>
+                <palaso:reorder palaso:match="(&#x1025;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102F;"/>
+                <palaso:reorder palaso:match="(&#x1026;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1030;"/>
+                <palaso:reorder palaso:match="([&#x1027;&#x1028;])((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1031;"/>
+                <palaso:reorder palaso:match="(&#x1031;&#x102C;|&#x1031;&#x102B;|&#x102D;&#x102F;|[&#x102B;-&#x102D;&#x102F;&#x1031;])(&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;])" palaso:reorder="\2\3\1"/>
             </special>
 			<rules>
                 <reset>&#x1021;</reset><p>ႌ</p><p>့</p><p>း</p><p>့း</p>
@@ -57,8 +59,8 @@
                 <p>ၞ</p><p>ၟ</p><p>ျ</p><p>ြ</p><p>ၠ</p><p>ွ</p><p>ႂ</p><p>ှ</p><p>ျွ</p><p>ြွ</p><p>ျှ</p><p>ြှ</p><p>ွှ</p><p>ျွှ</p><p>ြွှ</p>
 
                 <!-- Independent vowels -->
-                <reset>အီ</reset><t>ဤ</t>
-                <reset>အူ</reset><t>ဦ</t>
+<!--                <reset>အီ</reset><t>ဤ</t>
+                <reset>အူ</reset><t>ဦ</t> -->
                 <reset>&#x1019;&#x103A;</reset><x><p>&#x102F;&#x1036;</p><p>&#x102F;&#x1019;&#x103A;&#x1037;</p><p>&#x102F;&#x1036;&#x1037;</p><p>&#x102F;&#x1019;&#x103A;&#x1038;</p><p>&#x102F;&#x1036;&#x1038;</p><expand>&#x102F;</expand></x>
                 <reset>&#x1019;&#x103A;</reset><x><p>&#x102D;&#x1036;</p><p>&#x102D;&#x1019;&#x103A;&#x1037;</p><p>&#x102D;&#x1036;&#x1037;</p><p>&#x102D;&#x1019;&#x103A;&#x1038;</p><p>&#x102D;&#x1036;&#x1038;</p><expand>&#x102D;</expand></x>
                 <reset>အုံ</reset><t>ဥုံ</t>

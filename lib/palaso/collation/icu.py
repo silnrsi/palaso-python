@@ -20,6 +20,8 @@ def strkey(key) :
         keyinfo.append([struct.unpack('>H', x+(y or "\000")) for (x, y) in zip(b[::2], b[1::2])])
         if len(keyinfo[-1]) > keyinfo_size: keyinfo_size = len(keyinfo[-1])
     line = ""
-    for k in range(keyinfo_size):
-        line += "[" + ".".join(["%04X" % (0 if len(e) <= k else e[k]) for e in keyinfo]) + "]"
+    for k in keyinfo :
+        line += "[" + ".".join(["%04X" % (i) for i in k]) + "]"
+#    for k in range(keyinfo_size):
+#        line += "[" + ".".join(["%04X" % (0 if len(e) <= k else e[k]) for e in keyinfo]) + "]"
     return line
