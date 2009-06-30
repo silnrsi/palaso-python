@@ -1,4 +1,5 @@
 ~$
 \.pyc$
-^((build|dist)/|(MANIFEST)$)
+^((build|dist)/|MANIFEST$)
+^(\.(pydev)?project|\.settings)$
 

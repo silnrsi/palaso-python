@@ -90,7 +90,7 @@ class EmptyBuffer(Exception): pass
 
 # Define some 'typedefs' these make the argtypes list slight less opaque.
 converter = c_void_p
-mapping   = c_char_p
+mapping   = POINTER(c_char)
 nameid    = c_uint16
 status    = c_long
 c_bool    = c_ubyte
