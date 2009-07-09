@@ -59,17 +59,11 @@
                 <p>ၞ</p><p>ၟ</p><p>ျ</p><p>ြ</p><p>ၠ</p><p>ွ</p><p>ႂ</p><p>ှ</p><p>ျွ</p><p>ြွ</p><p>ျှ</p><p>ြှ</p><p>ွှ</p><p>ျွှ</p><p>ြွှ</p>
 
                 <!-- Independent vowels -->
-<!--                <reset>အီ</reset><t>ဤ</t>
-                <reset>အူ</reset><t>ဦ</t> -->
                 <reset>&#x1019;&#x103A;</reset><x><p>&#x102F;&#x1036;</p><p>&#x1019;&#x103A;&#x102F;&#x1037;</p><p>&#x102F;&#x1036;&#x1037;</p><p>&#x1019;&#x103A;&#x102F;&#x1038;</p><p>&#x102F;&#x1036;&#x1038;</p><extend>&#x102F;</extend></x>
                 <reset>&#x1019;&#x103A;</reset><x><p>&#x102D;&#x1036;</p><p>&#x1019;&#x103A;&#x102D;&#x1037;</p><p>&#x102D;&#x1036;&#x1037;</p><p>&#x1019;&#x103A;&#x102D;&#x1038;</p><p>&#x102D;&#x1036;&#x1038;</p><extend>&#x102D;</extend></x>
-<!--		<reset>&#x1021;</reset><x><i>&#x1021;&#x102F;</i><extend>&#x102F;</extend></x> -->
 		<reset>&#x1021;</reset><x><t>&#x1021;&#x102F;&#x102F;&#x1036;</t><extend>&#x102F;&#x1036;&#x102F;</extend></x>
-<!--		<reset>&#x1021;&#x102F;&#x102F;&#x1036;</reset><x><i>&#x1025;&#x102F;&#x1036;</i><extend>&#x102F;&#x1036;&#x102F;</extend></x> -->
-<!--		<reset>&#x1025;&#x102F;&#x1036;</reset><i>&#x1021;&#x102F;&#x102F;&#x1036;</i> -->
                 <!-- Contractions -->
                 <reset>က&#x103A;</reset><x><i>&#x1000;&#x103A;&#x1031;&#x102C;&#x103B;</i><extend>&#x1031;&#x102C;ကျ</extend></x> <!-- (suffix of) man -->
-<!--                <reset>&#x1000;&#x103A;&#x1031;&#x102C;&#x103B;</reset><x><i>&#x1031;&#x102C;&#x1000;&#x103A;&#x103B;</i><extend>&#x1031;&#x102C;ကျ</extend></x> --> <!-- (suffix of) man -->
                 <reset>န&#x103A;</reset><x><i>&#x1014;&#x103A;&#x1015;&#x103A;&#x102F;</i><i>&#x1014;&#x103A;&#x102F;&#x1015;&#x103A;</i><extend>နပ&#x103A;&#x102F;</extend></x> <!-- (suffix of) I -->
                 <!-- Great Sa -->
                 <reset>သ&#x1039;&#x1031;သ</reset><i>ေဿ</i>
