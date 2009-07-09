@@ -43,7 +43,9 @@ class Mapping(str):
 
     def __str__(self):  return self.lhsName + ' <-> ' + self.rhsName
     
-    def __repr__(self): return 'Mapping(%s)' % self._repr_args 
+    def __repr__(self): return ('Mapping(%s)' % self._repr_args 
+                                if hasattr(self,'__repr_args') 
+                                else object.__repr__(self)) 
     
     @property
     @memoize
