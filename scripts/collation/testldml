@@ -1,11 +1,11 @@
 #!/usr/bin/python2.6
 
-import sys, xml.sax, palaso, pprint, PyICU
+import sys, xml.sax, palaso, pprint, PyICU, re
 from optparse import OptionParser
 from palaso.collation import *
-from palaso.contexts import palaso
+from palaso.contexts import defaultapp
 
-with palaso() :
+with defaultapp() :
     usage = "%prog [options] codes"
     parser = OptionParser(usage)
     parser.add_option("-l", "--ldml", help = "LDML file containing collation")
@@ -46,7 +46,8 @@ with palaso() :
             for s in sorted(collation.getElements()) :
                 print "%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s)))
         if options.preprocess and collation and collation.reorders :
-            str = reduce(lambda s, p: p[0].sub(p[1], s), collation.reorders, str)
+            preproc = [(re.compile(p[0]), p[1]) for p in collation.reorders]
+            str = reduce(lambda s, p: p[0].sub(p[1], s), preproc, str)
         print "%s : %s" % (pprint.pformat(str), palaso.collation.icu.strkey(icuCollation.getCollationKey(str)))
     else :
         print options.ldml

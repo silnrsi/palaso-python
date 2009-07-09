@@ -1,11 +1,12 @@
-import unittest, palaso, os
+import unittest, palaso, os, codecs
 from palaso.collation import *
 import xml.sax
 
 class TestCollation(unittest.TestCase) :
     def sortldml(self, ldml, infile, alt='', depth=15) :
-        inf = open(os.path.join('base', infile))
+        inf = codecs.open(os.path.join('base', infile), "r", "utf-8")
         indata = inf.readlines()
+        inf.close()
         handler = palaso.collation.tailor.LDMLHandler()
         ldmlparser = xml.sax.make_parser()
         ldmlparser.setContentHandler(handler)
@@ -30,7 +31,7 @@ class TestCollation(unittest.TestCase) :
         self.assertEqual(indata, outdata, "lists do not sort equally")
        
     def test_my(self) :
-        self.sortldml('my-reg2.xml', 'my-reg1.txt')
+        self.sortldml('my-reg1.xml', 'my-reg1.txt')
 
     def test_kht(self) :
         self.sortldml('kht.xml', 'kht_words.txt')
