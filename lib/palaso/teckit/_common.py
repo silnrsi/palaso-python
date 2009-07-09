@@ -136,10 +136,22 @@ def FLAGS(ctype, *flags):
                 self.value = value[0]
         
         def __str__(self):
-            return '|'.join(fn[0] for fn in _BITS._fields_ if getattr(self,fn[0],False))
+            return '(' + ' + '.join(fn[0] for fn in _BITS._fields_ if getattr(self,fn[0],False)) + ')'
         
         @property
         def _as_parameter_(self): return self.value
         
     return _FLAGS
 
+
+def memoize(fn):
+    from functools import wraps
+    memo = {}
+    @wraps(fn)
+    def _decor(*args):
+        try:
+            return memo[args]
+        except KeyError:
+            memo[args] = val = fn(*args)
+            return val
+    return _decor

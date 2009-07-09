@@ -12,7 +12,8 @@ from __future__ import with_statement
 
 import _engine
 import codecs
-from _engine import getVersion
+
+from _engine import getVersion, memoize
 from _engine import Option
 from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
@@ -27,7 +28,8 @@ class Mapping(str):
     
     def __init__(self, path):
         self._repr_args = repr(path)
-        
+
+    @memoize   
     def __getattr__(self, name):
         from _engine import getMappingName
         try:
@@ -41,15 +43,22 @@ class Mapping(str):
 
     def __str__(self):  return self.lhsName + ' <-> ' + self.rhsName
     
-    def __repr__(self): return 'Mapping(%s)' % self._repr_args 
+    def __repr__(self): return ('Mapping(%s)' % self._repr_args 
+                                if hasattr(self,'__repr_args') 
+                                else object.__repr__(self)) 
+    
+    @property
+    @memoize
+    def flags(self):
+        return _engine.getMappingFlags(self, len(self))
     
     @property
     def lhsFlags(self):
-        return _engine.getMappingFlags(self, len(self))[0]
+        return self.flags[0]
     
     @property
     def rhsFlags(self):
-        return _engine.getMappingFlags(self, len(self))[1]
+        return self.flags[1]
 
 
 
@@ -65,14 +74,13 @@ class Converter(object):
         source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
         target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
         self.__converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self.__flags    = None
         self.__residue  = ''
 
     
     def __del__(self):
         _engine.disposeConverter(self.__converter)
     
-    
+    @memoize
     def __getattr__(self, name):
         from _engine import getConverterName
         try:
@@ -86,16 +94,17 @@ class Converter(object):
     
     
     @property
+    @memoize
+    def flags(self):
+        return _engine.getConverterFlags(self.__converter)
+    
+    @property
     def sourceFlags(self):
-        if not self.__flags:
-            self.__flags = _engine.getConverterFlags(self.__converter)
-        return self.__flags[0]
+        return self.flags[0]
     
     @property
     def targetFlags(self):
-        if not self.__flags:
-            self.__flags = _engine.getMappingFlags(self.__converter)
-        return self.__flags[1]
+        return self.flags[1]
     
     
     def reset(self):
