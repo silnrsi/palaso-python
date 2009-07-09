@@ -10,26 +10,30 @@
 #
 
 import _compiler as _tc
-from _compiler import CompilationError, \
-                      getUnicodeName, getTECkitName, getUnicodeValue
+from _compiler import getUnicodeName, getTECkitName, getUnicodeValue
 from engine import Mapping
 
 
-def _err_fn(user_data, msg, param, line):
-    import sys
-    sys.stderr.write('compilation error at line %d: %s\n' % (line,msg +': ' + param if param else msg)) 
-
+class CompilationError(_tc.CompilationError):
+    def __init__(self, errors):
+        self.errors = errors
+    
+    def __str__(self):
+        return 'compilation failed with errors:\n%s' % '\n'.join('line %d: %s' % (line, msg +': ' + param if param else msg) for (msg, param, line) in self.errors)
 
 
 class _Compiled(Mapping):
     def __new__(cls,  txt, compress=True):
-        (tbl, tbl_len) = _tc.compile(txt, len(txt), compress,
-                                        _tc.teckit_error_fn(_err_fn, ), 
-                                        None)
+        compile_errors = []
+        callback = _tc.teckit_error_fn(lambda dummy, *err: compile_errors.append(err))
+        (tbl, tbl_len) = _tc.compile(txt, len(txt), compress, callback, None)
+
+        if compile_errors: raise CompilationError(compile_errors)
+        
         buf = super(Mapping,cls).__new__(cls,tbl[:tbl_len])
         _tc.disposeCompiled(tbl)
-        buf.__table = tbl
         return buf
+
 
     def __init__(self, *args):
         res = []
@@ -40,12 +44,14 @@ class _Compiled(Mapping):
 
 
 def translate(txt):
-    (tbl, tbl_len) = _tc.compileOpt(txt, len(txt), 
-                                    _tc.teckit_error_fn(_err_fn, ), None,
-                                    _tc.Opt.XML)
+    compile_errors = []
+    callback = _tc.teckit_error_fn(lambda dummy, *err: compile_errors.append(err))
+    (tbl, tbl_len) = _tc.compileOpt(txt, len(txt), callback, None, _tc.Opt.XML)
+    
+    if compile_errors: raise CompilationError(compile_errors)
+        
     xml_doc = str(tbl[:tbl_len])
     _tc.disposeCompiled(tbl)
-    
     return xml_doc
 
 
