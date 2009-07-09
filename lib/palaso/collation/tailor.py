@@ -89,11 +89,9 @@ class Collation :
         element.flattenrule = flattenrule
         self.rules.append(element)
         return element
-    def addIdentity(self, reset, *values) :
-        if not len(values) : return
+    def addIdentity(self, reset, value, context=None) :
         e = self.addreset(reset, 0, flattenrule=1)
-        for i in values :
-            e = e.addElement(i, 'i', None, flattenrule=1)
+        e = e.addElement(value, 'i', context, flattenrule=1)
     def asICU(self) :
         strengths = {'primary' : '1', 'secondary' : '2', 'tertiary' : '3', 'quaternary' : '4'}
         res = ""
@@ -131,6 +129,7 @@ class Collation :
         results = []
         inputs = {}
         outputs = {}
+        ces = set()
         for r in self.reorders :
             for b, s in palaso.reggen.expand_sub(r[0], r[1], debug=debug) :
                 if b == s : continue
@@ -148,20 +147,33 @@ class Collation :
                     print ("%s -> %s" % (b, s)).encode("utf-8")
 
         for r in self.rules :
-            if r.flattenrule : continue
+            expansion = None
+            i = reduce(lambda m, x: max(m, x if r.string[0:x] in ces else 0), range(1, len(r.string)+1), 0)
+            if i == 0 : i = 1
+            if i < len(r.string) :
+                expansion = Context()
+                expansion.extend = r.string[i:]
+                r.string = r.string[:i]
+            elif r.flattenrule :
+                continue
             for e in r :
-                if e.relation == 'r' or e.string in outputs : continue
+                if e.relation != 'r' and expansion and not e.context :
+                    e.context = expansion
+                ces.add(e.string)
+                if r.flattenrule or e.relation == 'r' or e.string in outputs : continue
                 idents = (o for o in longestReplace(e.string, outputs) if o != e.string)
                 for o in idents :
                     passed = False
-                    for r in self.rules :
-                        if r.relation != 'r' and r.string != e.string : continue
-                        for f in r :
+                    for n in self.rules :
+                        if n.relation != 'r' and n.string != e.string : continue
+                        for f in n :
                             if f.string == o :
                                 passed = True
                                 break
                         if passed : break
-                    if not passed : self.addIdentity(e.string, o)
+                    if not passed :
+                        self.addIdentity(e.string, o, context=e.context)
+                        ces.add(o)
         self.flattened = 1
     def testPrimaryMultiple(self) :
         ces = set()
