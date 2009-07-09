@@ -1,0 +1,68 @@
+These are tests of the engine.Mapping object
+
+>>> from palaso.teckit.engine import Mapping
+
+Test access to the meta data and flags for silipa93.tec
+>>> m = Mapping('data/silipa93.tec')
+
+Check left and right sides encoding info
+>>> m.lhsName; m.lhsDescription
+'SIL-IPA93-2001'
+'SIL IPA93 Font encoding'
+>>> m.rhsName; m.rhsDescription
+'Unicode'
+'Unicode'
+
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/silipa93.tec')"
+'SIL-IPA93-2001 <-> Unicode'
+
+
+Check extended info from UTR-22 these are optional and may through an AttributeError
+if not included in the mapping
+>>> m.version; m.contact; m.regAuthority; m.regName
+'8'
+'mailto:martin_hosken@sil.org'
+'SIL International'
+'IPA93'
+
+This attribute is absent for silipa93.tec
+>>> m.copyright
+Traceback (most recent call last):
+    ...
+AttributeError: Mapping('data/silipa93.tec') object has no attribute 'copyright'
+
+-----------
+
+Test access to the meta data and flags for academy.tec
+>>> m = Mapping('data/academy.tec')
+
+Check left and right sides encoding info
+>>> m.lhsName; m.lhsDescription
+'SIL-Academy-2001'
+'Geocomp Burmese encoding'
+>>> m.rhsName; m.rhsDescription
+'Unicode'
+'Unicode'
+
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/academy.tec')"
+'SIL-Academy-2001 <-> Unicode'
+
+Check extended info from UTR-22 these are optional and may raise an
+AttributeError if not included in the mapping, in this case regName and 
+copyright were never included in the tec mapping.
+>>> m.version; m.contact; m.regAuthority
+'7'
+'mailto:martin_hosken@sil.org'
+'none'
+>>> m.regName
+Traceback (most recent call last):
+    ...
+AttributeError: Mapping('data/academy.tec') object has no attribute 'regName'
+>>> m.copyright
+Traceback (most recent call last):
+    ...
+AttributeError: Mapping('data/academy.tec') object has no attribute 'copyright'
