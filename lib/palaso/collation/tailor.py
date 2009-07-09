@@ -152,7 +152,16 @@ class Collation :
             for e in r :
                 if e.relation == 'r' or e.string in outputs : continue
                 idents = (o for o in longestReplace(e.string, outputs) if o != e.string)
-                self.addIdentity(e.string, *idents)
+                for o in idents :
+                    passed = False
+                    for r in self.rules :
+                        if r.relation != 'r' and r.string != e.string : continue
+                        for f in r :
+                            if f.string == o :
+                                passed = True
+                                break
+                        if passed : break
+                    if not passed : self.addIdentity(e.string, o)
         self.flattened = 1
     def testPrimaryMultiple(self) :
         ces = set()
@@ -261,21 +270,19 @@ def overlap(base, str) :
         base.startswith(tuple(str[-i:] for i in run)))
 
 def longestReplace(s, d) :
-    for i in range(1, len(s)+1) :
-        if not s[0:i] in d :
-            break
-    if i > 1 :
-        for a in d[s[0:i-1]] :
+    i = reduce(lambda m, x: max(m, x if s[0:x] in d else 0), range(1, len(s)+1), 0)
+    if i > 0 :
+        for a in d[s[0:i]] :
             if i < len(s) :
-                for y in longestReplace(s[i-1:], d) :
+                for y in longestReplace(s[i:], d) :
                     yield a + y
             else :
                 yield a
     elif len(s) == 1 :
         yield s
     else :
-        for y in longestReplace(s[i:], d) :
-            yield s[0:i] + y
+        for y in longestReplace(s[1:], d) :
+            yield s[0:1] + y
 
 if __name__ == "__main__" :
     filename = sys.argv[1]
