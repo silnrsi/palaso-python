@@ -2,14 +2,22 @@ from __future__ import with_statement
 
 import unittest
 import os.path
-from palaso.teckit.compiler import compile, translate
+from palaso.teckit.compiler import compile, translate, CompilationError
 from palaso.teckit.engine   import Converter, Form, Mapping
+
+def resource(name):
+    return os.path.join('data', name)
+
+def open_resource(name):
+    with open(resource(name),'rb') as f:
+        res = f.read()
+    return res
 
 class TestCompiler:
     def test_compilation(self):
         if not hasattr(self, 'reference_file'): return
-        ref_map = Mapping(os.path.join('data',self.reference_file))
-        source  = open(os.path.join('data',self.source_file),'rb').read()
+        ref_map = Mapping(resource(self.reference_file))
+        source  = open_resource(self.source_file)
         com_map = compile(source, self.compress)
         self.assertEqual(str(com_map), str(ref_map))
         self.assertEqual(com_map, ref_map,
@@ -19,8 +27,8 @@ class TestCompiler:
 
     def test_translation(self):
         if not hasattr(self, 'reference_file_xml'): return
-        ref_map = open(os.path.join('data',self.reference_file_xml)).read()
-        source  = open(os.path.join('data',self.source_file),'rb').read()
+        ref_map = open_resource(self.reference_file_xml)
+        source  = open_resource(self.source_file)
         com_map = translate(source)
         self.assertEqual(com_map, ref_map,
                          'translated %r (xml) does not match reference %r' % 
@@ -43,6 +51,13 @@ class CompileGreekMappingCompressed(unittest.TestCase, CompileGreekMapping):
 class TranslateISO_8859_1_XML(unittest.TestCase, TestCompiler):
     source_file    = 'ISO-8859-1.map'
     reference_file_xml = 'ISO-8859-1.map.reference.xml'
+
+
+
+class TestCompilerFailure(unittest.TestCase):
+    def test_compile_fail(self):
+        source = open_resource('ISO-8859-1.map.reference.xml')
+        self.assertRaises(CompilationError, compile, source)
 
 
 if __name__ == "__main__":
