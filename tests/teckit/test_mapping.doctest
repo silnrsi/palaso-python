@@ -33,6 +33,11 @@ Traceback (most recent call last):
     ...
 AttributeError: Mapping('data/silipa93.tec') object has no attribute 'copyright'
 
+Check the flags come out as expected:
+>>> print m.lhsFlags; print m.rhsFlags
+()
+(expectsNFD + generatesNFD + unicode)
+
 -----------
 
 Test access to the meta data and flags for academy.tec
@@ -66,3 +71,8 @@ AttributeError: Mapping('data/academy.tec') object has no attribute 'regName'
 Traceback (most recent call last):
     ...
 AttributeError: Mapping('data/academy.tec') object has no attribute 'copyright'
+
+Check the flags come out as expected:
+>>> print m.lhsFlags; print m.rhsFlags
+()
+(expectsNFD + generatesNFD + unicode)

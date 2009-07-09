@@ -5,7 +5,7 @@ from glob import glob
 
 
 setup(name='palaso',
-      version='0.1.0a1',
+      version='0.2.0b1',
       description='Payap Language Software python package and scripts',
       long_description="Modules and scripts useful for building language software.",
       maintainer='Tim Eves',
