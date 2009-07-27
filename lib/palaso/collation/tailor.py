@@ -46,6 +46,7 @@ class LDMLHandler(xml.sax.ContentHandler) :
         if tag == 'reset' :
             if self.textelement :
                 self.currelement = self.currcollation.addreset(self.textelement, 1)
+                self.textelement = None
             else :
                 self.currelement = self.currcollation.addreset(self.text, 0)
             if self.resetattr :
@@ -142,10 +143,15 @@ class Collation :
                     outputs[s].append(b)
                 else :
                     outputs[s] = [b]
+                # add map for &output=input
                 self.addIdentity(s, b)
                 if debug :
                     print ("%s -> %s" % (b, s)).encode("utf-8")
 
+        # go through the rules collecting sequences which are collation elements
+        # convert &abc < x -> &a < x/bc type thing everywhere
+        # for each rhs that is the result of a regexp subst, create a corresponding original string
+        # and add an identity (with a possible corresponding extension)
         for r in self.rules :
             expansion = None
             i = reduce(lambda m, x: max(m, x if r.string[0:x] in ces else 0), range(1, len(r.string)+1), 0)
