@@ -1,5 +1,5 @@
 from contextlib import contextmanager, nested
-import sys
+import sys, codecs
 import errno
 import sre_parse
 
@@ -8,7 +8,7 @@ def defaultapp() :
 * console
 * relaxedsubs
 """
-    return nested(console(), relaxedsubs())
+    return nested(utf8out(), console(), relaxedsubs())
 
 @contextmanager
 def console(ctrlc=sys.exit) :
@@ -46,4 +46,11 @@ def relaxedsubs() :
         raise
     finally :
         sre_parse.expand_template = temp
+
+@contextmanager
+def utf8out() :
+    """Wraps sys.stdout to always output as UTF-8"""
+    enc = codecs.lookup('UTF-8')
+    sys.stdout = codecs.StreamReaderWriter(sys.stdout, enc.streamreader, enc.streamwriter)
+    yield
 
