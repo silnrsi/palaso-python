@@ -239,17 +239,17 @@ class Element :
         if self.context and self.context.extend :
             res += "/" + self.context.extend
         return res
-    def asLDML(self, sax, currcontext) :
+    def asLDML(self, sax, currcontext = None) :
         if currcontext and not self.context :
             if currcontext.extend :
-                sax.startElement('extend')
+                sax.startElement('extend', AttributesImpl({}))
                 sax.characters(currcontext.extend)
                 sax.endElement('extend')
             sax.endElement('x')
         if not currcontext and self.context :
-            sax.startElement('x')
+            sax.startElement('x', AttributesImpl({}))
             if self.context.context :
-                sax.startElement('context')
+                sax.startElement('context', AttributesImpl({}))
                 sax.characters(self.context.context)
                 sax.endElement('context')
         currcontext = self.context
@@ -264,7 +264,7 @@ class Element :
         sax.endElement(tag)
 
         if self.child :
-            self.child.asLDML(sax)
+            self.child.asLDML(sax, currcontext)
 
 class ElementIter :
     def __init__(self, start) :

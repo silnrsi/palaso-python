@@ -49,7 +49,7 @@ with defaultapp() :
     else :
         tailor = ""
     results = palaso.collation.icu.sorted(tailor, infile.readlines(), level=options.depth, preproc = collation.reorders if options.preprocess else ())
-    outfile.write("".join(results))
+    outfile.write(u"".join(results))
     if options.prefile :
         preprocs = [(re.compile(p[0]), p[1]) for p in collation.reorders]
         prefile = codecs.open(options.prefile, "w", "utf-8")
