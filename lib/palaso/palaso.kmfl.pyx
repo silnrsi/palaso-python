@@ -54,6 +54,8 @@ cdef class kmfl :
         self.kbd = kmfl_load_keyboard(fname)
         if self.kbd >= 0 :
             kmfl_attach_keyboard(self.kmsi, self.kbd)
+        else :
+            raise SyntaxError("Can't load keyboard " + fname)
 
     def __del__(self) :
         kmfl_detach_keyboard(self.kmsi)
