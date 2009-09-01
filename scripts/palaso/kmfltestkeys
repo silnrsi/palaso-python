@@ -1,0 +1,15 @@
+#!/usr/bin/python2.6
+
+from palaso.contexts import defaultapp
+from optparse import OptionParser
+from palaso.kmfl import kmfl
+import sys
+
+with defaultapp() :
+    k = kmfl(sys.argv[1])
+    for l in sys.stdin.readlines() :
+        l = l.strip()
+        r = k.run_string(l)
+        print l + "\t" + r
+
+        
