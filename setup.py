@@ -2,6 +2,8 @@
 
 from distutils.core import setup
 from glob import glob
+from Pyrex.Distutils.extension import Extension
+from Pyrex.Distutils import build_ext
 
 
 setup(name='palaso',
@@ -12,6 +14,10 @@ setup(name='palaso',
       maintainer_email='tim_eves@sil.org',
       url='http://projects.palaso.org/projects/show/palaso-python',
       packages=['', 'palaso', 'palaso.collation'],
+      ext_modules = [
+        Extension("palaso.kmfl", ["lib/palaso/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"])
+        ],
+      cmdclass = {'build_ext': build_ext},
       scripts=glob('scripts/*/*'),
       license='LGPL',
       platforms=['Linux','Win32','Mac OS X'],
