@@ -1,4 +1,5 @@
 from palaso.kmfl import kmfl
+from palaso.kmn import items_to_keys
 from random import choice
 import sys
 
@@ -8,9 +9,9 @@ class Coverage :
         self.kmfl = kmfl(fname)
         self.numrules = self.kmfl.num_rules()
 
-    def create_sequences(self, input, cache = {}, mode = 'first') :
+    def create_sequences(self, input, cache = {}, mode = 'random') :
         for i in xrange(0, self.numrules) :
-            res = self.kmfl.reverse_match(input, i)
+            res = self.kmfl.reverse_match(input, i, mode = mode)
             if res != None and len(res[1]) > 0:
                 for output in res[1] :
                     if output[-1] >= 0x100FF00 : continue   # ignore specials
@@ -29,29 +30,28 @@ class Coverage :
                     else :
                         yield [output[0]]
 
-    def find_input(self, string, mode = 'first') :
+    def find_input(self, string, mode = 'first1') :
         input = [ord(i) for i in string]
         for output in self.create_sequences(input, mode = mode) :
-            yield self.item_to_keys(output)
-            if mode == 'first' : break
+            yield items_to_keys(output)
 
-    def coverage_test(self, mode = 'first') :
+    def coverage_test(self, mode = 'random') :
         cache = {}
+        outputted = set()
         for i in xrange(0, self.numrules) :
-            sys.stderr.write(str(i) + "\n")
-            for c in self.kmfl.flatten_context(i, side = 'l') :
+#            print i, self.kmfl.rule(i)
+            for c in self.kmfl.flatten_context(i, side = 'l', mode = mode) :
+                if (c[-1] & 0xFFFF) > 0xFF00 : continue
 #                print c
                 if len(c) > 1 :
                     for output in self.create_sequences(c[:-1], cache = cache, mode = mode) :
-                        yield self.item_to_keys(output + [c[-1]])
+                        res = items_to_keys(output + [c[-1]])
+                        if not res in outputted :
+                            outputted.add(res)
+                            yield res
                 else :
-                    yield self.item_to_keys([c[-1]])
+                    res = items_to_keys([c[-1]])
+                    if not res in outputted :
+                        outputted.add(res)
+                        yield res
 
-    def item_to_keys(self, items) :
-        res = u""
-        for o in items :
-            if o < 0xFFFFFF :
-                res = res + unichr(o)
-            elif o < 0x1FFFFFF :
-                res = res + unichr(o - 0x1000000 - 32)
-        return res

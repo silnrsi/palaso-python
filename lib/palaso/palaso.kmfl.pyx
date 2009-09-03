@@ -1,4 +1,5 @@
 import re
+from palaso.kmn.vector import VectorIterator
 
 ctypedef unsigned int UINT
 
@@ -150,7 +151,7 @@ cdef class kmfl :
         res.reverse()
         return "".join(map(unichr, res))
 
-    def reverse_match(self, input, rulenum) :
+    def reverse_match(self, input, rulenum, mode = 'all') :
         """Given a rule and an input context, matches the end of the input context
             against the output of the rule, if it matches, returns all possible
             lhs contexts that will produce this output
@@ -191,11 +192,11 @@ cdef class kmfl :
                         if indices[index[0]] != None and indices[index[0]] != index[1] : return None
                         indices[index[0]] = index[1]
                 i = i + lcount - 1
-        vector = self.init_vector(indices)
+        vector = VectorIterator(indices, mode)
         result = []
         while vector != None :
-            result.append(self.expand_context(rulenum, vector, side = 'l'))
-            vector = self.update_vector(vector, indices)
+            result.append(self.expand_context(rulenum, vector.vector, side = 'l'))
+            vector = vector.advance()
         return (rule.olen, result)
 
     def test_match(self, UINT charitem, UINT ritem) :
@@ -243,7 +244,7 @@ cdef class kmfl :
                     res.extend(self.expand_context(rulenum, vector, side = 'r'))
         return res
 
-    def flatten_context(self, UINT rulenum, side = 'l') :
+    def flatten_context(self, UINT rulenum, side = 'l', mode = 'all') :
         cdef UINT *context, clen
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
@@ -259,10 +260,10 @@ cdef class kmfl :
             elif ruleitem == item_index :
                 indices[item_index_offset(context[i]) - 1] = range(0, self.kmsi.stores[item_base(context[i])].len)
         result = []
-        vector = self.init_vector(indices)
+        vector = VectorIterator(indices, mode = mode)
         while vector != None :
-            result.append(self.expand_context(rulenum, vector, side = side))
-            vector = self.update_vector(vector, indices)
+            result.append(self.expand_context(rulenum, vector.vector, side = side))
+            vector = vector.advance()
         return result
 
     def match_store(self, UINT snum, UINT item) :
@@ -277,22 +278,4 @@ cdef class kmfl :
         if len(res) == 0 :
             return None
         return res
-
-    def update_vector(self, vector, indices) :
-        for 0 <= i < len(vector) :
-            if indices[i] != None :
-                ind = indices[i].index(vector[i])
-                if ind < len(indices[i]) - 1 :
-                    vector[i] = indices[i][ind + 1]
-                    return vector
-                else :
-                    vector[i] = indices[i][0]
-        return None
-
-    def init_vector(self, indices) :
-        vector = [0] * len(indices)
-        for 0 <= i < len(indices) :
-            if indices[i] != None : vector[i] = indices[i][0]
-        return vector
-
 

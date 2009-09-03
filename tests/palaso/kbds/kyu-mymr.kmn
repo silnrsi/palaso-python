@@ -256,10 +256,8 @@ any(anuU) + any(m4DiaK) > index(mDia, 2) context
 
 any(lDiaU) any(anuU) + any(uDiaK) > index(uDiaU, 3) context
 any(anuU) + any(uDiaK) > index(uDiaU, 2) context
- + any(uDiaK) > index(uDiaU, 1)
 
 any(anuU) + any(lDiaK) > index(lDiaU, 2) context
- + any(lDiaK) > index(lDiaU, 1)
  + any(anuK) > index(anuU, 1)
 
 U+1005 + 's' > U+1008
