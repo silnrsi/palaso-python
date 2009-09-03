@@ -138,12 +138,12 @@ def keysyms_items(syms) :
     return [keysym_item(s) for s in re.split(ur'(\\.|\[[^\]]*\]|.)', syms)[1::2]]
 
 def keysym_item(sym) :
-    if re.match(r'\[[^\]]+\]', sym) :
-        words = split(r'\s+', sym[1:-1].strip())
+    if re.match(r'^\[[^\]]+\]$', sym) :
+        words = re.split(r'\s+', sym[1:-1].strip())
         mod = 0
         for w in words[:-1] :
             mod = mod | _modifiers[w]
-        key = _rawkeys[sym[-1]]
+        key = _rawkeys[words[-1]]
         return 0x1000000 | (mod << 16) | key
     elif sym[0] == '\\' :
         char = sym[1]
@@ -182,7 +182,7 @@ def item_to_key(item) :
         return escape(unichr(item))
         
 def escape(keyname) :
-    if "\\[".find(keyname) > 0 :
+    if "\\[".find(keyname) >= 0 :
         return "\\" + keyname
     else :
         return keyname

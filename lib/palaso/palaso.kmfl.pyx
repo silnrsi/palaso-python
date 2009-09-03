@@ -130,22 +130,11 @@ cdef class kmfl :
             rhs.append(base[i])
         return (lhs, rhs)
 
-    def run_string(self, keystring) :
+    def run_items(self, items) :
         clear_history(self.kmsi)
-        keys = re.split(r"([+^%]*.)", keystring)[1::2]
-        for k in keys :
-            akey = re.split("[+^%]", k)
-            base = akey[-1]
-            mod = 0
-            for m in akey[1::2] :
-                if m == '+' :
-                    mod = mod + shift
-                elif m == '^' :
-                    mod = mod + ctrl
-                elif m == '%' :
-                    mod = mod + alt
-            kmfl_interpret(self.kmsi, ord(base), mod)
-            res = []
+        for i in items :
+            kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
+        res = []
         for 1 <= i <= self.kmsi.nhistory :
             res.append(self.kmsi.history[i])
         res.reverse()
