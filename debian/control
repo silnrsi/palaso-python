@@ -2,7 +2,7 @@ Source: python-palaso
 Section: python
 Priority: optional
 Maintainer: Tim Eves <tim_eves@sil.org>
-Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>=2.5)
+Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>=2.5), libkmfl-dev, libkmflcomp-dev
 Build-Depends-Indep: python-support (>= 0.5.3)
 Standards-Version: 3.8.0
 Homepage: http://projects.palaso.org/projects/show/palaso-python
