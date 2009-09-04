@@ -162,6 +162,18 @@ def _chars(rdata) :
         raise SyntaxError, "Unrecognised character group operator: " + op
 
 def expand_sub(string, template, debug=0, mode='all') :
+    """ Given a regular expression and a replacement string, generate expansions of
+        the regular expression and for each one return it and its transformation
+        as applied by the replacement string.
+
+        string : regular expression to expand
+        template : transformation to apply to each regular expression
+        mode : can take 3 values
+            all : return all possible shortest strings that the regular expression
+                    would match
+            first : return the first string that all would return
+            random : return one random string that the regular expression would match
+    """
     pattern = sre_parse.parse(string)
     pattern.mode = mode
     template = sre_parse.parse_template(template, pattern)
@@ -173,6 +185,16 @@ def expand_sub(string, template, debug=0, mode='all') :
         yield (s.string, sre_parse.expand_template(template, s))
     
 def invert(string, mode='all') :
+    """ Given a regular expression generate expansions of the regular expression and
+        return them.
+
+        string : regular expression to expand
+        mode : can take 3 values
+            all : return all possible shortest strings that the regular expression
+                    would match
+            first : return the first string that all would return
+            random : return one random string that the regular expression would match
+    """
     pattern = sre_parse.parse(string)
     pattern.mode = mode
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
