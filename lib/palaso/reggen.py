@@ -2,6 +2,7 @@
 """Module to generate strings from a regexp"""
 
 import sre_parse, sre_constants
+from random import randrange, choice
 
 class MatchObj :
     def __init__(self, pattern, str) :
@@ -101,11 +102,16 @@ def _proc(pattern, data, match) :
         s.string += unichr(data[1])
         yield s
     elif op == 'max_repeat' :   # ('max_repeat', (min, max, [contents]))
-        subdata = [data[1][2][0]] * data[1][1]
-        for n in range(data[1][1] - data[1][0], 0, -1) :
-            for s in _rec_proc(pattern, subdata, 0, match) :
-                yield s
-            del subdata[-1]
+        if pattern.mode == 'random' :
+            subdata = [data[1][2][0]] * randrange(data[1][0], data[1][1])
+        elif pattern.mode == 'first' :
+            subdata = [data[1][2][0]] * data[1][0]
+        else :
+            subdata = [data[1][2][0]] * data[1][1]
+            for n in range(data[1][1] - data[1][0], 0, -1) :
+                for s in _rec_proc(pattern, subdata, 0, match) :
+                    yield s
+                del subdata[-1]
         if len(subdata) > 0 :
             for s in _rec_proc(pattern, subdata, 0, match) :
                 yield s
@@ -119,13 +125,27 @@ def _proc(pattern, data, match) :
                 s.endpos.insert(data[1][0], len(s.string))
             yield s
     elif op == 'in' :           # ('in', [contents])
+        allchars = []
         for r in data[1] :
-            for c in _chars(r) :
-                s = match.copy()
-                s.string += unichr(c)
-                yield s
+            allchars.extend([c for c in _chars(r)])
+        if pattern.mode == 'first' :
+            dochars = [allchars[0]]
+        elif pattern.mode == 'random' :
+            dochars = [choice(allchars)]
+        else :
+            dochars = allchars
+        for c in dochars :
+            s = match.copy()
+            s.string += unichr(c)
+            yield s
     elif op == 'branch' :       # ('branch', (None, [[contents1], [contents2], ...]))
-        for d in data[1][1] :
+        if pattern.mode == 'first' :
+            l = [data[1][1][0]]
+        elif pattern.mode == 'random' :
+            l = [choice(data[1][1])]
+        else :
+            l = data[1][1]
+        for d in l :
             for s in _iterate(pattern, d, match) :
                 yield s
     else :
@@ -141,8 +161,9 @@ def _chars(rdata) :
     else :
         raise SyntaxError, "Unrecognised character group operator: " + op
 
-def expand_sub(string, template, debug=0) :
+def expand_sub(string, template, debug=0, mode='all') :
     pattern = sre_parse.parse(string)
+    pattern.mode = mode
     template = sre_parse.parse_template(template, pattern)
     if debug :
         print pattern
@@ -151,15 +172,16 @@ def expand_sub(string, template, debug=0) :
         s.patient = 0
         yield (s.string, sre_parse.expand_template(template, s))
     
-def invert(string) :
+def invert(string, mode='all') :
     pattern = sre_parse.parse(string)
+    pattern.mode = mode
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         yield s.string
 
 if __name__ == "__main__" :
     tests=[
         ('([ab])([cd])', r'\2\1'),
-        (u'([\u1000-\u1003])([\u103C-\u103D]?)([\u102F\u1030])([\u1000-\u1003]\u103A)', r'\1\2\4\3')
+        (u'([\u1000-\u1003])([\u103C-\u103D]?)(\u102F|\u1030)([\u1000-\u1003]\u103A)', r'\1\2\4\3')
     ]
     for t in tests :
         print "-" * 50
