@@ -4,13 +4,14 @@ from palaso.contexts import defaultapp
 from optparse import OptionParser
 from palaso.kmfl import kmfl
 from palaso.kmn import keysyms_items
-import sys
+import sys, codecs
 
 with defaultapp() :
     k = kmfl(sys.argv[1])
-    for l in sys.stdin.readlines() :
-        l = l.strip()
+    for l in codecs.EncodedFile(sys.stdin, 'utf-8').readlines() :
+        l = l.decode('utf-8').strip()
         r = k.run_items(keysyms_items(l))
         print l + "\t" + r
+
 
         
