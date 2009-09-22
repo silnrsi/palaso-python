@@ -1,0 +1,20 @@
+Source: python-palaso
+Section: python
+Priority: optional
+Maintainer: Tim Eves <tim_eves@sil.org>
+Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>=2.5), libkmfl-dev, libkmflcomp-dev
+Build-Depends-Indep: python-support (>= 0.5.3)
+Standards-Version: 3.8.0
+Homepage: http://projects.palaso.org/projects/show/palaso-python
+
+Package: python-palaso
+Architecture: all
+XB-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-ctypes (>= 1.0.2)
+Provides: ${python:Provides}
+Description: Payap Language Software python package and scripts
+ Python scripts, modules and packages created by the Computing Unit at the 
+ Payap Linguistic Institute, a partner ship between SIL and Payap University. 
+ .
+ These have been useful for language software programs and tools develeped 
+ by the Computing Unit.

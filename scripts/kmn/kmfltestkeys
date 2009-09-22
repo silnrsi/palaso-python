@@ -1,0 +1,16 @@
+#!/usr/bin/python2.6
+
+from palaso.contexts import defaultapp
+from optparse import OptionParser
+from palaso.kmfl import kmfl
+from palaso.kmn import keysyms_items
+import sys
+
+with defaultapp() :
+    k = kmfl(sys.argv[1])
+    for l in sys.stdin.readlines() :
+        l = l.strip()
+        r = k.run_items(keysyms_items(l))
+        print l + "\t" + r
+
+        

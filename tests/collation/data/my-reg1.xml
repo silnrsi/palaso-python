@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ldml>
+	<identity>
+		<version number="$Revision: 1.2 $"/>
+		<generation date="$Date: 2009/05/05 23:28:47 $"/>
+		<language type="my"/> 
+	</identity>
+	<collations>
+		<collation type="standard">
+            <special xmlns:palaso="www.palaso.org/ldml/0.1">
+                <palaso:reorder palaso:match="(&#x1029;)(&#x1031;&#x102C;)?((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\4\5&#x1031;&#x102C;"/>
+                <palaso:reorder palaso:match="(&#x102A;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1031;&#x102C;&#x103A;"/>
+                <palaso:reorder palaso:match="(&#x1023;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102D;"/>
+                <palaso:reorder palaso:match="(&#x1024;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102E;"/>
+                <palaso:reorder palaso:match="(&#x1025;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x102F;"/>
+                <palaso:reorder palaso:match="(&#x1026;)((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1030;"/>
+                <palaso:reorder palaso:match="([&#x1027;&#x1028;])((&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;]))?" palaso:reorder="&#x1021;\3\4&#x1031;"/>
+                <palaso:reorder palaso:match="(&#x1031;&#x102C;|&#x1031;&#x102B;|&#x102D;&#x102F;|[&#x102B;-&#x102D;&#x102F;&#x1031;])(&#x1004;&#x103A;|[&#x1000;-&#x1021;])([&#x1039;&#x103A;])" palaso:reorder="\2\3\1"/>
+            </special>
+			<rules>
+                <reset>&#x1021;</reset><p>ႌ</p><p>့</p><p>း</p><p>့း</p>
+                <reset>ာ</reset><s>ါ</s>
+                <reset>ဲ</reset><p>ော</p><s>ေါ</s><p>ော်</p><s>ေါ်</s>
+                <reset>ဴ</reset><p>ံ</p><p>ို</p>
+                <p>&#x1000;&#x1039;</p><s>&#x1000;&#x103A;</s>
+                <p>&#x1001;&#x1039;</p><s>&#x1001;&#x103A;</s>
+                <p>&#x1002;&#x1039;</p><s>&#x1002;&#x103A;</s>
+                <p>&#x1003;&#x1039;</p><s>&#x1003;&#x103A;</s>
+                <p>&#x1004;&#x103A;&#x1039;</p><s>&#x1004;&#x1039;</s><s>&#x1004;&#x103A;</s>
+                <p>&#x1005;&#x1039;</p><s>&#x1005;&#x103A;</s>
+                <p>&#x1006;&#x1039;</p><s>&#x1006;&#x103A;</s>
+                <p>&#x1007;&#x1039;</p><s>&#x1007;&#x103A;</s>
+                <p>&#x1008;&#x1039;</p><s>&#x1008;&#x103A;</s>
+                <p>&#x1009;&#x1039;</p><s>&#x1009;&#x103A;</s>
+                <p>&#x100A;&#x1039;</p><s>&#x100A;&#x103A;</s>
+                <p>&#x100B;&#x1039;</p><s>&#x100B;&#x103A;</s>
+                <p>&#x100C;&#x1039;</p><s>&#x100C;&#x103A;</s>
+                <p>&#x100D;&#x1039;</p><s>&#x100D;&#x103A;</s>
+                <p>&#x100E;&#x1039;</p><s>&#x100E;&#x103A;</s>
+                <p>&#x100F;&#x1039;</p><s>&#x100F;&#x103A;</s>
+                <p>&#x1010;&#x1039;</p><s>&#x1010;&#x103A;</s>
+                <p>&#x1011;&#x1039;</p><s>&#x1011;&#x103A;</s>
+                <p>&#x1012;&#x1039;</p><s>&#x1012;&#x103A;</s>
+                <p>&#x1013;&#x1039;</p><s>&#x1013;&#x103A;</s>
+                <p>&#x1014;&#x1039;</p><s>&#x1014;&#x103A;</s>
+                <p>&#x1015;&#x1039;</p><s>&#x1015;&#x103A;</s>
+                <p>&#x1016;&#x1039;</p><s>&#x1016;&#x103A;</s>
+                <p>&#x1017;&#x1039;</p><s>&#x1017;&#x103A;</s>
+                <p>&#x1018;&#x1039;</p><s>&#x1018;&#x103A;</s>
+                <p>&#x1019;&#x1039;</p><s>&#x1019;&#x103A;</s>
+                <p>&#x101A;&#x1039;</p><s>&#x101A;&#x103A;</s>
+                <p>&#x101B;&#x1039;</p><s>&#x101B;&#x103A;</s>
+                <p>&#x101C;&#x1039;</p><s>&#x101C;&#x103A;</s>
+                <p>&#x101D;&#x1039;</p><s>&#x101D;&#x103A;</s>
+                <p>&#x101E;&#x1039;</p><s>&#x101E;&#x103A;</s>
+                <p>&#x101F;&#x1039;</p><s>&#x101F;&#x103A;</s>
+                <p>&#x1020;&#x1039;</p><s>&#x1020;&#x103A;</s>
+                <p>&#x1021;&#x1039;</p><s>&#x1021;&#x103A;</s>
+                <p>ၞ</p><p>ၟ</p><p>ျ</p><p>ြ</p><p>ၠ</p><p>ွ</p><p>ႂ</p><p>ှ</p><p>ျွ</p><p>ြွ</p><p>ျှ</p><p>ြှ</p><p>ွှ</p><p>ျွှ</p><p>ြွှ</p>
+
+                <!-- Independent vowels -->
+                <reset>&#x1019;&#x103A;</reset><x><p>&#x102F;&#x1036;</p><p>&#x1019;&#x103A;&#x102F;&#x1037;</p><p>&#x102F;&#x1036;&#x1037;</p><p>&#x1019;&#x103A;&#x102F;&#x1038;</p><p>&#x102F;&#x1036;&#x1038;</p><extend>&#x102F;</extend></x>
+                <reset>&#x1019;&#x103A;</reset><x><p>&#x102D;&#x1036;</p><p>&#x1019;&#x103A;&#x102D;&#x1037;</p><p>&#x102D;&#x1036;&#x1037;</p><p>&#x1019;&#x103A;&#x102D;&#x1038;</p><p>&#x102D;&#x1036;&#x1038;</p><extend>&#x102D;</extend></x>
+		<reset>&#x1021;</reset><x><t>&#x1021;&#x102F;&#x102F;&#x1036;</t><extend>&#x102F;&#x1036;&#x102F;</extend></x>
+                <!-- Contractions -->
+                <reset>က&#x103A;</reset><x><i>&#x1000;&#x103A;&#x1031;&#x102C;&#x103B;</i><extend>&#x1031;&#x102C;ကျ</extend></x> <!-- (suffix of) man -->
+                <reset>န&#x103A;</reset><x><i>&#x1014;&#x103A;&#x1015;&#x103A;&#x102F;</i><i>&#x1014;&#x103A;&#x102F;&#x1015;&#x103A;</i><extend>နပ&#x103A;&#x102F;</extend></x> <!-- (suffix of) I -->
+                <!-- Great Sa -->
+                <reset>သ&#x1039;&#x1031;သ</reset><i>ေဿ</i>
+                <reset>သ&#x1039;&#x102D;သ</reset><i>ိဿ</i>
+                <reset>သ&#x1039;&#x102F;သ</reset><i>ုဿ</i>
+                <reset>အသ&#x1039;&#x102D;သ</reset><t>ဣဿ</t>
+                <reset>အသ&#x1039;&#x102F;သ</reset><t>ဥဿ</t>
+                <reset>သ&#x1039;သ</reset><i>ဿ</i>
+
+<!-- Symbols - collate as long form -->
+                <reset>&#x1014;&#x103E;&#x1000;&#x103A;&#x102D;&#x102F;</reset><s>၌</s>
+                <reset>&#x101B;&#x103D;&#x1031;&#x1037;</reset><s>၍</s>
+                <reset>&#x101C;&#x100A;&#x103A;&#x1038;&#x1000;&#x1004;&#x103A;&#x1031;&#x102C;&#x1038;</reset><s>၎င်း</s>
+                <reset>အိ</reset><s>၏</s>
+
+<!-- Short Forms may need to be added here -->
+                <reset>လက်ယာ</reset><i>လက်ျာ</i> <!-- right hand side -->
+                <reset>သမီ</reset><i>သ္မီ</i> <!-- daughter -->
+                <reset>ထမင်း</reset><i>ထ္မင်း</i> <!-- cooked rice -->
+                <reset>လက်ဘက်</reset><i>လ္ဘက်</i> <!-- tea -->
+			</rules>
+		</collation>
+	</collations>
+</ldml>

@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+from palaso.contexts import defaultapp
+from palaso.kmn.coverage import Coverage
+from optparse import OptionParser
+import sys
+
+with defaultapp() :
+    k = Coverage(sys.argv[1])
+    for l in sorted(k.coverage_test(), cmp = lambda x,y : cmp(len(y),len(x)) or cmp(x,y)) :
+        print l
