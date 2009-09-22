@@ -15,7 +15,7 @@ setup(name='palaso',
       url='http://projects.palaso.org/projects/show/palaso-python',
       packages=['', 'palaso', 'palaso.collation'],
       ext_modules = [
-        Extension("palaso.kmfl", ["lib/palaso/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"])
+        Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"])
         ],
       cmdclass = {'build_ext': build_ext},
       scripts=glob('scripts/*/*'),
