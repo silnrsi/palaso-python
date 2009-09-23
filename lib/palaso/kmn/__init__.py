@@ -1,7 +1,5 @@
 import re
 
-__ALL__=["coverage"]
-
 _modifiers = {
     'LShift'    : 0x01,
     'Caps'      : 0x02,
@@ -187,3 +185,7 @@ def escape(keyname) :
     else :
         return keyname
         
+__all__=["keysyms_items","keysym_item",
+         "items_to_keys","item_to_key",
+         "escape",
+         "coverage"]
