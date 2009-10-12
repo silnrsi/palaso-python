@@ -28,6 +28,7 @@ class Coverage :
                         for x in self.create_sequences(newinput,  mode, cache = cache, history=history) :
                             cache[newstr].append(x)
                             yield x + [output[-1]]
+                        history.remove(i)
                     else :
                         yield [output[0]]
 
