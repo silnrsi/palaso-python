@@ -1,6 +1,4 @@
-import re
-from functools import partial
-from itertools import imap
+import itertools, functools, re
 from palaso.kmn.vector import VectorIterator
 
 ctypedef unsigned int UINT
@@ -138,9 +136,8 @@ cdef class kmfl :
             kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
         res = []
         for 1 <= i <= self.kmsi.nhistory :
-            res.append(self.kmsi.history[i])
-        res.reverse()
-        return "".join(map(unichr, res))
+            res.insert(0,unichr(self.kmsi.history[i]))
+        return "".join(res)
 
     def reverse_match(self, input, rulenum, mode = 'all') :
         """Given a rule and an input context, matches the end of the input context
@@ -155,6 +152,7 @@ cdef class kmfl :
         cdef UINT ruleitem, lcount, i, j, ruletype
         cdef UINT *compares
         cdef XRULE rule
+        cdef XSTORE store
         rule = self.kmsi.rules[rulenum]
         linput = len(input)
         if rule.olen > linput : return None
@@ -163,8 +161,9 @@ cdef class kmfl :
             ruleitem = self.kmsi.strings[rule.rhs + rule.olen - i]
             ruletype = item_type(ruleitem)
             if ruletype == item_outs :
-                compares = self.kmsi.strings + self.kmsi.stores[item_base(ruleitem)].items
-                comparel = self.kmsi.stores[item_base(ruleitem)].len
+                store = self.kmsi.stores[item_base(ruleitem)]
+                compares = self.kmsi.strings + store.items
+                comparel = store.len
                 for 0 <= j < comparel :
                     if compares[j] != item_base(input[linput-i-j]) : return None
                 i = i + comparel - 1
@@ -183,7 +182,8 @@ cdef class kmfl :
                         if indices[index[0]] != None and indices[index[0]] != index[1] : return None
                         indices[index[0]] = index[1]
                 i = i + lcount - 1
-        return (rule.olen, imap(partial(self.expand_context, rulenum, side= 'l'),VectorIterator(indices, mode)))
+        expand_rule_context = functools.partial(self.expand_context, rulenum, side= 'l')
+        return (rule.olen, itertools.imap(expand_rule_context,VectorIterator(indices, mode)))
 
     def test_match(self, UINT charitem, UINT ritem) :
         simpleres = (None, ())
@@ -200,7 +200,7 @@ cdef class kmfl :
 
     def expand_context(self, UINT rulenum, vector, side = 'r') :
         cdef XSTORE s
-        cdef UINT *items, *context, clen
+        cdef UINT *items, *context, clen, ci
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
             clen = self.kmsi.rules[rulenum].olen
@@ -209,17 +209,18 @@ cdef class kmfl :
             clen = self.kmsi.rules[rulenum].ilen
         res = []
         for 0 <= i < clen :
-            ruleitem = item_type(context[i])
+            ci = context[i]           
+            ruleitem = item_type(ci)
             if ruleitem == item_char or ruleitem == item_deadkey or ruleitem == item_keysym :
-                res.append(context[i])
+                res.append(ci)
             elif ruleitem == item_index or ruleitem == item_any :
-                items = self.kmsi.strings + self.kmsi.stores[item_base(context[i])].items
+                items = self.kmsi.strings + self.kmsi.stores[item_base(ci)].items
                 if ruleitem == item_index :
-                    res.append(items[vector[item_index_offset(context[i]) - 1]])
+                    res.append(items[vector[item_index_offset(ci) - 1]])
                 else :
                     res.append(items[vector[i]])
             elif ruleitem == item_outs :
-                s = self.kmsi.stores[item_base(context[i])]
+                s = self.kmsi.stores[item_base(ci)]
                 items = self.kmsi.strings + s.items
                 for 0 <= j < s.len :
                     res.append(items[j])
@@ -231,7 +232,7 @@ cdef class kmfl :
         return res
 
     def flatten_context(self, UINT rulenum, side = 'l', mode = 'all') :
-        cdef UINT *context, clen
+        cdef UINT *context, clen, ci
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
             clen = self.kmsi.rules[rulenum].olen
@@ -240,12 +241,14 @@ cdef class kmfl :
             clen = self.kmsi.rules[rulenum].ilen
         indices = [None] * clen
         for 0 <= i < clen :
-            ruleitem = item_type(context[i])
+            ci = context[i]
+            ruleitem = item_type(ci)
             if ruleitem == item_any :
-                indices[i] = range(0, self.kmsi.stores[item_base(context[i])].len)
+                indices[i] = range(0, self.kmsi.stores[item_base(ci)].len)
             elif ruleitem == item_index :
-                indices[item_index_offset(context[i]) - 1] = range(0, self.kmsi.stores[item_base(context[i])].len)
-        return imap(partial(self.expand_context,rulenum,side=side), VectorIterator(indices, mode = mode))
+                indices[item_index_offset(ci) - 1] = range(0, self.kmsi.stores[item_base(ci)].len)
+        expand_rule_context = functools.partial(self.expand_context,rulenum,side=side)
+        return itertools.imap(expand_rule_context, VectorIterator(indices, mode = mode))
 
     def match_store(self, UINT snum, UINT item) :
         cdef UINT i
