@@ -1,0 +1,80 @@
+#!/usr/bin/env python2.6
+'''
+Generate an XML file from an keyman keyboard which describes what characters 
+are output for every key (shifted and unshifted) on an standard 105 key 
+keyboard.
+NOTE: This will not generate mappings key sequences, dead-keys or keys in 
+combination with meta keys other than shift.
+'''
+__version__ = '$Revision: 0.0$'
+__date__    = '25 September 2009'
+__author__  = 'Tim Eves <tim_eves@sil.org>'
+__credits__ = '''\
+Martin Hosken for the original Perl implementation of this script. 
+This version uses libkmflcomp to process the source rather than parse the 
+source directly so it works better with more complex keyboards.
+'''
+
+import codecs, optparse, os.path, re, sys
+from palaso.kmfl import kmfl
+from palaso import kmn
+from itertools import ifilter, imap
+from htmlentitydefs import codepoint2name
+
+
+key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
+shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
+unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
+
+
+header = u'''\
+<?xml version='1.0' encoding='UTF-8'?>
+<keyboard font='{font}' size='{size}' name='{name}'>
+'''.format
+
+key = u'''\
+    <key id=\"{0}\" unshift='{1}' shift='{2}'/>
+'''.format
+
+footer = u'''</keyboard>'''
+
+
+
+def quote(cs):
+    r = u''
+    for c in cs:
+        ent = codepoint2name.get(ord(c))
+        r += (('&'+ent+';') if ent else c)
+    return r
+
+
+def keyboard_name(kmn_path):
+    name = re.compile(u'''^\s*(store\(NAME\)|NAME)\s*(.+)\s*$''',re.U)
+    with codecs.open(kmn_path,'r',encoding='utf_8_sig') as source:
+        m = ifilter(bool, imap(name.match, source)).next()
+        return quote(eval(m.group(2)) if m else os.path.basename(os.path.splitext(kmn_path))) 
+
+
+def output_chars(keypresses):
+    return [quote(kb.run_items([it])) for it in kmn.keysyms_items(keypresses)]
+
+
+parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n' + __doc__)
+parser.add_option("-f","--font",action='store',metavar='FONTNAME',
+                  help='Specify the preferred font for the keyboard output')
+parser.add_option("-s","--size",action='store',type="float", metavar='POINTS',
+                  help='The size of the output characters')
+
+(opts,kmns) = parser.parse_args()
+if len(kmns) == 0:
+    sys.stderr.write(parser.expand_prog_name('%prog: missing KEYMAN FILE\n'))
+    parser.print_help(file=sys.stderr)
+    sys.exit(1)
+
+kb = kmfl(kmns[0])
+out = codecs.getwriter('utf_8')(sys.stdout)
+out.write(header(font=opts.font or '', 
+                 size=opts.font and opts.size or '',
+                 name=keyboard_name(kmns[0])))
+out.writelines(map(key, key_tops, output_chars(unshifted), output_chars(shifted)))
+out.write(footer)
