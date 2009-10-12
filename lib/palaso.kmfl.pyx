@@ -1,4 +1,6 @@
 import re
+from functools import partial
+from itertools import imap
 from palaso.kmn.vector import VectorIterator
 
 ctypedef unsigned int UINT
@@ -181,12 +183,7 @@ cdef class kmfl :
                         if indices[index[0]] != None and indices[index[0]] != index[1] : return None
                         indices[index[0]] = index[1]
                 i = i + lcount - 1
-        vector = VectorIterator(indices, mode)
-        result = []
-        while vector != None :
-            result.append(self.expand_context(rulenum, vector.vector, side = 'l'))
-            vector = vector.advance()
-        return (rule.olen, result)
+        return (rule.olen, imap(partial(self.expand_context, rulenum, side= 'l'),VectorIterator(indices, mode)))
 
     def test_match(self, UINT charitem, UINT ritem) :
         simpleres = (None, ())
@@ -248,12 +245,7 @@ cdef class kmfl :
                 indices[i] = range(0, self.kmsi.stores[item_base(context[i])].len)
             elif ruleitem == item_index :
                 indices[item_index_offset(context[i]) - 1] = range(0, self.kmsi.stores[item_base(context[i])].len)
-        result = []
-        vector = VectorIterator(indices, mode = mode)
-        while vector != None :
-            result.append(self.expand_context(rulenum, vector.vector, side = side))
-            vector = vector.advance()
-        return result
+        return imap(partial(self.expand_context,rulenum,side=side), VectorIterator(indices, mode = mode))
 
     def match_store(self, UINT snum, UINT item) :
         cdef UINT i
