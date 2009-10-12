@@ -19,8 +19,7 @@ _modifiers = {
     'Alt'       : (0x88, 0x38)
 }
 
-_modkeys = sorted(_modifiers.keys(), key=lambda x: _modifiers[x][0])
-_modkeys.reverse()
+_modkeys = sorted(_modifiers.keys(), key=lambda x: _modifiers[x][0], reverse=True)
 
 _rawkeys = {
     'K_SPACE'   : (0x20, 0x39),
@@ -203,7 +202,7 @@ def item_to_key(item) :
         modstr = ""
         for m in _modkeys :
             if mods == 0: break
-            modifier = _modifiers[m]
+            modifier = _modifiers[m][0]
             if (mods & modifier) != 0 :
                 modstr += m + " "
                 mods &= ~modifier
