@@ -1,51 +1,48 @@
-from random import choice
-
-class VectorIterator :
-
-    def __init__(self, indices, mode = 'all') :
-        self.indices = indices
-        self.len = len(indices)
-        self.mode = mode
-        self.vector = [0] * self.len
-        self.current = None
-        for i in xrange(self.len) :
-            if indices[i] != None :
-                if self.current == None : self.current = i
-                if (mode == 'random' and self.current != i) or mode == 'random1' :
-                    self.vector[i] = choice(indices[i])
-                else :
-                    self.vector[i] = indices[i][0]
-
-    def advance(self) :
-        if self.mode == 'random1' or self.mode == 'first1' or self.current == None : return None
-        if self.mode == 'all' :
-            for i in xrange(self.len) :
-                if self.indices[i] != None :
-                    ind = self.indices[i].index(self.vector[i])
-                    if ind < len(self.indices[i]) - 1 :
-                        self.vector[i] = self.indices[i][ind + 1]
-                        return self.vector
-                    else :
-                        self.vector[i] = self.indices[i][0]
-            return None
-        else :
-            ind = self.indices[self.current].index(self.vector[self.current])
-            if ind < len(self.indices[self.current]) - 1 :
-                self.vector[self.current] = self.indices[self.current][ind + 1]
-            else :
-                self.vector[self.current] = self.indices[self.current][0]
-                i = None
-                for i in xrange(self.current + 1, self.len) :
-                    if self.indices[i] != None :
-                        self.current = i
-                        self.vector[i] = self.indices[i][0]
-                        break
-                if i == None or i != self.current :
-                    return None
-            if self.mode == 'random' :
-                for i in xrange(self.len) :
-                    if self.indices[i] != None and self.current != i :
-                        self.vector[i] = choice(self.indices[i])
-        return self
+import random
+import operator
+from itertools import product, islice, imap
 
 
+def VectorIterator(indices, mode ='all') :
+    return _vector_iterators[mode]([ns if ns else [0] for ns in indices])
+
+def _iterate_all(indices):
+    return product(*indices)
+
+def _first(iter_fn):
+    return (lambda indices: islice(iter_fn(indices),1))
+
+def _rands(n):
+    n -= 1
+    while True:
+        yield random.randint(0,n)
+
+def _pick(pid,digits):
+    r = []
+    for d in reversed(digits):
+        pid,i = divmod(pid,len(d))
+        r.insert(0, d[i])
+    return tuple(r)
+
+def _iterate_random(digits):
+    n_products = reduce(operator.mul,imap(len,digits))
+    return islice((_pick(pid,digits) for pid in _rands(n_products)), n_products)        
+
+def _iterate_random_all(digits):
+    n_products = reduce(operator.mul,imap(len,digits))
+    schedule = range(n_products)
+    random.shuffle(schedule)
+    return (_pick(pid,digits) for pid in schedule)
+
+def _iterate_random_all_depth(digits):
+    digits = [ds[:] for ds in digits]
+    map(random.shuffle, digits)
+    return product(*digits)
+    
+_vector_iterators = {
+     'all'              : _iterate_all,
+     'first1'           : _first(_iterate_all),
+     'random'           : _iterate_random,
+     'random-all'       : _iterate_random_all,
+     'random-all-depth' : _iterate_random_all_depth,
+     'random1'          : _first(_iterate_random)}
