@@ -16,8 +16,7 @@ _modifiers = {
     'Alt'       : 0x88
 }
 
-_modkeys = sorted(_modifiers.keys(), key=lambda x: _modifiers[x])
-_modkeys.reverse()
+_modkeys = sorted(_modifiers.keys(), key=lambda x: _modifiers[x],reverse=True)
 
 _rawkeys = {
     'K_SPACE'   : 0x20,
@@ -151,25 +150,23 @@ def keysym_item(sym) :
     return ord(char)
 
 def items_to_keys(items) :
-    return "".join(item_to_key(o) for o in items)
+    r = ""
+    for o in items: r += item_to_key(o)
+    return r
 
 def item_to_key(item) :
     if item > 0x1000000 :
         mods = (item & 0xFF0000) >> 16
         key = item & 0xFFFF
-        modres = []
+        modstr = ""
         for m in _modkeys :
-            if (mods & _modifiers[m]) != 0 :
-                modres.append(m)
-                mods = mods & ~_modifiers[m]
-            if mods == 0 :
-                break
-        if len(modres) > 0 :
-            modstr = " ".join(modres) + " "
-        elif key < 0x100 :
+            if mods == 0: break
+            modifier = _modifiers[m]
+            if (mods & modifier) != 0 :
+                modstr += m + " "
+                mods &= ~modifier
+        if not modstr and key < 0x100:
             return escape(unichr(key))
-        else :
-            modstr = ""
 
         if _keynames.has_key(key) :
             keystr = _keynames[key]
@@ -180,10 +177,7 @@ def item_to_key(item) :
         return escape(unichr(item))
         
 def escape(keyname) :
-    if "\\[".find(keyname) >= 0 :
-        return "\\" + keyname
-    else :
-        return keyname
+    return "\\" + keyname if "\\[".find(keyname) >= 0 else keyname
         
 __all__=["keysyms_items","keysym_item",
          "items_to_keys","item_to_key",
