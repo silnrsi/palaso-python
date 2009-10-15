@@ -48,26 +48,20 @@ def relaxedsubs() :
 @contextmanager
 def utf8out() :
     """Wraps sys.stdout to always output as UTF-8"""
-    if sys.stdout.encoding == 'UTF-8':
+    old_stdout = sys.stdout
+    sys.stdout = codecs.getwriter('UTF-8')(old_stdout)
+    try:
         yield
-    else:
-        old_stdout = sys.stdout
-        sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
+    finally:
+        sys.stdout = old_stdout
 
 @contextmanager
 def utf8in() :
     """Wraps sys.stdout to always output as UTF-8"""
-    if sys.stdin.encoding == 'UTF-8':
+    old_stdin = sys.stdin
+    sys.stdin = codecs.getreader('UTF-8')(sys.stdin)
+    try:
         yield
-    else:
-        old_stdin = sys.stdin
-        sys.stdin = codecs.getreader('UTF-8')(sys.stdin)
-        try:
-            yield
-        finally:
-            sys.stdin = old_stdin
+    finally:
+        sys.stdin = old_stdin
 
