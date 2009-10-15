@@ -42,15 +42,32 @@ def relaxedsubs() :
     sre_parse.expand_template = _expand_template
     try :
         yield
-    except :
-        raise
     finally :
         sre_parse.expand_template = temp
 
 @contextmanager
 def utf8out() :
     """Wraps sys.stdout to always output as UTF-8"""
-    enc = codecs.lookup('UTF-8')
-    sys.stdout = codecs.StreamReaderWriter(sys.stdout, enc.streamreader, enc.streamwriter)
-    yield
+    if sys.stdout.encoding == 'UTF-8':
+        yield
+    else:
+        old_stdout = sys.stdout
+        sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
+@contextmanager
+def utf8in() :
+    """Wraps sys.stdout to always output as UTF-8"""
+    if sys.stdin.encoding == 'UTF-8':
+        yield
+    else:
+        old_stdin = sys.stdin
+        sys.stdin = codecs.getreader('UTF-8')(sys.stdin)
+        try:
+            yield
+        finally:
+            sys.stdin = old_stdin
 
