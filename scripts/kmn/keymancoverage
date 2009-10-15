@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-from palaso.contexts import defaultapp
+from palaso.contexts import defaultapp, relaxedsubs, utf8out
 from palaso.kmn.coverage import Coverage
-from optparse import OptionParser
 import sys
+import contextlib
 
 with defaultapp() :
     k = Coverage(sys.argv[1])
-    for l in sorted(k.coverage_test(), cmp = lambda x,y : cmp(len(y),len(x)) or cmp(x,y)) :
-        print l
+    mode = sys.argv[2] if len(sys.argv) > 2 else 'all'
+    results = sorted(sorted(k.coverage_test(mode)),key=len,reverse=True)
+    sys.stdout.writelines(l + '\n' for l in results)
