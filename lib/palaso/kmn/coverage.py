@@ -30,7 +30,7 @@ class Coverage :
                 rule_history = history[rule]
                 if newinput and (not rule_history or rule_history[-1] > len(newinput)):
                     rule_history.append(len(newinput))
-                    for x in self.create_sequences(newinput,  mode, cache, history) :
+                    for x in self.create_sequences(newinput, mode, cache, history) :
                         cache[newstr].append(x)
                         yield x + [output[-1]]
                     rule_history.pop()

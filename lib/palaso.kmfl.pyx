@@ -67,6 +67,23 @@ cdef enum :
     item_call
     item_notany
 
+cdef enum :
+    ss_undefined = -1
+    ss_name
+    ss_version
+    ss_hotkey
+    ss_language
+    ss_layout
+    ss_copyright
+    ss_message
+    ss_bitmap
+    ss_mnemonic
+    ss_ethnologue
+    ss_capsoff
+    ss_capson
+    ss_capsfree
+    ss_author
+
 ctypedef _kmsi KMSI
 
 cdef extern from "kmfl/libkmfl.h" :
@@ -94,6 +111,24 @@ cdef public void erase_char(connection) :
 cdef item_index_offset(UINT x) : return (x >> 16) & 0xFF
 cdef item_base(UINT x) : return x & 0xFFFF
 cdef item_type(UINT x) : return (x >> 24) & 0xFF
+
+_storemap = {
+    'UNDEFINED' : ss_undefined,
+    'NAME'      : ss_name,
+    'VERSION'   : ss_version,
+    'HOTKEY'    : ss_hotkey,
+    'LANGUAGE'  : ss_language,
+    'LAYOUT'    : ss_layout,
+    'COPYRIGHT' : ss_copyright,
+    'MESSAGE'   : ss_message,
+    'BITMAP'    : ss_bitmap,
+    'MNEMONIC'  : ss_mnemonic,
+    'ETHNOLOGUE' : ss_ethnologue,
+    'CAPSOFF'   : ss_capsoff,
+    'CAPSON'    : ss_capson,
+    'CAPSFREE'  : ss_capsfree,
+    'AUTHOR'    : ss_author
+}
 
 cdef class kmfl :
 
@@ -154,10 +189,10 @@ cdef class kmfl :
         cdef XRULE rule
         cdef XSTORE store
         rule = self.kmsi.rules[rulenum]
-        linput = len(input)
-        if rule.olen > linput : return None
+        linput = len(input) - 1
         indices = [None] * rule.ilen
         for 1 <= i <= rule.olen :
+            if linput < 0 : return None
             ruleitem = self.kmsi.strings[rule.rhs + rule.olen - i]
             ruletype = item_type(ruleitem)
             if ruletype == item_outs :
@@ -165,25 +200,25 @@ cdef class kmfl :
                 compares = self.kmsi.strings + store.items
                 comparel = store.len
                 for 0 <= j < comparel :
-                    if compares[j] != item_base(input[linput-i-j]) : return None
-                i = i + comparel - 1
+                    if compares[j] != item_base(input[linput-j]) : return None
+                linput = linput - comparel
             else :
                 if ruletype == item_context :
                     lcount = rule.ilen - 1
-                    lbase = rule.lhs + rule.ilen
+                    lbase = rule.lhs + lcount - 1
                 else :
                     lcount = 1
-                    lbase = rule.rhs + rule.olen
+                    lbase = rule.rhs + rule.olen - i
                 if lcount > len(input) - i + 1 : return None
                 for 0 <= j < lcount :
-                    index = self.test_match(input[linput-i-j], self.kmsi.strings[lbase - j - i])
+                    index = self.test_match(input[linput-j], self.kmsi.strings[lbase-j])
                     if index == None : return None
                     if index[0] != None :
                         if indices[index[0]] != None and indices[index[0]] != index[1] : return None
                         indices[index[0]] = index[1]
-                i = i + lcount - 1
+                linput = linput - lcount
         expand_rule_context = functools.partial(self.expand_context, rulenum, side= 'l')
-        return (rule.olen, itertools.imap(expand_rule_context,VectorIterator(indices, mode)))
+        return (len(input) - linput - 1, itertools.imap(expand_rule_context,VectorIterator(indices, mode)))
 
     def test_match(self, UINT charitem, UINT ritem) :
         simpleres = (None, ())
@@ -263,3 +298,23 @@ cdef class kmfl :
             return None
         return res
 
+    def store(self, sname) :
+        """ returns a given store by name or number. No bounds checking
+            is done (because none is possible!)"""
+        cdef UINT i
+        cdef UINT snum
+        cdef XSTORE s
+        cdef UINT *items
+        res = ""
+        if sname == 0 and sname != "0" :
+            snum = _storemap.get(sname, -1)
+        elif sname != 0 or sname == "0" :
+            snum = sname
+        else :
+            return None
+
+        s = self.kmsi.stores[snum]
+        items = self.kmsi.strings + s.items
+        for 0 <= i < s.len :
+            res = res + unichr(items[i])
+        return res
