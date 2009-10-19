@@ -48,13 +48,6 @@ def quote(cs):
     return r
 
 
-def keyboard_name(kmn_path):
-    name = re.compile(u'''^\s*(store\(NAME\)|NAME)\s*(.+)\s*$''',re.U)
-    with codecs.open(kmn_path,'r',encoding='utf_8_sig') as source:
-        m = ifilter(bool, imap(name.match, source)).next()
-        return quote(eval(m.group(2)) if m else os.path.basename(os.path.splitext(kmn_path))) 
-
-
 def output_chars(keypresses):
     return [quote(kb.run_items([it])) for it in kmn.keysyms_items(keypresses)]
 
@@ -75,6 +68,6 @@ kb = kmfl(kmns[0])
 out = codecs.getwriter('utf_8')(sys.stdout)
 out.write(header(font=opts.font or '', 
                  size=opts.font and opts.size or '',
-                 name=keyboard_name(kmns[0])))
+                 name=kb.store('NAME')))
 out.writelines(map(key, key_tops, output_chars(unshifted), output_chars(shifted)))
 out.write(footer)
