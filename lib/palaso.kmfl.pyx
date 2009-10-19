@@ -95,6 +95,7 @@ cdef extern from "kmfl/libkmfl.h" :
     int kmfl_detach_keyboard(KMSI *p_kmsi)
     int kmfl_interpret(KMSI *p_kmsi, UINT key, UINT state)
     void clear_history(KMSI *p_kmsi)
+    void add_to_history(KMSI *p_kmsi, UINT item)
 
 cdef public void output_string(connection, char *p) :
     pass
@@ -173,6 +174,18 @@ cdef class kmfl :
         for 1 <= i <= self.kmsi.nhistory :
             res.insert(0,unichr(self.kmsi.history[i]))
         return "".join(res)
+
+    def interpret_items(self, items) :
+        clear_history(self.kmsi)
+        for i in items :
+            if item_type(i) > 1 :
+                add_to_history(self.kmsi, i)
+            else :
+                kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
+        res = []
+        for 1 <= i <= self.kmsi.nhistory :
+            res.insert(0,self.kmsi.history[i])
+        return res
 
     def reverse_match(self, input, rulenum, mode = 'all') :
         """Given a rule and an input context, matches the end of the input context
@@ -306,12 +319,9 @@ cdef class kmfl :
         cdef XSTORE s
         cdef UINT *items
         res = ""
-        if sname == 0 and sname != "0" :
-            snum = _storemap.get(sname, -1)
-        elif sname != 0 or sname == "0" :
-            snum = sname
-        else :
-            return None
+        snum = _storemap.get(sname.upper(), -1)
+        if not sname :
+            snum = int(sname)
 
         s = self.kmsi.stores[snum]
         items = self.kmsi.strings + s.items
