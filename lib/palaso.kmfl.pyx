@@ -181,7 +181,7 @@ cdef class kmfl :
             if item_type(i) > 1 :
                 add_to_history(self.kmsi, i)
             else :
-                kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
+                kmfl_interpret(self.kmsi, i & 0xFFFF, ((i >> 16) & 0x0F) | ((i >> 12) & 0x0F00))
         res = []
         for 1 <= i <= self.kmsi.nhistory :
             res.insert(0,self.kmsi.history[i])
