@@ -7,7 +7,7 @@ from Pyrex.Distutils import build_ext
 
 
 setup(name='palaso',
-      version='0.3.0b1',
+      version='0.3.0b3',
       description='Payap Language Software python package and scripts',
       long_description="Modules and scripts useful for building language software.",
       maintainer='Tim Eves',

@@ -1,3 +1,11 @@
+python-palaso (0.3.0b3) jaunty; urgency=low
+
+  * Added palaso.kmn and palaso.kmfl modules.
+    - Scripts to convert kmn to msklc and xml.
+    - Testing scripts for checking kmfl keyboards.
+
+ -- Tim Eves <tim@tims-d820>  Wed, 21 Oct 2009 16:21:14 +0700
+
 python-palaso (0.1.0a1) unstable; urgency=low
 
   * Initial Release.
