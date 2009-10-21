@@ -1,12 +1,12 @@
 #!/usr/bin/env python2.6
 '''
-Generate an XML file from an keyman keyboard which describes what characters 
-are output for every key (shifted and unshifted) on an standard 105 key 
-keyboard.
+Generate an XML file from an keyman keyboard which describes what 
+characters are output for every key (shifted and unshifted) on an standard
+105 key keyboard.
 NOTE: This will not generate mappings key sequences, dead-keys or keys in 
 combination with meta keys other than shift.
 '''
-__version__ = '$Revision: 0.0$'
+__version__ = '1.2'
 __date__    = '25 September 2009'
 __author__  = 'Tim Eves <tim_eves@sil.org>'
 __credits__ = '''\
@@ -15,10 +15,9 @@ This version uses libkmflcomp to process the source rather than parse the
 source directly so it works better with more complex keyboards.
 '''
 
-import codecs, optparse, os.path, re, sys
+import codecs, optparse, sys
 from palaso.kmfl import kmfl
 from palaso import kmn
-from itertools import ifilter, imap
 from htmlentitydefs import codepoint2name
 
 
