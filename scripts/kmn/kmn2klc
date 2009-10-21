@@ -3,15 +3,13 @@
 Generate a Microsoft Keyboard Layout Creator file from a keyman keyboard.
 This program will also handle deadkeys in the KMN file.
 '''
-__version__ = '$Revision: 0.0$'
+__version__ = '0.9'
 __date__    = '15 October 2009'
 __author__  = 'Martin Hosken <martin_hosken@sil.org>'
 
-import codecs, optparse, os.path, re, sys
+import optparse, os.path, re, sys
 from palaso.kmfl import kmfl
 from palaso import kmn
-from itertools import ifilter, imap
-from htmlentitydefs import codepoint2name
 
 def res_str(res) :
     if len(res) > 4 or len(res) == 0 : return None
