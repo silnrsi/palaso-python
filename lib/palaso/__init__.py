@@ -1,2 +1,2 @@
-__all__ =["reggen","unicsv","kmfl","kmn","fontforge","contexts"]
+__all__ =["reggen","unicsv","kmfl","kmn","fontforge","contexts","debian"]
 
