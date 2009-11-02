@@ -1,6 +1,7 @@
 
-from debian_bundle.deb822 import Sources
-import re, itertools
+from debian_bundle.deb822 import Sources, Packages
+from subprocess import Popen, PIPE
+import re, itertools, os, urllib
 
 class source_collection(object) :
     """Manages a Sources file of multiple source packages"""
@@ -10,7 +11,7 @@ class source_collection(object) :
         x = Sources(seq)
         while len(x) > 0 :
             self.sources[x['package']] = x
-            for b in re.split("\s*,\s*", x['binary']) :
+            for b in re.split(r"\s*,\s*", x['binary']) :
                 self.binaries[b] = x['package']
             x = Sources(seq)
 
@@ -48,6 +49,41 @@ class source_collection(object) :
                     res[r].append(p)
                     done[p] = r
                     todo.remove(p)
-        print res
         return itertools.chain(*res)
 
+    def download(self, spackage, dest, host) :
+        src = self.sources[spackage]
+        for f in src['files'] :
+            name = f['name']
+            if not os.path.exists(name) :
+                (name, info) = urllib.urlretrieve(host + "/" + src['directory'] + "/" + name, name)
+                print "Downloaded " + name
+            if name.endswith(".dsc") :
+                dsc = name
+        if os.path.exists(dest) :
+            cmd = 'rm -fr ' + dest
+            os.system(cmd)
+        os.system("dpkg-source -x " + dsc + " " + dest)
+
+class package_collection(object) :
+    """Manages a Packages file of multiple binary packages"""
+    def __init__(self, seq) :
+        self.sources = {}
+        x = Packages(seq)
+        while len(x) > 0 :
+            self.sources[x['package']] = x
+            x = Packages(seq)
+
+def arch_expects_bin(arch, package) :
+    if not arch in ("amd64") :
+        if package.startswith("lib32") : return False
+    return True
+
+def getdistro() :
+    return Popen(["lsb_release", "-cs"], stdout = PIPE).communicate()[0].strip()
+
+def getarch() :
+    return re.findall(r"^DEB_BUILD_ARCH=([^\n]*)", Popen(["dpkg-architecture"], stdout = PIPE).communicate()[0])[0]
+
+def getbasever(version) :
+    return re.sub(r"^(.*)[-].*?$", r"\1", version)
