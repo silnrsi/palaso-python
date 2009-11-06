@@ -1,0 +1,15 @@
+Palaso-Python
+-------------
+This contains pyhton scripts, modules and packages created by SIL at the Payap 
+Linguistic Institute Computing Unit. These are used by and made avaialble for 
+future use by Payap language software programs develeped at the Computing Unit 
+such as ptxplus.
+
+This includes modules for:
+    o Support or Unicode in CSV file (palaso.unicsv)
+    o Import, export & manipulation of collation data (palaso.collation)
+    o Data generation from regexps (palaso.reggen)
+    o A Python interface to SIL's TECkit encoding conversion library.
+
+
+This is a standard python distutils project and also a debian package too.
