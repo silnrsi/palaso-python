@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import urllib, ConfigParser, os
+import urllib, ConfigParser, os, re
 from optparse import OptionParser
 from palaso.debian.sources import source_collection, getdistro, getbasever
 
@@ -19,6 +19,7 @@ url = host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources"
 f = urllib.urlopen(url)
 x = source_collection(f)
 f.close()
+print "Found %d packages in the original repository" % len(x.sources)
 
 try :
     f = urllib.urlopen(host + "/dists/" + opts.newdistro + "/" + opts.section + "/source/Sources")
@@ -27,6 +28,7 @@ except IOError :
 
 y = source_collection(f)
 f.close()
+print "Found %d packages in the target repository" % len(y.sources)
 
 edits = ConfigParser.ConfigParser()
 if opts.edits :
@@ -34,23 +36,23 @@ if opts.edits :
     
 for s in x.sources :
     if s in y.sources : continue
+    if edits.has_option(s, 'Remove') : continue
     src = x.sources[s]
     v = src['version']
     if edits.has_option(s, 'Version') :
         v = edits.get(s, 'Version') 
     newv = v.replace(opts.distro, opts.newdistro)
     if newv == v :
-        newv = v + "-" + opts.newdistro + "1"
+        newv = v + "+" + opts.newdistro + "1"
     basever = getbasever(v)
     print "%s: %s(%s) -> %s" % (s, v, basever, newv)
     dir = "%s-%s" % (s, basever)
     x.download(s, dir, host)
     os.chdir(dir)
-    cmd = "dch --force-distribution -v " + newv + " -D " + opts.newdistro + " -m 'Transfer from " + opts.distro + "'"
+    cmd = "dch --force-distribution -v '" + newv + "' -D " + opts.newdistro + " -m 'Transfer from " + opts.distro + "'"
     print cmd
     os.system(cmd)
     os.chdir("..")
-    dir = "%s-%s" % (s, getbasever(newv))
     cmd = "dpkg-source"
     if edits.has_section(s) :
         for e in edits.items(s) :
@@ -59,12 +61,12 @@ for s in x.sources :
     cmd += " -b " + dir
     print cmd
     if os.system(cmd) == 0 :
-        changes = "%s_%s_source.changes" % (s, newv)
+        changes = "'%s_%s_source.changes'" % (s, re.sub(r"^\d:", "", newv))
         os.chdir(dir)
         cmd = "dpkg-genchanges -sa -S > ../" + changes
         os.system(cmd)
         os.chdir('..')
-        cmd = "debsign " + changes
+        cmd = "debsign -m'" + os.environ['DEBEMAIL'] + "' " + changes
         os.system(cmd)
         cmd = "dput " + opts.put + " " + changes
         print cmd

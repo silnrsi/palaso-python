@@ -2,7 +2,7 @@
 
 import re, urllib, os, time, smtplib, csv
 from optparse import OptionParser
-from palaso.debian.sources import source_collection, package_collection, arch_expects_bin, getdistro, getarch
+from palaso.debian.sources import source_collection, package_collection, arch_expects_bin, getdistro, getarch, getbasever
 from email.mime.text import MIMEText
 
 def load_packages(times, opts, host) :
@@ -10,26 +10,32 @@ def load_packages(times, opts, host) :
     ptime = f.info().getdate('Last-modified')
     y = package_collection(f)
     f.close()
-    for p in y.sources :
+    for p in y.sources.values() :
         s = p.get('source') or p['package']
         if not s in times or times[s] < ptime : times[s] = ptime
     return (y, ptime)
 
 def build_package(src, sources, opts, host, indep=True, updatep=False) :
     if updatep :
-        cmd = "pbuilder --update --override-config --configfile " + opts.conf
+        cmd = "sudo pbuilder --update --override-config --configfile " + opts.conf
         print cmd
         os.system(cmd)
-    sources.download(src['package'], "temp", host)
-    os.chdir("temp")
-    cmd = "pdebuild --auto-debsign --buildresult .. --debbuildopts "
+    dir = "%s-%s" % (src['package'], getbasever(src['version']))
+    sources.download(src['package'], dir, host)
+    os.chdir(dir)
+    cmd = "pdebuild"
+    if opts.conf : cmd += " --configfile " + opts.conf
+    cmd += " --debbuildopts "
     if indep : cmd += "-b"
     else : cmd += "-B"
-    if opts.conf : cmd += " --configfile " + opts.conf
-    cmd += " -- --logfile ../" + src['package'] + ".log"
+    cmd += " --buildresult .. -- --logfile ../" + src['package'] + ".log"
     print cmd
     state = os.system(cmd)
     os.chdir("..")
+    if state == 0 :
+        cmd = "debsign \"-e$DEBEMAIL\" %s_%s_%s.changes" % (src['package'], src['version'], opts.arch)
+        print cmd
+        state = os.system(cmd)
     return state
 
 def email(addr, fname, opts) :
@@ -86,8 +92,10 @@ times = {}
 (y, ptime) = load_packages(times, opts, host)
 
 if opts.failures != None :
-    r = csv.reader(opts.failures)
+    f = file(opts.failures)
+    r = csv.reader(f)
     failures = dict(s for s in r)
+    f.close()
 else:
     failures = {}
 
@@ -97,7 +105,7 @@ buildindep = set()
 for s in res :
     for b in re.split(r"\s*,\s*", x.sources[s]['binary']) :
         if not b in y.sources and arch_expects_bin(opts.arch, b) :
-            todo.append(s)
+            if len(todo) == 0 or todo[-1] != s : todo.append(s)
             if not b in y.sources or y.sources[b]['architecture'] == 'all' :
                 buildindep.add(s)
 
@@ -110,7 +118,7 @@ for s in todo :
 
     # do we have to wait and get a new packages due to dependency timings?
     for d in src.local_dependencies :
-        if not times.has(d) :
+        if not d in times :
             print "Dependency for %s unavailable, skipping." % (s)
             skip = True
             break
@@ -120,12 +128,12 @@ for s in todo :
             update_required = True
     if skip : continue
 
-    state = build_package(src, x, opts, True if s in buildindep else False, update_required)
+    state = build_package(src, x, opts, host, True if s in buildindep else False, update_required)
     print "Build result " + str(state)
     if state :
         email(src['maintainer'], src['package'] + ".log", opts)
     else :
         if dput(src['package'] + "_" + src['version'] + "_" + opts.arch + ".changes", opts) :
-            times[s] = (int(time.time() / wait / 60) + 1) * wait * 60
+            times[s] = (int(time.time() / opts.wait / 60) + 1) * opts.wait * 60
 
 

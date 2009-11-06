@@ -40,7 +40,7 @@ class source_collection(object) :
             for p in todo.copy() :
                 r = None
                 for b in self.sources[p].local_dependencies :
-                    t = done[b]
+                    t = done.get(b)
                     if t == None :
                         r = None
                         break
@@ -63,7 +63,9 @@ class source_collection(object) :
         if os.path.exists(dest) :
             cmd = 'rm -fr ' + dest
             os.system(cmd)
-        os.system("dpkg-source -x " + dsc + " " + dest)
+        cmd = "dpkg-source -x " + dsc + " " + dest
+        print cmd
+        os.system(cmd)
 
 class package_collection(object) :
     """Manages a Packages file of multiple binary packages"""
@@ -86,4 +88,4 @@ def getarch() :
     return re.findall(r"^DEB_BUILD_ARCH=([^\n]*)", Popen(["dpkg-architecture"], stdout = PIPE).communicate()[0])[0]
 
 def getbasever(version) :
-    return re.sub(r"^(.*)[-].*?$", r"\1", version)
+    return re.sub(r"^(\d:)?(.*)[-].*?$", r"\2", version)
