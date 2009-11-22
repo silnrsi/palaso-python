@@ -107,7 +107,7 @@ class parser(sfm.parser):
 				except AttributeError:
 					self._error(ValueError, '\\{event.tag} parameter {event.params[0]!r} is not a number or range', e)
 			elif event.istext(e) and e.context == 'id':
-				try:    ref = (e.text.split(None,0)[0].strip(),None,None)
+				try:    ref = (e.text.split(None,1)[0].strip(),None,None)
 				except: self._error(SyntaxError, 'missing required book name on \\id tag',e)
 			elif event.isend(e):
 				if   e.tag == 'c':  ref = (ref[0],None,None)
