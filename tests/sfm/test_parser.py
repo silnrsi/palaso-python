@@ -158,9 +158,9 @@ class USFMTestCase(unittest.TestCase):
                           (3,1),(3,4),(3,5)])   # \l3\n
 
     def test_reference(self):
-        p=usfm.parser('\\id MAT\n\\c 1 \\v 1 \\v 2-3\n\\id JHN\n\\c 3 \\v 16')
+        p=usfm.parser('\\id MAT EN\n\\c 1 \\v 1 \\v 2-3\n\\id JHN\n\\c 3 \\v 16')
         self.assertEqual([tuple(e.pos) for e in p],
-                         [(1, 1, None, None, None),  (1, 5, 'MAT', None, None),  (1, 9, 'MAT', None, None), # \id MAT\n 
+                         [(1, 1, None, None, None),  (1, 5, 'MAT', None, None),  (1, 12, 'MAT', None, None), # \id MAT\n 
                           (2, 1, 'MAT', '1', None),                                                         # \c 1 
                           (2, 6, 'MAT', '1', '1'), (2, 11, 'MAT', '1', None),                               # \v 1 
                           (2, 11, 'MAT', '1', '2-3'), (2,18, 'MAT','1',None), (2,18, 'MAT',None,None),      # \v 2-3 
