@@ -28,7 +28,7 @@ def ischar(tag):        return istype(tag,'isChar')
 def isendtag(tag):      return tag[-1] == '*' and isinline(tag[:-1])
 def isnesting(tag):     return ischar(tag) or isinline(tag)
 def endtag(tag):        return tag+'*' if isinline(tag) else ''
-def opentag(tag):       return tag[:-1] if tag[-1] is '*'  and isinline(tag[:-1]) else ''
+def opentag(tag):       return tag[:-1] if tag[-1] == '*'  and isinline(tag[:-1]) else ''
 
 TOP = -1
 
