@@ -45,7 +45,7 @@ class parser(object):
             for m in tokenise.finditer(line):
                 tok = m.group(1)
                 if not tok: continue
-                yield (pos(line_no,m.start(1)), tok)
+                yield (pos(line_no+1,m.start(1)+1), tok)
 
 
     @staticmethod
