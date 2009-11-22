@@ -121,6 +121,7 @@ class USFMTestCase(unittest.TestCase):
         tests = [(r'\c 1', ['start{} c 1', 'end{} c']),
                  (r'\c 2 text', ['start{} c 2', "text{c} 'text'", 'end{} c']),
                  (r'\v 1', ['start{} v 1', 'end{} v']),
+                 (r'\v 1-3', ['start{} v 1-3', 'end{} v']),
                  (r'\v 2 text', ['start{} v 2', "text{v} 'text'", 'end{} v']),
                  (r'\c 2\v 3 text\v 4 verse', ['start{} c 2', 'start{c} v 3', "text{v} 'text'", 'end{c} v', 'start{c} v 4', "text{v} 'verse'", 'end{c} v', 'end{} c']),]
         for r in [(map(str,usfm.parser(s)),r) for s,r in tests]: self.assertEqual(*r)
@@ -157,14 +158,15 @@ class USFMTestCase(unittest.TestCase):
                           (3,1),(3,4),(3,5)])   # \l3\n
 
     def test_reference(self):
-        p=usfm.parser('\\id MAT\n\\c 1 \\v 1\n\\id JHN\n\\c 3 \\v 16')
+        p=usfm.parser('\\id MAT\n\\c 1 \\v 1 \\v 2-3\n\\id JHN\n\\c 3 \\v 16')
         self.assertEqual([tuple(e.pos) for e in p],
-                         [(0, 0, None, 0, 0), (0, 4, 'MAT', 0, 0), (0, 8, 'MAT', 0, 0),     # \id MAT\n 
-                          (1, 0, 'MAT', 1, 0),                                              # \c 1 
-                          (1, 5, 'MAT', 1, 1), (1, 10, 'MAT', 1, 1), (1, 10, 'MAT', 1, 1),  # \v 1\n 
-                          (2, 0, None, 0, 0), (2, 4, 'JHN', 0, 0), (2, 8, 'JHN', 0, 0),     # \id JHN\n
-                          (3, 0, 'JHN', 3, 0),                                              # \c 3 
-                          (3, 5, 'JHN', 3, 16), (3, 10, 'JHN', 3, 16), (3, 10, 'JHN', 3, 16)]) # \v 16
+                         [(1, 1, None, None, None),  (1, 5, 'MAT', None, None),  (1, 9, 'MAT', None, None), # \id MAT\n 
+                          (2, 1, 'MAT', '1', None),                                                         # \c 1 
+                          (2, 6, 'MAT', '1', '1'), (2, 11, 'MAT', '1', None),                               # \v 1 
+                          (2, 11, 'MAT', '1', '2-3'), (2,18, 'MAT','1',None), (2,18, 'MAT',None,None),      # \v 2-3 
+                          (3, 1, None, None, None),  (3, 5, 'JHN', None, None),  (3, 9, 'JHN', None, None), # \id JHN\n
+                          (4, 1, 'JHN', '3', None),                                                         # \c 3 
+                          (4, 6, 'JHN', '3', '16'),(4, 11, 'JHN', '3', None),(4, 11, 'JHN', None, None)])   # \v 16
                             
     def test_transduction(self):
         src = ['\\test\n',

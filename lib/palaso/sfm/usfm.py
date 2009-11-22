@@ -18,7 +18,7 @@ __history__ = '''
 '''
 import palaso.sfm as sfm
 from palaso.sfm import event
-import collections, warnings
+import collections, re, warnings
 
 def istype(tag,type):   return type in types(tag)
 def types(tag):         return markers.get(tag,[])
@@ -35,6 +35,8 @@ TOP = -1
 	
 		
 class parser(sfm.parser):
+	chap_no  = re.compile(r'\d+',re.UNICODE)
+	verse_no = re.compile(r'\d+(-\d+)?',re.UNICODE)
 	def __init__(self, source):
 		super(parser,self).__init__(source)
 		self._events = self.__scripture(self.__params(self.__contextualise(iter(self)))) 
@@ -95,19 +97,21 @@ class parser(sfm.parser):
 
 
 	def __scripture(self,events):
-		ref = (None,0,0)
+		ref = (None,None,None)
 		for e in events:
 			if event.isstart(e):
 				try:
-					if e.tag == 'c':    ref = (ref[0],int(e.params[0]),ref[2]) 
-					elif e.tag == 'v':  ref = (ref[0],ref[1],int(e.params[0]))
-					elif e.tag == 'id': ref = (None,0,0)
-				except ValueError:
-					self._error(ValueError, '\\{event.tag} parameter {event.params[0]!r} is not a number', e)
-			if event.istext(e) and e.context == 'id':
-				try: ref = (e.text.split(None,0)[0].strip(),0,0)
-				except:
-					self._error(SyntaxError, 'missing required book name on \\id tag',e)					
+					if e.tag == 'c':    ref = (ref[0],self.chap_no.match(e.params[0]).group(),ref[2]) 
+					elif e.tag == 'v':  ref = (ref[0],ref[1],self.verse_no.match(e.params[0]).group())
+					elif e.tag == 'id': ref = (None,None,None)
+				except AttributeError:
+					self._error(ValueError, '\\{event.tag} parameter {event.params[0]!r} is not a number or range', e)
+			elif event.istext(e) and e.context == 'id':
+				try:    ref = (e.text.split(None,0)[0].strip(),None,None)
+				except: self._error(SyntaxError, 'missing required book name on \\id tag',e)
+			elif event.isend(e):
+				if   e.tag == 'c':  ref = (ref[0],None,None)
+				elif e.tag == 'v':  ref = (ref[0],ref[1],None)					
 			yield getattr(event,'_'+e.type)(pos(*e.pos+ref),*e[1:])
 					
 pos = collections.namedtuple('pos', 'line col book chapter verse')
