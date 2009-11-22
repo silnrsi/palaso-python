@@ -10,136 +10,96 @@ from itertools import chain
 import event
 
 eol = '\n'
+endofline = ('\r\n','\n','\n\r')
+
 pos    = collections.namedtuple('pos', 'line col')
 
 class SyntaxWarning(SyntaxWarning): pass
 
 def ismarker(tok): return tok and tok[0] == '\\'
-def isopen(tok):   return tok and tok[-1] != '*' 
 
 
 class parser(object):
     def __init__(self, source):
-        self.__pos = None
         self.source = source.name if hasattr(source,'name') else '<string>'
-        self._context =[None]
-        self._events = self.__scanner(self.__tokens(source.splitlines() if isinstance(source,basestring) else source))
+        self._events = self.__scanner(self.__tokens(source.splitlines(True) if isinstance(source,basestring) else source))
     
     def __iter__(self): return self._events
     
-    @property
-    def pos(self): return self.__pos
-    def set_pos(self, line,col): self.__pos = pos(line+1,col+1)
-
-    @property
-    def context(self):  return self._context[-1]
-    
-    def __tokens(self,source):
-        tokenise = re.compile(r'(\\[^\\\s]+|(?:^|(?<=\s))[^\\]*)',re.U)        
-        nlines = 1
-        for line_no,line in enumerate(source):
-            for m in tokenise.finditer(line.rstrip("\r\n")):
-                tok = m.group(1)
-                if not tok: continue
-                self.set_pos(line_no,m.start(1))
-                yield tok
-            self.set_pos(line_no,len(line))
-            yield eol
-
-    
-    def _error(self,err_type, msg,*args,**kwds):
+    def _error(self, err_type, msg, ev, *args, **kwds):
         if issubclass(err_type, StandardError):
-            msg = ('{source}: line {line},{col}: '+msg).format(line=self.pos.line,
-                                                               col=self.pos.col,
-                                                               source=self.source,
+            msg = ('{source}: line {event.pos.line},{event.pos.col}: '+msg).format(event=ev,source=self.source,
                                                                *args)
-            raise SyntaxError, msg
+            raise err_type, msg
         elif issubclass(err_type, Warning):
-            msg = msg.format(col=self.pos.col,*args,**kwds)
-            warnings.warn_explicit(msg, SyntaxWarning, self.source, self.pos.line)
+            msg = msg.format(event=ev,*args,**kwds)
+            warnings.warn_explicit(msg, err_type, self.source, ev.pos.line)
         else:
             raise ValueError, "'{0!r}' is not an StandardError or Warning object".format(err_type)
-    
-    
-    def __scanner(self,tokens):
-        need_close=0
-        for tok in tokens:
-            if ismarker(tok):
-                tag = tok[1:]
-                if isopen(tok):
-                    yield event.start(self.context, tag)
-                    self._context.append(tag)
-                else:
-                    try:
-                        need_close = list(reversed(self._context)).index(tag[:-1])+1
-                    except ValueError:
-                        self._error(SyntaxError, 'missing opening tag for in-line tag \\{0}',tag)
-            elif tok == eol:
-                if self._context:
-                    need_close = len(self._context)-1
-            else:
-                # A text token without a context is a bare text line, in SFM 
-                # this would probably be an error however in USFM it's permissable so
-                # we'll log it as a warning.
-                if not self.context:
-                    tag = tokens.next()
-                    if tag != eol:
-                        self._error(SyntaxWarning, 'in-line tag \\{0} used outside of a marker',tag)
-                yield event.text(self.context, tok)
-            # This loop closes any open tags between the top of opened and
-            # the opening tag for this closing tag.
-            if need_close:
-                need_close -= 1
-                while need_close:
-                    need_close -= 1
-                    self._error(SyntaxWarning, 'expected closing tag at {col}, for in-line tag \\{0}',self.context)
-                    tag = self._context.pop()
-                    yield event.end(self.context, tag)
-                tag = self._context.pop()
-                yield event.end(self.context, tag)
+
+    @staticmethod
+    def __tokens(source):
+        tokenise = re.compile(r'(\\[^\\\s]+|(?:^|$|(?<=[ \t]))[^\\]*)',re.U)        
+        nlines = 1
+        for line_no,line in enumerate(source):
+            for m in tokenise.finditer(line):
+                tok = m.group(1)
+                if not tok: continue
+                yield (pos(line_no,m.start(1)), tok)
+
+
+    @staticmethod
+    def __scanner(tokens):
+        return (event.start(None, tok[1:], p) if ismarker(tok) else event.text(None, tok, p) for p,tok in tokens)
 
 
 
 class handler(object):
     def __init__(self):
         self.errors = []
-    def start(self, ctag, tag, pos): return tag
-    def text(self, ctag, text, pos): return text
-    def end(self, ctag, tag, pos):   return tag
+    def start(self, pos, ctag, tag, params): return ' '.join([tag]+params)
+    def text(self, pos, ctag, text): return text
+    def end(self, pos, ctag, tag):   return ''
     def error(self, *warn_msg):      self.errors.append(warnings.WarningMessage(*warn_msg))
 
 
-def transduce(handler, source):
-    events = parser(source)
-    line = ''
-    
+def transduce(parser, handler, source):
     with warnings.catch_warnings():
         warnings.showwarning = handler.error
         warnings.resetwarnings()
         warnings.simplefilter("always", SyntaxWarning)
         
+        events = parser(source)
+        line = ''
+        textprefix = ''
+    
         for ev in events:
             if event.isstart(ev):
-                if ev.context: line += ' '
-                line += '\\' + handler.start(*ev + (events.pos,))
+                line += '\\' + handler.start(*ev)
+                textprefix = ' '
             elif event.isend(ev):
-                if ev.context:
-                    line += '\\' + handler.end(*ev + (events.pos,)) + '*'
-                else:
-                    yield line + '\n'
-                    line = ''
+                    tag = handler.end(*ev)
+                    line += tag and '\\' + tag
+                    textprefix = tag and ' '
             elif event.istext(ev):
-                text = handler.text(*ev + (events.pos,))
-                if ev.context:
-                    line += ' ' + text
-                else:
-                    yield line + text + '\n'
-                    line = '' 
-        if line: yield line
+                text = handler.text(*ev)
+                line += text if text.startswith(endofline) else textprefix + text
+                textprefix = ''
+            lines = line.splitlines(True)
+            if len(lines) > 1:
+                for line in lines[:-1]: yield line
+            if lines:
+                line[0]
+                if line.endswith(endofline):
+                    yield line
+                else: continue
+            line = ''
+        if line: 
+            yield line
 
 
-def parse(handler,source):
-    for _ in transduce(handler,source): pass
+def parse(parser,handler,source):
+    for _ in transduce(parser,handler,source): pass
 
 
 if __name__ == '__main__':
