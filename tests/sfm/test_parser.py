@@ -51,9 +51,9 @@ class SFMTestCase(unittest.TestCase):
     def test_position(self):
         p=sfm.parser('\\li1 text\n\\l2\n\\l3\n')
         self.assertEqual([tuple(e.pos) for e in p],
-                         [(0,0),(0,5),  # \li1 text\n
-                          (1,0),(1,3),  # \l2\n
-                          (2,0),(2,3)]) # \l3\n
+                         [(1,1),(1,6),  # \li1 text\n
+                          (2,1),(2,4),  # \l2\n
+                          (3,1),(3,4)]) # \l3\n
                 
     
     def test_transduction(self):
@@ -152,9 +152,9 @@ class USFMTestCase(unittest.TestCase):
     def test_position(self):
         p=usfm.parser('\\li1 text\n\\l2\n\\l3\n')
         self.assertEqual([tuple(e.pos[:2]) for e in p],
-                         [(0,0),(0,5),(0,10),   # \li1 text\n
-                          (1,0),(1,3),(1,4),    # \l2\n
-                          (2,0),(2,3),(2,4)])   # \l3\n
+                         [(1,1),(1,6),(1,11),   # \li1 text\n
+                          (2,1),(2,4),(2,5),    # \l2\n
+                          (3,1),(3,4),(3,5)])   # \l3\n
 
     def test_reference(self):
         p=usfm.parser('\\id MAT\n\\c 1 \\v 1\n\\id JHN\n\\c 3 \\v 16')
