@@ -88,9 +88,12 @@ class parser(sfm.parser):
 					if not event.istext(params): raise StopIteration
 				except StopIteration:
 					self._error(SyntaxError, 'missing required number parameter for \\{0}', params, e.tag)
-				ps = params.text.split(None,1)
+				ps = params.text.split(' ',1)
+				if ps[0].endswith(sfm.endofline): 
+					ps[0] = ps[0].rstrip('\r\n')
+					ps.append('\n')
 				yield event.start(e.context, e.tag, e.pos, ps[:1])
-				if len(ps) > 1:
+				if len(ps) > 1 and ps[1]:
 					yield event.text(e.tag, ps[1], sfm.pos(params.pos.line,params.pos.col+len(ps[0])))
 			else:
 				yield e
