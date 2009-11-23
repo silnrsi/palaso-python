@@ -160,13 +160,23 @@ class USFMTestCase(unittest.TestCase):
     def test_reference(self):
         p=usfm.parser('\\id MAT EN\n\\c 1 \\v 1 \\v 2-3\n\\id JHN\n\\c 3 \\v 16')
         self.assertEqual([tuple(e.pos) for e in p],
-                         [(1, 1, None, None, None),  (1, 5, 'MAT', None, None),  (1, 12, 'MAT', None, None), # \id MAT\n 
-                          (2, 1, 'MAT', '1', None),                                                         # \c 1 
-                          (2, 6, 'MAT', '1', '1'), (2, 11, 'MAT', '1', None),                               # \v 1 
-                          (2, 11, 'MAT', '1', '2-3'), (2,18, 'MAT','1',None), (2,18, 'MAT',None,None),      # \v 2-3 
-                          (3, 1, None, None, None),  (3, 5, 'JHN', None, None),  (3, 9, 'JHN', None, None), # \id JHN\n
-                          (4, 1, 'JHN', '3', None),                                                         # \c 3 
-                          (4, 6, 'JHN', '3', '16'),(4, 11, 'JHN', '3', None),(4, 11, 'JHN', None, None)])   # \v 16
+                         [(1, 1, None, None, None),     # start{}   id
+                          (1, 5, 'MAT', None, None),    # text{id}  'MAT EN\n'
+                          (1, 12, 'MAT', None, None),   # end{}     id 
+                          (2, 1, 'MAT', '1', None),     # start{}   c 1
+                          (2, 6, 'MAT', '1', '1'),      # start{c}  v 1
+                          (2, 11, 'MAT', '1', '1'),     # end{c}    v
+                          (2, 11, 'MAT', '1', '2-3'),   # start{c}  v 2-3
+                          (2,17, 'MAT','1','2-3'),      # text{v}   '\n'
+                          (2,18, 'MAT','1','2-3'),      # end{c}    v
+                          (2,18, 'MAT','1','2-3'),      # end{}     c
+                          (3, 1, None, None, None),     # start{}   id
+                          (3, 5, 'JHN', None, None),    # text{id}  'JHN\n'
+                          (3, 9, 'JHN', None, None),    # end{}     id
+                          (4, 1, 'JHN', '3', None),     # start{}   c 3                                      # \c 3 
+                          (4, 6, 'JHN', '3', '16'),     # start{c}  v 16
+                          (4, 11, 'JHN', '3', '16'),    # end{c}    v
+                          (4, 11, 'JHN', '3', '16')])   # end{}     c
                             
     def test_transduction(self):
         src = ['\\test\n',
@@ -184,7 +194,7 @@ class USFMTestCase(unittest.TestCase):
                '\\test\\f\\fk deep text\\f*\n',
                '\\test\\f\\fr deep text\n',
                '\\id MAT\n',
-#               '\\c 1 \\v 1\n',
+               '\\c 1 \\v 1\n',
                '\\id JHN\n',
                '\\c 3 \\v 16',
                ]

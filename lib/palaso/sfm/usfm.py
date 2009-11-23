@@ -109,9 +109,9 @@ class parser(sfm.parser):
 			elif event.istext(e) and e.context == 'id':
 				try:    ref = (e.text.split(None,1)[0].strip(),None,None)
 				except: self._error(SyntaxError, 'missing required book name on \\id tag',e)
-			elif event.isend(e):
-				if   e.tag == 'c':  ref = (ref[0],None,None)
-				elif e.tag == 'v':  ref = (ref[0],ref[1],None)					
+#			elif event.isend(e):
+#				if   e.tag == 'c':  ref = (ref[0],None,None)
+#				elif e.tag == 'v':  ref = (ref[0],ref[1],None)					
 			yield getattr(event,'_'+e.type)(pos(*e.pos+ref),*e[1:])
 					
 pos = collections.namedtuple('pos', 'line col book chapter verse')
