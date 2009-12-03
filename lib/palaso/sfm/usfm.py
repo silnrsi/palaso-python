@@ -21,7 +21,7 @@ from palaso.sfm import event
 import collections, re, warnings
 
 def istype(tag,type):   return type in types(tag)
-def types(tag):         return markers.get(tag,[])
+def types(tag):         return markers.get(tag,['isEnd','isChar'])
 def isinline(tag):      return istype(tag,'isInline')
 def isnum(tag):         return istype(tag,'isNum')
 def ischar(tag):        return istype(tag,'isChar')
