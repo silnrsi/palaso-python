@@ -77,7 +77,7 @@ class DictWriter:
     
     @staticmethod
     def __make_row(row):
-        return dict((k.encode('utf-8'),v.encode('utf-8')) for k,v in row.iteritems())
+        return dict((unicode(k).encode('utf-8'),unicode(v).encode('utf-8')) for k,v in row.iteritems())
     
     def writerow(self,row):
         self.__writer.writerow(self.__make_row(row))
