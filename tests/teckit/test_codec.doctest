@@ -1,0 +1,24 @@
+Here is an example session using teckit as a codec
+
+>>> import palaso.teckit
+
+Now register a particular TECkit mapping file
+
+>>> palaso.teckit.register("data/silipa93.tec")
+>>> palaso.teckit.list_mappings()
+{'sil-ipa93-2001<->unicode': Mapping('data/silipa93.tec')}
+>>> instr = "DE kHAtH"
+
+Notice that we use the mapping name not the file
+
+>>> instr.decode("sil-ipa93-2001<->unicode")
+u'\xf0\u025b k\u02b0\u0251t\u02b0'
+
+This is: ðɛ kʰɑtʰ
+
+We can also register a whole directory of .tec files
+
+>>> palaso.teckit.register_library("data")
+>>> palaso.teckit.list_mappings()
+{'sil-ipa93-2001<->unicode': Mapping('data/silipa93.tec'), 'sil-academy-2001<->unicode': Mapping('data/academy.tec'), 'sil-greek_galatia-2001<->unicode': Mapping('data/SILGreek2004-04-27.uncompressed.reference.tec')}
+
