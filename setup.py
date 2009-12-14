@@ -13,7 +13,7 @@ setup(name='palaso',
       maintainer='Tim Eves',
       maintainer_email='tim_eves@sil.org',
       url='http://projects.palaso.org/projects/show/palaso-python',
-      packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm'],
+      packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 'palaso.teckit'],
       ext_modules = [
         Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"])
         ],

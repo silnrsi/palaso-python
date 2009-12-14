@@ -19,6 +19,13 @@ from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
     FullBuffer, EmptyBuffer, flags, Form
 
+_errors = {
+    'strict':Option.DontUseReplacementChar,
+    'ignore':Option.DontUseReplacementChar,
+    'replace':Option.UseReplacementCharSilently,
+    'xmlcharrefreplace':Option.UseReplacementCharWithWarning,
+    'xmlcharrefreplace':Option.UseReplacementCharWithWarning
+    }
 
 class Mapping(str):
     def __new__(cls, path):
@@ -44,8 +51,8 @@ class Mapping(str):
     def __str__(self):  return self.lhsName + ' <-> ' + self.rhsName
     
     def __repr__(self): return ('Mapping(%s)' % self._repr_args 
-                                if hasattr(self,'__repr_args') 
-                                else object.__repr__(self)) 
+                                if hasattr(self,'_repr_args') 
+                                else self.__str__())
     
     @property
     @memoize
@@ -61,42 +68,39 @@ class Mapping(str):
         return self.flags[1]
 
 
-
 def _form_from_flags(form, flags):
     if form==Form.Unspecified:
         if   flags.expectsNFD or flags.generatesNFD:  form = Form.NFD
         elif flags.expectsNFC or flags.generatesNFC:  form = Form.NFC
-    return form + Form.UTF8 if flags.unicode else Form.Bytes
+    return form + (Form.UTF8 if flags.unicode else Form.Bytes)
 
 
 class Converter(object):
     def __init__(self, mapping, forward=True,source=Form.Unspecified,target=Form.Unspecified):
         source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
         target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
-        self.__converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self.__residue  = ''
+        self._converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
+        self._residue  = ''
 
-    
     def __del__(self):
-        _engine.disposeConverter(self.__converter)
+        _engine.disposeConverter(self._converter)
     
     @memoize
     def __getattr__(self, name):
         from _engine import getConverterName
         try:
             nid = getattr(_engine.NameID,name)
-            nlen = getConverterName(self.__converter, nid)
+            nlen = getConverterName(self._converter, nid)
         except (AttributeError,IndexError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         buf  = _engine.create_string_buffer(nlen)
-        nlen = getConverterName(self.__converter, nid, buf, nlen)
+        nlen = getConverterName(self._converter, nid, buf, nlen)
         return str(buf[:nlen])
-    
-    
-    @property
+   
+    @property 
     @memoize
     def flags(self):
-        return _engine.getConverterFlags(self.__converter)
+        return _engine.getConverterFlags(self._converter)
     
     @property
     def sourceFlags(self):
@@ -106,11 +110,21 @@ class Converter(object):
     def targetFlags(self):
         return self.flags[1]
     
-    
     def reset(self):
-        _engine.resetConverter(self.__converter)
-        self.__residue = ''
+        _engine.resetConverter(self._converter)
+        self._residue = ''
     
+    def encode(self, input, errors = 'strict') :
+        res = self.convert(input, finished = True, options = _errors[errors])
+        residue = len(self._residue)
+        self.reset()
+        return (res, residue)
+
+    def decode(self, input, errors = 'strict') :
+        res = self.convert(input, finished = True, options = _errors[errors])
+        residue = len(self._residue)
+        self.reset()
+        return (res, residue)
     
     def convert(self, data, finished=False, options=Option.UseReplacementCharSilently):
         if self.sourceFlags.unicode and isinstance(data,str):
@@ -119,14 +133,14 @@ class Converter(object):
         options += Option.InputIsComplete if finished else 0
         if self.sourceFlags.unicode:
             data = codecs.encode(data,'utf-8')
-        data = self.__residue + data
+        data = self._residue + data
         
         buf = _engine.create_string_buffer(long(len(data)*3/2))
         out = 0
         while True:
             try:
                 #print 'trying with buffer size %d' % len(buf)
-                cons,outs,lhc = _engine.convertBufferOpt(self.__converter, data, len(data), buf, len(buf), options)
+                cons,outs,lhc = _engine.convertBufferOpt(self._converter, data, len(data), buf, len(buf), options)
                 if finished:
                     self.reset()
                 break
@@ -143,14 +157,13 @@ class Converter(object):
         buf = str(buf[:outs])
         return unicode(buf,'utf-8') if self.targetFlags.unicode else buf
     
-    
     def flush(self,finished=True,options=Option.UseReplacementCharSilently):
         options += Option.InputIsComplete if finished else 0
         buf = _engine.create_string_buffer(128L)
         outs = 0
         while True:
             try:
-                outs,lhc = _engine.flushOpt(self.__converter, buf, len(buf), options)
+                outs,lhc = _engine.flushOpt(self._converter, buf, len(buf), options)
                 if finished:
                     self.reset()
                 break
