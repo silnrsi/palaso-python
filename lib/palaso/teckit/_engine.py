@@ -27,6 +27,7 @@ from ctypes import *
 from ctypes.util import find_library
 from _common import *
 from itertools import chain, count
+import platform
 
 # formFlags bits for normalization; if none are set, then this side of the 
 #  mapping is normalization-form-agnostic on input, and may generate an 
@@ -69,17 +70,22 @@ Form = ENUM(Form,
 EndOfText = 0xffffffffL
 
 # TODO: Check whether we need to use windll instead of cdll on Windows.
-libteckit = cdll.LoadLibrary(find_library('TECkit'))
+if platform.system() == "Windows" :
+    libteckit = windll.LoadLibrary(find_library('TECkit_' + platform.machine()))
+    LOCALFUNCTYPE = WINFUNCTYPE
+else :
+    libteckit = cdll.LoadLibrary(find_library('TECkit'))
+    LOCALFUNCTYPE = CFUNCTYPE
 
 #
 # Create a converter object from a compiled mapping and dispose of it
 #
-prototype = CFUNCTYPE(status, mapping, c_size_t, c_bool, c_uint16, c_uint16, POINTER(converter))
+prototype = LOCALFUNCTYPE(status, mapping, c_size_t, c_bool, c_uint16, c_uint16, POINTER(converter))
 paramflags = (1,'mapping'),(1,'mappingSize'),(1,'forward'),(1,'sourceForm'),(1,'targetForm'),(2,'converter')
 createConverter = prototype(('TECkit_CreateConverter', libteckit), paramflags)
 createConverter.errcheck = status_code
 
-prototype = CFUNCTYPE(status, converter)
+prototype = LOCALFUNCTYPE(status, converter)
 paramflags = (1,'converter'),
 disposeConverter = prototype(('TECkit_DisposeConverter', libteckit), paramflags)
 disposeConverter.errcheck = status_code
@@ -88,12 +94,12 @@ disposeConverter.errcheck = status_code
 #
 # Read a name record or the flags from a converter object
 #
-prototype = CFUNCTYPE(status, converter, nameid, c_char_p, c_size_t, POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, converter, nameid, c_char_p, c_size_t, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'nameID'),(1,'nameBuffer',None),(1,'bufferSize',0),(2,'nameLength')
 getConverterName = prototype(('TECkit_GetConverterName', libteckit), paramflags)
 getConverterName.errcheck = status_code
 
-prototype = CFUNCTYPE(status, converter, POINTER(flags), POINTER(flags))
+prototype = LOCALFUNCTYPE(status, converter, POINTER(flags), POINTER(flags))
 paramflags = (1,'converter'),(2,'sourceFlags'),(2,'targetFlags')
 getConverterFlags = prototype(('TECkit_GetConverterFlags', libteckit), paramflags)
 getConverterFlags.errcheck = status_code
@@ -102,7 +108,7 @@ getConverterFlags.errcheck = status_code
 #
 # Reset a converter object, forgetting any buffered context/state
 #
-prototype = CFUNCTYPE(status, converter)
+prototype = LOCALFUNCTYPE(status, converter)
 paramflags = (1,'converter'),
 resetConverter = prototype(('TECkit_ResetConverter',libteckit), paramflags)
 resetConverter.errcheck = status_code
@@ -111,7 +117,7 @@ resetConverter.errcheck = status_code
 #
 # Convert text from a buffer in memory
 #
-prototype = CFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_bool)
+prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_bool)
 paramflags = (1,'converter'),(1,'inBuffer'),(1,'inLength'),(2,'inUsed'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inputIsComplete',False)
 convertBuffer = prototype(('TECkit_ConvertBuffer',libteckit),paramflags)
 convertBuffer.errcheck = status_code
@@ -120,7 +126,7 @@ convertBuffer.errcheck = status_code
 # Flush any buffered text from a converter object
 # (at end of input, if inputIsComplete flag not set for ConvertBuffer)
 #
-prototype = CFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed')
 flush = prototype(('TECkit_Flush',libteckit),paramflags)
 flush.errcheck = status_code
@@ -128,12 +134,12 @@ flush.errcheck = status_code
 #
 # Read name and flags directly from a compiled mapping, before making a converter object
 #
-prototype = CFUNCTYPE(status, mapping, c_size_t, nameid, c_char_p, c_size_t, POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, mapping, c_size_t, nameid, c_char_p, c_size_t, POINTER(c_size_t))
 paramflags = (1,'mapping'),(1,'mappingSize'),(1,'nameID'),(1,'nameBuffer',None),(1,'bufferSize',0),(2,'nameLength')
 getMappingName = prototype(('TECkit_GetMappingName',libteckit),paramflags)
 getMappingName.errcheck = status_code
 
-prototype = CFUNCTYPE(status, mapping, c_size_t, POINTER(flags), POINTER(flags))
+prototype = LOCALFUNCTYPE(status, mapping, c_size_t, POINTER(flags), POINTER(flags))
 paramflags = (1,'mapping'),(1,'mappingSize'),(2,'lhsFlags'),(2,'rhsFlags')
 getMappingFlags = prototype(('TECkit_GetMappingFlags', libteckit), paramflags)
 getMappingFlags.errcheck = status_code
@@ -142,7 +148,7 @@ getMappingFlags.errcheck = status_code
 #
 # Return the version number of the TECkit library
 #
-prototype = CFUNCTYPE(c_uint32)
+prototype = LOCALFUNCTYPE(c_uint32)
 getVersion = prototype(('TECkit_GetVersion', libteckit))
 
 #
@@ -171,7 +177,7 @@ Option = ENUM(
 # Convert text from a buffer in memory, with options
 # (note that former inputIsComplete flag is now a bit in the options parameter)
 #
-prototype = CFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'inBuffer'),(1,'inLength'),(2,'inUsed'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inOptions'),(2,'lookaheadCount')
 convertBufferOpt = prototype(('TECkit_ConvertBufferOpt',libteckit),paramflags)
 convertBufferOpt.errcheck = status_code
@@ -180,7 +186,7 @@ convertBufferOpt.errcheck = status_code
 # Flush any buffered text from a converter object, with options
 # (at end of input, if inputIsComplete flag not set for ConvertBuffer)
 #
-prototype = CFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inOptions'),(2,'lookaheadCount')
 flushOpt = prototype(('TECkit_FlushOpt',libteckit),paramflags)
 flushOpt.errcheck = status_code

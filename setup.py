@@ -2,9 +2,16 @@
 
 from distutils.core import setup
 from glob import glob
-from Pyrex.Distutils.extension import Extension
-from Pyrex.Distutils import build_ext
+import platform
 
+if platform.system() == "Windows" :
+    ext = []
+    cmd = {}
+else :
+    from Pyrex.Distutils.extension import Extension
+    from Pyrex.Distutils import build_ext
+    ext =[ Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"]) ] 
+    cmd = {'build_ext': build_ext}
 
 setup(name='palaso',
       version='0.4.0b1',
@@ -14,11 +21,9 @@ setup(name='palaso',
       maintainer_email='tim_eves@sil.org',
       url='http://projects.palaso.org/projects/show/palaso-python',
       packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 'palaso.teckit'],
-      ext_modules = [
-        Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"])
-        ],
-      cmdclass = {'build_ext': build_ext},
-      scripts=glob('scripts/*/*'),
+      ext_modules = ext,
+      cmdclass = cmd,
+      scripts=filter(lambda x : x.rfind(".") == -1, glob('scripts/*/*')),
       license='LGPL',
       platforms=['Linux','Win32','Mac OS X'],
       package_dir={'':'lib'}
