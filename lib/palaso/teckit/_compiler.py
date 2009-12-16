@@ -25,6 +25,7 @@
 from ctypes import *
 from ctypes.util import find_library
 from _common import *
+import platform
 
 
 Opts_FormMask   = 0x0000000F    # see TECkit_Common.h for encoding form constants
@@ -33,7 +34,7 @@ Opt = ENUM(
     XML     =0x20)   # instead of a compiled binary table, generate an XML 
                      #   representation of the mapping
 
-teckit_error_fn = CFUNCTYPE(None, c_void_p, c_char_p, c_char_p, c_uint32)
+teckit_error_fn = LOCALFUNCTYPE(None, c_void_p, c_char_p, c_char_p, c_uint32)
 
 def key_error(err_val,msg):
     def check(res,func,args):
@@ -42,31 +43,36 @@ def key_error(err_val,msg):
     return check
 
 # TODO: Check whether we need to use windll instead of cdll on Windows.
-libteckit_compile = cdll.LoadLibrary(find_library('TECkit_Compiler'))
+if platform.system() == "Windows" :
+    libteckit_compile = windll.LoadLibrary(find_library('TECkit_Compiler_' + platform.machine()))
+    LOCALFUNCTYPE = WINFUNCTYPE
+else :
+    libteckit_compile = cdll.LoadLibrary(find_library('TECkit_Compiler'))
+    LOCALFUNCTYPE = CFUNCTYPE
 
 
-prototype = CFUNCTYPE(status, c_char_p, c_size_t, c_bool, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t))
+prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, c_bool, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t))
 paramflags = (1,'txt'),(1,'len'),(1,'doCompression'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen')
 compile = prototype(('TECkit_Compile',libteckit_compile),paramflags)
 compile.err_check = status_code
 
-prototype = CFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t), c_uint32)
+prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t), c_uint32)
 paramflags = (1,'txt'),(1,'len'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen'),(1,'opts')
 compileOpt = prototype(('TECkit_CompileOpt',libteckit_compile),paramflags)
 compileOpt.err_check = status_code
 
-prototype = CFUNCTYPE(None, mapping)
+prototype = LOCALFUNCTYPE(None, mapping)
 paramflags = (1,'table'),
 disposeCompiled = prototype(('TECkit_DisposeCompiled',libteckit_compile),paramflags)
 
-prototype = CFUNCTYPE(c_uint32)
+prototype = LOCALFUNCTYPE(c_uint32)
 getCompilerVersion = prototype(('TECkit_GetCompilerVersion', libteckit_compile))
 
 #
 # new APIs for looking up Unicode names (as NUL-terminated C strings)
 #
 # returns the Unicode name of usv, if available, else NULL
-prototype = CFUNCTYPE(c_char_p, c_uint32)
+prototype = LOCALFUNCTYPE(c_char_p, c_uint32)
 paramflags = (1,'usv'),
 getUnicodeName = prototype(('TECkit_GetUnicodeName',libteckit_compile),paramflags)
 getUnicodeName.err_check = key_error(0, 'no name for U+%x')
@@ -74,12 +80,12 @@ getUnicodeName.err_check = key_error(0, 'no name for U+%x')
 # returns the TECkit form of the name of usv, or "U+xxxx" if no name
 # NB: returns value is a pointer to a static string, which will be
 #   overwritten by subsequent calls.
-prototype = CFUNCTYPE(c_char_p,c_uint32)
+prototype = LOCALFUNCTYPE(c_char_p,c_uint32)
 paramflags = (1,'usv'),
 getTECkitName = prototype(('TECkit_GetTECkitName',libteckit_compile),paramflags)
 getTECkitName.err_check = key_error(0, 'no name for U+%x')
 
-prototype = CFUNCTYPE(c_int,c_char_p)
+prototype = LOCALFUNCTYPE(c_int,c_char_p)
 paramflags = (1,'name'),
 getUnicodeValue = prototype(('TECkit_GetUnicodeValue',libteckit_compile),paramflags)
 getUnicodeValue.err_check = key_error(-1,'no USV for %s')

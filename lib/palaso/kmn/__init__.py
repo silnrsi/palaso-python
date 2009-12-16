@@ -325,7 +325,7 @@ def keysym_klcinfo(sym) :
         for w in words[:-1] :
             mod = mod | _modifiers[w][2]
         vkey = words[-1]
-        item, cap, sc, kn, ekn = _rawkeys[words[-1]]
+        item, cap, sc, vkc, kn, ekn = _rawkeys[words[-1]]
         if _msrawmap.has_key(vkey) :
             vkey = _msrawmap[vkey]
         else :

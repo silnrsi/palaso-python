@@ -47,23 +47,6 @@ _errors = {
 
 
 
-class _CodecInfo (object):
-    def __init__(self,name,mapping):
-        self._map = mapping
-        self.name = name
-        self._enc = engine.Converter(self._map, forward=False)
-        self._dec = engine.Converter(self._map, forward=True)
-    
-    def encode(input,errors='strict'):
-        enc = engine.Converter(self._map, forward=False)
-        res = enc.convert(input,_errors[errors] + Option.InputIsComplete)
-        return res + enc.flush(_errors[errors])
-    
-    def decode(input,errors='strict'):
-        dec = engine.Converter(self._map)
-        res = dec.convert(input,_errors[errors] + Option.InputIsComplete)
-        return res + enc.flush(_errors[errors])
-
 # Don't need to store residue in these objects since new converter
 # created for each instance, so store state in the converter
 def _CreateIncrementalEncoder(converter) :
