@@ -158,13 +158,20 @@ if __name__ == '__main__':
         if not os.path.exists(sfms[1]): open(sfms[1],'wb').close()
         master_src = open(sfms[1],'r+b')
         master_out = tempfile.NamedTemporaryFile()
-        shutil.copystat(master_src.name, master_out.name)
         # merge in the word referneces into the new master.
         prev_num_words = opts.verbose and len(words_refs)
         prev_num_refs  = opts.verbose and sum(imap(len, words_refs.itervalues()))
         merge_master_file_with_book(master_src, master_out, words_refs)
-        # Replace the original with the new version
-        shutil.copy2(master_out.name, master_src.name)
+        # Replace the original with the new version.
+        # We need to use this verbose way rather than shutil.copy2 because 
+        #  Windows will not allow the NamedTemporaryFile object to be opened a
+        #  second time and closing it of deletes the temporary.
+        master_out.seek(0)
+        master_src.seek(0)
+        master_src.truncate()
+        shutil.copyfileobj(master_out,master_src)
+        master_src.close()
+        master_out.close()
     except IOError, err:
         sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n'.format(err)))
         sys.exit(2)

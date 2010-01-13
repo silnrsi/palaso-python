@@ -18,7 +18,7 @@ Depends: ${python:Depends}, ${misc:Depends},
 Provides: ${python:Provides}
 Description: Payap Language Software python package and scripts
  Python scripts, modules and packages created by the Computing Unit at the 
- Payap Linguistic Institute, a partner ship between SIL and Payap University. 
+ Payap Linguistic Institute, a partnership between SIL and Payap University. 
  .
  These have been useful for language software programs and tools develeped 
  by the Computing Unit.
