@@ -114,7 +114,7 @@ def status_code(s,f,args):
     elif s == Status.NameNotFound:     raise IndexError('TECkit: nameID index out of range')
     elif s == Status.IncompleteChar:   raise UnicodeDecodeError('bad UTF data (lone surrogate, incomplete UTF8 sequence)') 
     elif s == Status.CompilationFailed:raise CompilationError('mapping compilation failed')
-    elif s == Status.OutOfMemory:      raise MemoryError('TECkit: allocation failed in: %r' % func)
+    elif s == Status.OutOfMemory:      raise MemoryError('TECkit: allocation failed in: %r' % f)
     else: raise RuntimeError('unknown status code %s returned' % status)
 
 
