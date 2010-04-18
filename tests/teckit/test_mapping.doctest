@@ -18,20 +18,16 @@ Check the representation and str conversion methods
 "Mapping('data/silipa93.tec')"
 'SIL-IPA93-2001 <-> Unicode'
 
-
-Check extended info from UTR-22 these are optional and may through an AttributeError
-if not included in the mapping
+Check extended info from UTR-22 these are optional and may return None if not 
+included in the mapping
 >>> m.version; m.contact; m.regAuthority; m.regName
 '8'
 'mailto:martin_hosken@sil.org'
 'SIL International'
 'IPA93'
 
-This attribute is absent for silipa93.tec
+This attribute is absent for silipa93.tec and so returns None
 >>> m.copyright
-Traceback (most recent call last):
-    ...
-AttributeError: Mapping('data/silipa93.tec') object has no attribute 'copyright'
 
 Check the flags come out as expected:
 >>> print m.lhsFlags; print m.rhsFlags
@@ -56,21 +52,17 @@ Check the representation and str conversion methods
 "Mapping('data/academy.tec')"
 'SIL-Academy-2001 <-> Unicode'
 
-Check extended info from UTR-22 these are optional and may raise an
-AttributeError if not included in the mapping, in this case regName and 
-copyright were never included in the tec mapping.
+Check extended info from UTR-22 these are optional and may None if not included 
+in the mapping, in this case regName and copyright were never included in the 
+tec mapping.
 >>> m.version; m.contact; m.regAuthority
 '7'
 'mailto:martin_hosken@sil.org'
 'none'
+
+These attributes are absent from the academy encoding so return None.
 >>> m.regName
-Traceback (most recent call last):
-    ...
-AttributeError: Mapping('data/academy.tec') object has no attribute 'regName'
 >>> m.copyright
-Traceback (most recent call last):
-    ...
-AttributeError: Mapping('data/academy.tec') object has no attribute 'copyright'
 
 Check the flags come out as expected:
 >>> print m.lhsFlags; print m.rhsFlags

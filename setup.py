@@ -14,7 +14,7 @@ else :
     cmd = {'build_ext': build_ext}
 
 setup(name='palaso',
-      version='0.4.0b1',
+      version='0.5.0',
       description='Payap Language Software python package and scripts',
       long_description="Modules and scripts useful for building language software.",
       maintainer='Tim Eves',

@@ -42,8 +42,10 @@ class Mapping(str):
         try:
             nid = getattr(_engine.NameID,name)
             nlen = getMappingName(self, len(self), nid)
-        except (AttributeError,IndexError):
+        except (AttributeError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
+        except IndexError:
+            return None
         buf  = _engine.create_string_buffer(nlen)
         nlen = getMappingName(self, len(self), nid, buf, nlen)
         return str(buf[:nlen])
@@ -69,9 +71,11 @@ class Mapping(str):
 
 
 def _form_from_flags(form, flags):
-    if form==Form.Unspecified:
+    if form==Form.Unspecified or form==None:
         if   flags.expectsNFD or flags.generatesNFD:  form = Form.NFD
         elif flags.expectsNFC or flags.generatesNFC:  form = Form.NFC
+    else:
+        form &= Form_NormalizationMask
     return form + (Form.UTF8 if flags.unicode else Form.Bytes)
 
 
@@ -91,8 +95,11 @@ class Converter(object):
         try:
             nid = getattr(_engine.NameID,name)
             nlen = getConverterName(self._converter, nid)
-        except (AttributeError,IndexError):
+        except (AttributeError):
             raise AttributeError('%r object has no attribute %r' % (self,name))
+        except IndexError:
+            return None
+
         buf  = _engine.create_string_buffer(nlen)
         nlen = getConverterName(self._converter, nid, buf, nlen)
         return str(buf[:nlen])
