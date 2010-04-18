@@ -7,6 +7,25 @@ Make an encoder and decoder
 >>> m = Mapping('data/silipa93.tec')
 >>> enc = Converter(m); dec = Converter(m,forward=False)
 
+Check left and right sides encoding info in teh coverter object
+>>> enc.lhsName; enc.lhsDescription
+'SIL-IPA93-2001'
+'SIL IPA93 Font encoding'
+>>> enc.rhsName; enc.rhsDescription
+'Unicode'
+'Unicode'
+
+Check extended info from UTR-22 these are optional and may return None if not 
+included in the mapping
+>>> enc.version; enc.contact; enc.regAuthority; enc.regName
+'8'
+'mailto:martin_hosken@sil.org'
+'SIL International'
+'IPA93'
+
+This attribute is absent for silipa93.tec and so returns None
+>>> enc.copyright
+
 Test forward direction
 >>> res = enc.convert('D"\xe2s i\xf9z ?\xab tHEstH',finished=True)
 >>> res == u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0'
