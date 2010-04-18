@@ -28,6 +28,15 @@ from _common import *
 import platform
 
 
+# We need to use windll instead of cdll on Windows.
+if platform.system() == "Windows" :
+    libteckit_compile = windll.LoadLibrary(find_library('TECkit_Compiler_' + platform.machine()))
+    LOCALFUNCTYPE = WINFUNCTYPE
+else :
+    libteckit_compile = cdll.LoadLibrary(find_library('TECkit_Compiler'))
+    LOCALFUNCTYPE = CFUNCTYPE
+
+
 Opts_FormMask   = 0x0000000F    # see TECkit_Common.h for encoding form constants
 Opt = ENUM(
     Compress=0x10,   # generate compressed mapping table
@@ -41,15 +50,6 @@ def key_error(err_val,msg):
         if res != err_val: return res
         else:              raise KeyError(msg % args[0])
     return check
-
-# TODO: Check whether we need to use windll instead of cdll on Windows.
-if platform.system() == "Windows" :
-    libteckit_compile = windll.LoadLibrary(find_library('TECkit_Compiler_' + platform.machine()))
-    LOCALFUNCTYPE = WINFUNCTYPE
-else :
-    libteckit_compile = cdll.LoadLibrary(find_library('TECkit_Compiler'))
-    LOCALFUNCTYPE = CFUNCTYPE
-
 
 prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, c_bool, teckit_error_fn, c_void_p, POINTER(mapping), POINTER(c_size_t))
 paramflags = (1,'txt'),(1,'len'),(1,'doCompression'),(1,'errFunc'),(1,'userData'),(2,'outTable'),(2,'outLen')

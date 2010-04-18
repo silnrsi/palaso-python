@@ -69,7 +69,7 @@ Form = ENUM(Form,
 #
 EndOfText = 0xffffffffL
 
-# TODO: Check whether we need to use windll instead of cdll on Windows.
+# Load the library we use windll instead of cdll on Windows.
 if platform.system() == "Windows" :
     libteckit = windll.LoadLibrary(find_library('TECkit_' + platform.machine()))
     LOCALFUNCTYPE = WINFUNCTYPE
