@@ -19,19 +19,11 @@ from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
     FullBuffer, EmptyBuffer, flags, Form
 
-_errors = {
-    'strict':Option.DontUseReplacementChar,
-    'ignore':Option.DontUseReplacementChar,
-    'replace':Option.UseReplacementCharSilently,
-    'xmlcharrefreplace':Option.UseReplacementCharWithWarning,
-    'xmlcharrefreplace':Option.UseReplacementCharWithWarning
-    }
 
 class Mapping(str):
     def __new__(cls, path):
         with open(path, 'rb') as mf:
-            data = mf.read()
-        return str.__new__(cls, data)
+            return super(Mapping,cls).__new__(cls,mf.read())
     
     def __init__(self, path):
         self._repr_args = repr(path)
@@ -89,6 +81,7 @@ class Converter(object):
     def __del__(self):
         _engine.disposeConverter(self._converter)
     
+    
     @memoize
     def __getattr__(self, name):
         from _engine import getConverterName
@@ -99,27 +92,30 @@ class Converter(object):
             raise AttributeError('%r object has no attribute %r' % (self,name))
         except IndexError:
             return None
-
+        
         buf  = _engine.create_string_buffer(nlen)
         nlen = getConverterName(self._converter, nid, buf, nlen)
         return str(buf[:nlen])
-   
+    
+    
     @property 
     @memoize
     def flags(self):
         return _engine.getConverterFlags(self._converter)
     
+    
     @property
     def sourceFlags(self):
         return self.flags[0]
+    
     
     @property
     def targetFlags(self):
         return self.flags[1]
     
+    
     def reset(self):
         _engine.resetConverter(self._converter)
-        self._residue = ''
     
     def encode(self, input, errors = 'strict') :
         res = self.convert(input, finished = True, options = _errors[errors])

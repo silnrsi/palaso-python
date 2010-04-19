@@ -32,7 +32,7 @@ currentTECKitVersion = 0x00020004   # 16.16 version number
 def ENUM(*names, **kwds):
     base=object
     if names:
-        if not isinstance(names[0],(str,unicode)):
+        if not isinstance(names[0],basestring):
             base=names[0]
             names=names[1:]
         if names:
@@ -124,7 +124,7 @@ def FLAGS(ctype, *flags):
     
     class _BITS(Structure):
         _pack_ = 0
-        _fields_ = [(n, ctype, 1) if isinstance(n,(str,unicode)) else (names.next(),ctype,len(n)) for n in flags]
+        _fields_ = [(n, ctype, 1) if isinstance(n,basestring) else (names.next(),ctype,len(n)) for n in flags]
     
     class _FLAGS(Union):
         _fields_    = [('bits', _BITS), ('value', ctype)]
