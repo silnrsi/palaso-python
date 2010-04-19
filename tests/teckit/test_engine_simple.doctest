@@ -30,7 +30,7 @@ Test forward direction
 >>> res = enc.convert('D"\xe2s i\xf9z ?\xab tHEstH',finished=True)
 >>> res == u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0'
 True
->>> print res
+>>> print res.encode('utf-8')
 ðĩs iːz ʔə tʰɛstʰ
 
 Test reverse direction
@@ -51,7 +51,7 @@ Test forward direction
 >>> res = enc.convert('upkdu|Gm:',finished=True)
 >>> res == u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038'
 True
->>> print res
+>>> print res.encode('utf-8')
 ကစုိကရ္ဝား
 
 Test reverse direction
