@@ -11,13 +11,13 @@
 from __future__ import with_statement
 
 import _engine
-import codecs
+import codecs, sys
 
 from _engine import getVersion, memoize
 from _engine import Option
 from _engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
-    FullBuffer, EmptyBuffer, flags, Form
+    FullBuffer, EmptyBuffer, UnmappedChar, flags, Form
 
 
 class Mapping(str):
@@ -62,13 +62,24 @@ class Mapping(str):
         return self.flags[1]
 
 
+if sys.byteorder == 'little':
+    _Form_UNICODE = Form.UTF32LE
+    _unicode_encoder_name = 'utf-32le'
+else:
+    _Form_UNICODE = Form.UTF32BE
+    _unicode_encoder_name = 'utf-32be'
+
+_unicode_encoder = codecs.getencoder(_unicode_encoder_name)
+_unicode_decoder = codecs.getdecoder(_unicode_encoder_name)
+
+
 def _form_from_flags(form, flags):
     if form==Form.Unspecified or form==None:
         if   flags.expectsNFD or flags.generatesNFD:  form = Form.NFD
         elif flags.expectsNFC or flags.generatesNFC:  form = Form.NFC
     else:
         form &= Form_NormalizationMask
-    return form + (Form.UTF8 if flags.unicode else Form.Bytes)
+    return form + (_Form_UNICODE if flags.unicode else Form.Bytes)
 
 
 class Converter(object):
@@ -76,8 +87,9 @@ class Converter(object):
         source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
         target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
         self._converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self._residue  = ''
-
+        self._buffer    = _engine.create_string_buffer(80*4L)
+    
+    
     def __del__(self):
         _engine.disposeConverter(self._converter)
     
@@ -117,63 +129,72 @@ class Converter(object):
     def reset(self):
         _engine.resetConverter(self._converter)
     
-    def encode(self, input, errors = 'strict') :
-        res = self.convert(input, finished = True, options = _errors[errors])
-        residue = len(self._residue)
-        self.reset()
-        return (res, residue)
-
-    def decode(self, input, errors = 'strict') :
-        res = self.convert(input, finished = True, options = _errors[errors])
-        residue = len(self._residue)
-        self.reset()
-        return (res, residue)
     
-    def convert(self, data, finished=False, options=Option.UseReplacementCharSilently):
-        if self.sourceFlags.unicode and isinstance(data,str):
-            raise TypeError("data is type 'str' but unicode is expected")
-        
-        options += Option.InputIsComplete if finished else 0
+    def _handle_unmapped_char(self, input, context, (cons, outs, lhc)):
+        # This looks like a nasty hack because it is. Sorry
+        _engine.resetConverter(self._converter)
+        name = (self.lhsName + '<->' + self.rhsName).lower()
+        errtype = UnicodeEncodeError if self.sourceFlags.unicode else UnicodeDecodeError
         if self.sourceFlags.unicode:
-            data = codecs.encode(data,'utf-8')
-        data = self._residue + data
+            end = cons/4
+            end -= (lhc if end != len(input) else 0)
+            start = end -1
+        else:
+            start = cons - 1
+            end = start + lhc
+        end = min(end,len(input))
+        raise errtype(name, input, start, end, 
+                      context + ' stopped at unmapped character')
         
-        buf = _engine.create_string_buffer(long(len(data)*3/2))
-        out = 0
-        while True:
+    
+    def _coerce_to_target(self, data):
+        return _unicode_decoder(data)[0] if self.targetFlags.unicode else data
+    
+    
+    def convert(self, input, finished=False, options=Option.UseReplacementCharSilently):
+        # Validate input parameters and do an necessary conversions
+        if self.sourceFlags.unicode and isinstance(input,str):
+            raise TypeError("source is type 'str' but type 'unicode' is expected")
+        if not self.sourceFlags.unicode and isinstance(input, unicode):
+            raise TypeError("source is type 'unicode' but type 'str' is expected")    
+        data = _unicode_encoder(input)[0] if self.sourceFlags.unicode else input
+        options |= finished and Option.InputIsComplete
+        
+        buf = self._buffer; cons = outs = 0; res = ''
+        while data:
             try:
-                #print 'trying with buffer size %d' % len(buf)
-                cons,outs,lhc = _engine.convertBufferOpt(self._converter, data, len(data), buf, len(buf), options)
-                if finished:
-                    self.reset()
-                break
-            except FullBuffer, (cons,outs,lhc):
-                #print 'conv:',(cons,outs,lhc)
-                outstr = self.flush(finished,options)
-                #print 'conv:',repr(unicode(str(buf[:outs]),'utf-8') + outstr)
-                buf=_engine.create_string_buffer(long(len(buf)*3/2))
+                cons,outs,lhc = _engine.convertBufferOpt(self._converter, 
+                                                         data, len(data), 
+                                                         buf, len(buf), 
+                                                         options)
+            except FullBuffer, (cons,outs,lhc): pass
             except EmptyBuffer, (cons,outs,lhc):
-                break
+                if finished: 
+                    raise self._unicode_error('expected more data.')
+            except UnmappedChar, err:
+                self._handle_unmapped_char(input, 'convert', err)
+            
+            res += self._coerce_to_target(str(buf[:outs]))
+            data = data[cons:]
         
-        self.__residue = data[cons:]
-        
-        buf = str(buf[:outs])
-        return unicode(buf,'utf-8') if self.targetFlags.unicode else buf
+        if finished:
+            res += self.flush()
+        return res
+    
     
     def flush(self,finished=True,options=Option.UseReplacementCharSilently):
-        options += Option.InputIsComplete if finished else 0
-        buf = _engine.create_string_buffer(128L)
-        outs = 0
+        options |= finished and Option.InputIsComplete
+        
+        buf = self._buffer; outs = 0; res  = ''
         while True:
             try:
-                outs,lhc = _engine.flushOpt(self._converter, buf, len(buf), options)
-                if finished:
-                    self.reset()
-                break
-            except FullBuffer:
-                #print 'flush:',(cons,outs,lhc)
-                #print 'flush:',repr(unicode(str(buf[:outs]),'utf-8'))
-                buf=_engine.create_string_buffer(long(len(buf)*3/2))
+                outs,lhc = _engine.flushOpt(self._converter, 
+                                            buf, len(buf), 
+                                            options)
+                return res + self._coerce_to_target(str(buf[:outs]))
+            except FullBuffer, outs:
+                res += self._coerce_to_target(str(buf[:outs]))
+            except UnmappedChar, err:
+                self._handle_unmapped_char(input, 'flush', err)
 
-        buf = str(buf[:outs])
-        return unicode(buf,'utf-8') if self.targetFlags.unicode else buf
+
