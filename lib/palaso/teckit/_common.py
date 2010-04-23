@@ -21,8 +21,6 @@
 #   xx-xxx-2002     jk      version 2.0 initial release
 #
 
-from __future__ import with_statement
-
 from ctypes import *
 from itertools import chain,count
 
@@ -87,6 +85,7 @@ class ConverterBusy(RuntimeError): pass
 class MappingVersionError(ValueError): pass
 class FullBuffer(Exception): pass
 class EmptyBuffer(Exception): pass
+class UnmappedChar(Exception): pass
 
 # Define some 'typedefs' these make the argtypes list slight less opaque.
 converter = c_void_p
@@ -97,26 +96,24 @@ c_bool    = c_ubyte
 
 
 
-# ctypes errcheck function ensure nothing is wrong.
-def status_code(s,f,args):
-    if   s >= 0:
-        w = s & StatusMask_Warning      # Not really sure how to handle warnings
-        s = c_int8(s).value
-        if   s == Status.NoError:          return args
-        elif s == Status.OutputBufferFull: raise FullBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
-        elif s == Status.NeedMoreInput:    raise EmptyBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
-    elif s == Status.InvalidForm:      raise ValueError('inForm or outForm parameter does not match mapping: %r' % args[0])
+def dispatch_error_status_code(s,f,args):
+    if   s == Status.InvalidForm:      raise ValueError('inForm or outForm parameter does not match mapping: %r' % args[0])
     elif s == Status.ConverterBusy:    raise ConverterBusy('cannot initiate conversion: %r busy' % args[0])
     elif s == Status.InvalidConverter: raise TypeError('converter object is unrecongizable: %r' % args[0]) 
     elif s == Status.InvalidMapping:   raise TypeError('mapping data is unrecognizable: %r' % args[0]) 
     elif s == Status.BadMappingVersion:raise MappingVersionError('TECKit: cannot handle this mapping version')
     elif s == Status.Exception:        raise RuntimeError('TECkit: an internal error has occurred')
     elif s == Status.NameNotFound:     raise IndexError('TECkit: nameID index out of range')
-    elif s == Status.IncompleteChar:   raise UnicodeDecodeError('bad UTF data (lone surrogate, incomplete UTF8 sequence)') 
+    elif s == Status.IncompleteChar:   raise UnicodeError('bad UTF data (lone surrogate, incomplete UTF8 sequence)') 
     elif s == Status.CompilationFailed:raise CompilationError('mapping compilation failed')
     elif s == Status.OutOfMemory:      raise MemoryError('TECkit: allocation failed in: %r' % f)
-    else: raise RuntimeError('unknown status code %s returned' % status)
+    raise RuntimeError('unknown status code %s returned' % s)
 
+def status_code(s,f,args):
+    if s < 0:   dispatch_error_status_code(s,f,args)
+    s = c_int8(s).value
+    if s == Status.NoError:   return args
+    raise RuntimeError('unknown status code %s returned' % s)
 
 
 def FLAGS(ctype, *flags):

@@ -27,7 +27,7 @@ from ctypes import *
 from ctypes.util import find_library
 from _common import *
 from itertools import chain, count
-import platform
+import platform, warnings
 
 # formFlags bits for normalization; if none are set, then this side of the 
 #  mapping is normalization-form-agnostic on input, and may generate an 
@@ -68,6 +68,26 @@ Form = ENUM(Form,
 #	end of text value for TECkit_DataSource functions to return
 #
 EndOfText = 0xffffffffL
+
+
+# ctypes errcheck function ensure nothing is wrong with the ConvertXXX of Flush calls.
+def _converter_status_code(s,f,args):
+    if s < 0:   dispatch_error_status_code(s,f,args)
+    _dispatch_warnings(s & StatusMask_Warning)
+    s = c_int8(s).value
+    if   s == Status.NoError:           return args
+    elif s == Status.OutputBufferFull:  raise FullBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
+    elif s == Status.NeedMoreInput:     raise EmptyBuffer(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
+    elif s == Status.UnmappedChar:      raise UnmappedChar(*(v.value for v in args[3:4] + args[6:7] + args[8:9]))
+    raise RuntimeError('unknown status code %s returned' % s)
+
+def _dispatch_warnings(w):
+    if w == Status.UsedReplacement:  
+        warnings.warn('used default replacement character during mapping', 
+                      UnicodeWarning, 
+                      stacklevel=4)
+
+
 
 # Load the library we use windll instead of cdll on Windows.
 if platform.system() == "Windows" :
@@ -120,7 +140,7 @@ resetConverter.errcheck = status_code
 prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_bool)
 paramflags = (1,'converter'),(1,'inBuffer'),(1,'inLength'),(2,'inUsed'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inputIsComplete',False)
 convertBuffer = prototype(('TECkit_ConvertBuffer',libteckit),paramflags)
-convertBuffer.errcheck = status_code
+convertBuffer.errcheck = _converter_status_code
 
 #
 # Flush any buffered text from a converter object
@@ -129,7 +149,7 @@ convertBuffer.errcheck = status_code
 prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed')
 flush = prototype(('TECkit_Flush',libteckit),paramflags)
-flush.errcheck = status_code
+flush.errcheck = _converter_status_code
 
 #
 # Read name and flags directly from a compiled mapping, before making a converter object
@@ -180,7 +200,7 @@ Option = ENUM(
 prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t),c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'inBuffer'),(1,'inLength'),(2,'inUsed'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inOptions'),(2,'lookaheadCount')
 convertBufferOpt = prototype(('TECkit_ConvertBufferOpt',libteckit),paramflags)
-convertBufferOpt.errcheck = status_code
+convertBufferOpt.errcheck = _converter_status_code
 
 #
 # Flush any buffered text from a converter object, with options
@@ -189,5 +209,5 @@ convertBufferOpt.errcheck = status_code
 prototype = LOCALFUNCTYPE(status, converter, c_char_p, c_size_t, POINTER(c_size_t), c_uint32, POINTER(c_size_t))
 paramflags = (1,'converter'),(1,'outBuffer'),(1,'outLength'),(2,'outUsed'),(1,'inOptions'),(2,'lookaheadCount')
 flushOpt = prototype(('TECkit_FlushOpt',libteckit),paramflags)
-flushOpt.errcheck = status_code
+flushOpt.errcheck = _converter_status_code
 
