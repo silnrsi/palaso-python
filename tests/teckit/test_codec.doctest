@@ -1,25 +1,109 @@
 Here is an example session using teckit as a codec
 
 >>> import palaso.teckit
->>> import os.path
+>>> import codecs, os.path
+>>> from pprint import pprint
 
-Now register a particular TECkit mapping file
+Helper function to make file paths uniform regardless of platform so it can
+match the expected output in this doctest.
+>>> def normalise_reg(reg): return [(n,m.replace(os.path.sep,'/')) for (n,m) in sorted(reg.iteritems())]
 
+Now register an individual TECkit mapping file
 >>> palaso.teckit.register(os.path.join("data","silipa93.tec"))
->>> print repr(palaso.teckit.list_mappings()).replace(os.path.sep,'/')
-{'sil-ipa93-2001<->unicode': Mapping('data/silipa93.tec')}
->>> instr = "DE kHAtH"
-
-Notice that we use the mapping name not the file
-
->>> instr.decode("sil-ipa93-2001<->unicode")
-u'\xf0\u025b k\u02b0\u0251t\u02b0'
-
-This is: ðɛ kʰɑtʰ
+>>> print normalise_reg(palaso.teckit.list_mappings())
+[('sil-ipa93-2001<->unicode', "Mapping('data/silipa93.tec')")]
 
 We can also register a whole directory of .tec files
-
 >>> palaso.teckit.register_library("data")
->>> print repr(palaso.teckit.list_mappings()).replace(os.path.sep,'/')
-{'sil-ipa93-2001<->unicode': Mapping('data/silipa93.tec'), 'sil-academy-2001<->unicode': Mapping('data/academy.tec'), 'sil-greek_galatia-2001<->unicode': Mapping('data/SILGreek2004-04-27.uncompressed.reference.tec')}
+>>> pprint(normalise_reg(palaso.teckit.list_mappings()))
+[('sil-academy-2001<->unicode', "Mapping('data/academy.tec')"),
+ ('sil-greek_galatia-2001<->unicode',
+  "Mapping('data/SILGreek2004-04-27.uncompressed.reference.tec')"),
+ ('sil-ipa93-2001<->unicode', "Mapping('data/silipa93.tec')")]
+
+
+Test decode - Notice that we use the mapping name not the filename
+>>> "DE kHAtH".decode("sil-ipa93-2001<->unicode")
+u'\xf0\u025b k\u02b0\u0251t\u02b0'
+>>> print _.encode('utf-8')
+ðɛ kʰɑtʰ
+
+Test incremental decoding
+>>> dec = codecs.getincrementaldecoder("sil-ipa93-2001<->unicode")()
+>>> res  = dec.decode('D"\xe2s i\xf9')
+>>> res += dec.decode('z ?\xab t')
+>>> res +  dec.decode('HEstH',final=True)
+u'\xf0i\u0303s i\u02d0z \u0294\u0259 t\u02b0\u025bst\u02b0'
+>>> print _.encode('utf-8')
+ðĩs iːz ʔə tʰɛstʰ
+>>> del dec
+
+Test encode
+>>> u'\xf0\u025b k\u02b0\u0251t\u02b0'.encode("sil-ipa93-2001<->unicode")
+'DE kHAtH'
+
+Test incremental encoding
+>>> enc = codecs.getincrementalencoder("sil-ipa93-2001<->unicode")()
+>>> res  = enc.encode(u'\u00F0i\u0303s i\u02D0')
+>>> res += enc.encode(u'z \u0294\u0259 t')
+>>> res +  enc.encode(u'\u02B0\u025Bst\u02B0',final=True)
+'D"\xe2s i\xf9z ?\xab tHEstH'
+>>> del enc
+
+
+Test errors encode support
+>>> test = u'\xf0\u025b \ufffd k\u02b0\u0251t\u02b0'
+>>> print test.encode('utf-8')
+ðɛ � kʰɑtʰ
+>>> test.encode("sil-ipa93-2001<->unicode", 'strict')
+Traceback (most recent call last):
+    ...
+UnicodeEncodeError: 'sil-ipa93-2001<->unicode' codec can't encode character u'\ufffd' in position 3: convert stopped at unmapped character
+>>> test.encode("sil-ipa93-2001<->unicode", 'ignore')
+'DE  kHAtH'
+
+When the replacement sequence cannot be represented in the target encoding, a 
+very similar exception is throw except the reason is different.
+>>> test.encode("sil-ipa93-2001<->unicode", 'replace')
+Traceback (most recent call last):
+    ...
+UnicodeEncodeError: 'sil-ipa93-2001<->unicode' codec can't encode character u'\ufffd' in position 3: cannot convert replacement u'?' to target encoding
+>>> test.encode("sil-ipa93-2001<->unicode", 'xmlcharrefreplace')
+Traceback (most recent call last):
+    ...
+UnicodeEncodeError: 'sil-ipa93-2001<->unicode' codec can't encode character u'\ufffd' in position 3: cannot convert replacement u'&#65533;' to target encoding
+>>> test.encode("sil-ipa93-2001<->unicode", 'backslashreplace')
+'DE \\ufffd kHAtH'
+
+
+None of the encodings available in this test set support encoding the standard 
+python replacement character u'?' nor the u'&', u'#' and u';' characters 
+required for the xmlcharrefreplace handlers. 
+However teckit can insert a byte replacement character specified by the TECKit 
+mapping itself in the output. This cannot always round trip and can be more 
+ambigous if the replacement character is used frequently in the byte encoding 
+for legitemate sequences (e.g. '?' <-> u'ʔ')
+The teckit python codec provides a new error handler 'teckitreplace' for this
+purpose.
+>>> test.encode("sil-ipa93-2001<->unicode", 'teckitreplace')
+'DE ? kHAtH'
+
+
+Test errors decode support
+>>> test = 'upkdu\x81|m:'
+>>> test.decode("sil-academy-2001<->unicode", 'strict')
+Traceback (most recent call last):
+    ...
+UnicodeDecodeError: 'sil-academy-2001<->unicode' codec can't decode bytes in position 5-6: convert stopped at unmapped character
+>>> test.decode("sil-academy-2001<->unicode", 'ignore')
+u'\u1000\u1005\u102f\u102d\u1000\u102c\u1038'
+>>> test.decode("sil-academy-2001<->unicode", 'replace')
+u'\u1000\u1005\u102f\u102d\u1000\ufffd\u102c\u1038'
+
+The 'teckitreplace' error handler only works on encoding like the 
+'xmlcharrefreplace' and 'backslashreplace' handlers.
+>>> test.decode("sil-academy-2001<->unicode", 'teckitreplace')
+Traceback (most recent call last):
+    ...
+TypeError: don't know how to handle UnicodeDecodeError in error callback
 
