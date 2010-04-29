@@ -1,7 +1,7 @@
 
 from debian_bundle.deb822 import Sources, Packages
 from subprocess import Popen, PIPE
-import re, itertools, os, urllib
+import re, itertools, os, urllib, subprocess
 
 class source_collection(object) :
     """Manages a Sources file of multiple source packages"""
@@ -10,9 +10,10 @@ class source_collection(object) :
         self.binaries = {}
         x = Sources(seq)
         while len(x) > 0 :
-            self.sources[x['package']] = x
-            for b in re.split(r"\s*,\s*", x['binary']) :
-                self.binaries[b] = x['package']
+            if not self.sources.has_key(x['package']) or not subprocess.call(["dpkg", "--compare-versions", self.sources[x['package']]['version'], "lt", x['version']]):
+                self.sources[x['package']] = x
+                for b in re.split(r"\s*,\s*", x['binary']) :
+                    self.binaries[b] = x['package']
             x = Sources(seq)
 
     def all(self) :
