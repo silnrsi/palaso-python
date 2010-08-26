@@ -95,6 +95,7 @@ class git :
         currev = backquote('git show --pretty=format:%h')
         if not currev == self.tip :
             log = backquote('git log ' + self.tip + '..' + currev)
+            print "git log " + self.tip + '..' + currev
             state = ""
             change = []
             for l in log.splitlines() :
