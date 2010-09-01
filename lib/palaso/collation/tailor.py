@@ -256,19 +256,16 @@ class Element :
             sax.characters(self.string)
         sax.endElement(tag)
         
-        
-        if self.context and self.context.extend :
-            sax.startElement('extend', AttributesImpl({}))
-            sax.characters(self.context.extend)
-            sax.endElement('extend')
-        if currcontext and not self.context :
+        if currcontext and (not self.child or self.child.context != currcontext) :
+            if self.context.extend :
+                sax.startElement('extend', AttributesImpl({}))
+                sax.characters(self.context.extend)
+                sax.endElement('extend')
             sax.endElement('x')
         currcontext = self.context
 
         if self.child :
             self.child.asLDML(sax, currcontext)
-        elif currcontext :
-            sax.endElement('x')
 
 class ElementIter :
     def __init__(self, start) :
