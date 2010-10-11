@@ -155,36 +155,11 @@ class parser(sfm.parser):
         if tok[0] == '\\':
             self._error(SyntaxError, 'missing caller parameter number after {0}',
                         tok, parent)
-        parent.args = [str(tok.strip())]
+        parent.args = [unicode(tok.strip())]
         content = self._default_(parent)
         return chain.from_iterable(e if getattr(e,'name',None) == 'ft' else (e,) for e in content)
 
 
-# Performs a depth first walk of the tree calling 
-# visit(node, leaves, *args, **kwds) on each node.
-#def walk(node, visit, *args, **kwds):
-#    if hasattr(node, '__iter__'):
-#    else:
-#    
-#    return chain.from_iterable(imap(flatten, i)) if hasattr(i,'__iter__') else (i,)
 
-
-
-#def events(doc):
-#    return dmap(lambda s,_: event.start(s.parent, s.name, s.pos, s.args),
-#                lambda t: event.text(t.parent, str(t), t.pos),
-#                lambda e: event.end(e.parent, e.name, e.pos), doc)
-
-
-
-#def transduce(startf, textf, endf, source):
-#    with warnings.catch_warnings():
-#        warnings.showwarning = handler.error
-#        warnings.resetwarnings()
-#        warnings.simplefilter("always", SyntaxWarning)
-
-
-
-
-test = ['test text\n', '\\test text\\\\words\n', 'more text \\test2\n', 'inline \\i text\\i* more text']
+_test = ['test text\n', '\\test text\\\\words\n', 'more text \\test2\n', 'inline \\i text\\i* more text']
 
