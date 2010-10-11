@@ -1,3 +1,11 @@
+python-palaso (0.6.0) jaunty; urgency=low
+
+  * Re-implemented palaso.sfm as stylesheet guided parser
+    - Added default usfm.sty file
+    - Updated concordance tool to use new sfm parser and features
+
+ -- Tim Eves <tim_eves@sil.org>  Mon, 11 Oct 2010 16:05:00 +0700
+
 python-palaso (0.4.0b1) jaunty; urgency=low
 
   * Added palaso.sfm
