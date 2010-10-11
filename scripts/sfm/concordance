@@ -14,7 +14,7 @@ can be done.
 '''
 
 from palaso import sfm
-from palaso.sfm import event, usfm
+from palaso.sfm import usfm, style
 from itertools import ifilter,groupby,imap
 import palaso.unicsv as csv
 #import csv
@@ -33,6 +33,14 @@ class references(set):
     
     def __str__(self): return ', '.join(sorted(self))
 
+
+class reference(sfm.position):
+    def __new__(cls, pos, ref):
+        p = super(reference,cls).__new__(cls, *pos)
+        p.book = ref[0]
+        p.chapter = ref[1]
+        p.verse = ref[2]
+        return p
 
 
 word_cat = set(['Lu','Ll','Lt','Lm','Lo','Mn','Mc','Me','Pd','Cs','Co','Cn'])
@@ -71,15 +79,39 @@ def words(text):
                      ifilter(operator.itemgetter(0),
                              groupby(text, word_char))))
 
-    
-def concordance(source): 
+
+def _flatten(doc):
+    return sfm.sreduce(lambda e,ts,_: ts,
+                       lambda e,ts: ts.append(e) or ts,
+                       doc, [])
+
+
+def decorate_references(source):
+    ref = [None,None,None]
+    def _g(_, e):
+        if isinstance(e, sfm.element):
+            if   e.name == 'id': ref[0] = str(e[0]).split()[0]
+            elif e.name == 'c':  ref[1] = e.args[0]
+            elif e.name == 'v':  ref[2] = e.args[0]
+            return reduce(_g, e, None)
+        e.pos = reference(e.pos, ref)
+    source = list(source)
+    reduce(_g, source, None)
+    return source
+
+
+def concordance(source, stylesheet_path, strict): 
     refs = collections.defaultdict(references)
-    for e in ifilter(event.istext,usfm.parser(source)):
-        types = sfm.usfm.types(e.context)
-        if 'isChar' in types and 'isNonPub' not in types:
-            for word in words(e.text):
-                assert '\n' not in word, 'carriage return in word'
-                refs[word].add('{r.book} {r.chapter}:{r.verse}'.format(r=e.pos))
+    sty = usfm.default_stylesheet.copy()
+    if stylesheet_path:
+        sty.update(style.parse(open(stylesheet_path,'r')))
+    doc = sfm.sfilter(sfm.text_properties('publishable','vernacular'), 
+                decorate_references(
+                        usfm.parser(source, stylesheet=sty, private=strict)))
+    for txt in _flatten(doc):
+        for word in words(txt):
+            assert '\n' not in word, 'carriage return in word'
+            refs[word].add('{r.book} {r.chapter}:{r.verse}'.format(r=txt.pos))
     return refs
 
 
@@ -120,9 +152,14 @@ if __name__ == '__main__':
                       help='Print out statistics and progress info')
     parser.add_option("-w","--warnings",action='store_true',default=False,
                       help='Print out syntax warnings discovered during SFM parsing')
+    parser.add_option("-s","--strict",action='store_true',default=False,
+                      help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
+    parser.add_option("-S","--stylesheet",action='store',type='string',
+                     metavar='PATH', default=None,
+                     help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
     charset = optparse.OptionGroup(parser, 'Word definition',
        'By default the Unicode category type is used to decide what characters '
-       'are or are not word forming. The options bellow allow you to override '
+       'are or are not word forming. The options below allow you to override '
        'this for sets of characters. The default classifier considers Unicode '
        'categories: all Letters and Marks, Punctuation-Dash (for hyphenated '
        'words and non-break hyphens) and Surrogate, Private-Use and '
@@ -147,11 +184,12 @@ if __name__ == '__main__':
     if opts.word & opts.nonword:
         sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
         sys.exit(1)
+    opts.warnings = opts.strict or opts.warnings
 
     try:
         with warnings.catch_warnings():
-            warnings.simplefilter("always" if opts.warnings else "ignore", sfm.SyntaxWarning)
-            words_refs = concordance(codecs.open(sfms[0],'rb',encoding='utf-8_sig'))
+            warnings.simplefilter("always" if opts.warnings else "ignore", SyntaxWarning)
+            words_refs = concordance(codecs.open(sfms[0],'rb',encoding='utf-8_sig'), opts.stylesheet, opts.strict)
     
         # Open the master file if it exists and a temp output file.
         # copying metadata to the output file.
@@ -165,7 +203,7 @@ if __name__ == '__main__':
         # Replace the original with the new version.
         # We need to use this verbose way rather than shutil.copy2 because 
         #  Windows will not allow the NamedTemporaryFile object to be opened a
-        #  second time and closing it of deletes the temporary.
+        #  second time and closing it deletes the temporary.
         master_out.seek(0)
         master_src.seek(0)
         master_src.truncate()
