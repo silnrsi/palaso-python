@@ -22,7 +22,7 @@ __history__ = '''
 		direct how to parse document structure and TextType to permit
 		specific semantics on subsections.
 '''
-import collections, functools, operator, re, warnings
+import collections, codecs, functools, operator, re, warnings
 from itertools import chain, groupby, ifilter, imap
 from functools import partial
 
@@ -183,14 +183,14 @@ class parser(collections.Iterable):
     
     def _error(self, err_type, msg, ev, *args, **kwds):
         if issubclass(err_type, StandardError):
-            msg = ('{source}: line {token.pos.line},{token.pos.col}: '+msg).format(token=ev,source=self.source,
-                                                               *args)
+            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + msg).format(token=ev,source=self.source,
+                                                               *args).encode('utf_8')
             raise err_type, msg
         elif issubclass(err_type, Warning):
             msg = msg.format(token=ev,*args,**kwds)
             warnings.warn_explicit(msg, err_type, self.source, ev.pos.line)
         else:
-            raise ValueError, "'{0!r}' is not an StandardError or Warning object".format(err_type)
+            raise ValueError, u"'{0!r}' is not an StandardError or Warning object".format(err_type).encode('utf_8')
     
     
     def __get_style_lax(self, tag):
