@@ -25,6 +25,7 @@ key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
 
+xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" : '&apos;' }
 
 header = u'''\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -42,8 +43,8 @@ footer = u'''</keyboard>'''
 def quote(cs):
     r = u''
     for c in cs:
-        ent = codepoint2name.get(ord(c))
-        r += (('&'+ent+';') if ent else c)
+        ent = xmlentities.get(c)
+        r += (ent if ent else c)
     return r
 
 
