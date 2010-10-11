@@ -1,0 +1,192 @@
+#!/usr/bin/env python2.6
+'''
+Count the words in a USFM file skipping punctuation and non-publication 
+markers updating a master concordance CSV file with any new references 
+to existing words and append any words not already found in it to it's 
+end.
+'''
+__version__ = '0.1'
+__date__    = '29 October 2009'
+__author__  = 'Tim Eves <tim_eves@sil.org>'
+__credits__ = '''\
+Dennis Drescher for having done something very similar and showing how it
+can be done.
+'''
+
+from palaso import sfm
+from palaso.sfm import event, usfm
+from itertools import ifilter,groupby,imap
+import palaso.unicsv as csv
+#import csv
+import codecs, collections, operator, optparse, os.path, re, warnings, shutil, sys, tempfile, unicodedata
+
+
+
+class references(set):
+    '''Represent a set of biblical references.  
+       This class is really a typed parser and pretty printer for a set
+       of strings.'''
+    def __init__(self,iterable=[]):
+        if isinstance(iterable,basestring):
+            iterable = [r.strip() for r in iterable.split(',')]
+        super(references,self).__init__(iterable)
+    
+    def __str__(self): return ', '.join(sorted(self))
+
+
+
+word_cat = set(['Lu','Ll','Lt','Lm','Lo','Mn','Mc','Me','Pd','Cs','Co','Cn'])
+'''Define a word character as being one of:
+     Letter
+     Mark
+     Punctuation,Dash  
+     Other,{Surrogate,Private Use,Not Assigned}'''
+
+
+nonword_cat = set(['Nd','Nl','No','Pc','Ps','Pe','Pi','Pf','Po','Sm','Sc','Sk','So','Zs','Zl','Zp','Cc','Cf'])
+'''Define a word character as not being any of:
+         Number
+         Punctuation (all except Dash)
+         Symbol
+         Separator
+         Other,{Control,Format}'''
+
+
+def word_char(char):
+    '''Test character for membership in word_cat set where characters in 
+       opts.word are considered to be Letter,Other and characters in 
+       opts.nonword are considered to be Punctuation,Other.'''
+    cat = (char in opts.word and 'Lo' 
+        or char in opts.nonword and 'Po' 
+        or unicodedata.category(char))
+    return cat in word_cat
+
+
+def words(text):
+    '''Split a text string into words.
+       Words are defined as groups of characters that satisfy word_char'''
+    joiner = unicode().join
+    return imap(joiner, 
+                imap(operator.itemgetter(1),
+                     ifilter(operator.itemgetter(0),
+                             groupby(text, word_char))))
+
+    
+def concordance(source): 
+    refs = collections.defaultdict(references)
+    for e in ifilter(event.istext,usfm.parser(source)):
+        types = sfm.usfm.types(e.context)
+        if 'isChar' in types and 'isNonPub' not in types:
+            for word in words(e.text):
+                assert '\n' not in word, 'carriage return in word'
+                refs[word].add('{r.book} {r.chapter}:{r.verse}'.format(r=e.pos))
+    return refs
+
+
+def update_row(wordrefs):
+    wordlog={}
+    def _g((ln,row)):
+        word = row['Word']
+        if word in wordlog:
+            raise ValueError, 'duplicates: Word "{0}" at row {1} is repeated at row {2} of master file'.format(word.encode('utf-8'),wordlog[word]+2,ln+2)
+        wordlog[word] = ln
+        newrefs = wordrefs.pop(word)
+        oldrefs = references(row['References'])
+        if newrefs - oldrefs: row['References'] = oldrefs | newrefs 
+        return row
+    return _g
+
+
+def merge_master_file_with_book(infile, outfile, refs):
+    reader = csv.DictReader(infile)
+    fieldnames = reader.fieldnames or ('Word','References')
+    writer = csv.DictWriter(outfile, fieldnames)
+    
+    # write out the header row
+    writer.writerow(dict(zip(fieldnames,fieldnames)))
+    # write out an updated list
+    writer.writerows(imap(update_row(refs), enumerate(reader)))
+    # write out any new words
+    writer.writerows({'Word':w,'References':r} for (w,r) in refs.items())
+
+    infile.flush()
+    outfile.flush()
+	   
+        
+
+if __name__ == '__main__':
+    parser = optparse.OptionParser(usage='%prog [options] <SFM FILE> <MASTER CSV FILE>\n' + __doc__)
+    parser.add_option("-v","--verbose",action='store_true',default=False,
+                      help='Print out statistics and progress info')
+    parser.add_option("-w","--warnings",action='store_true',default=False,
+                      help='Print out syntax warnings discovered during SFM parsing')
+    charset = optparse.OptionGroup(parser, 'Word definition',
+       'By default the Unicode category type is used to decide what characters '
+       'are or are not word forming. The options bellow allow you to override '
+       'this for sets of characters. The default classifier considers Unicode '
+       'categories: all Letters and Marks, Punctuation-Dash (for hyphenated '
+       'words and non-break hyphens) and Surrogate, Private-Use and '
+       'Non-Assinged to be word forming.  WARNING: It is an error for the set '
+       'of word forming characters to intersect with the set of non-word '
+       'characters.')
+    charset.add_option("-W","--word",action='store',type="string", 
+                      metavar='WORD', default='',
+                      help='Extra word forming characters. Unicode codepoints may be escaped \\uXXXX')
+    charset.add_option("-n","--nonword",action='store',type="string", 
+                      metavar='NONWORD', default='',
+                      help='Extra non-word characters. Unicode codepoints may be escaped \\uXXXX')
+    parser.add_option_group(charset)
+    
+    opts,sfms = parser.parse_args()
+    if len(sfms) < 2:
+        sys.stderr.write(parser.expand_prog_name('%prog: missing CSV or SFM FILE\n'))
+        parser.print_help(file=sys.stderr)
+        sys.exit(1)
+    opts.word = set(opts.word.decode('unicode_escape'))
+    opts.nonword = set(opts.nonword.decode('unicode_escape'))
+    if opts.word & opts.nonword:
+        sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
+        sys.exit(1)
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("always" if opts.warnings else "ignore", sfm.SyntaxWarning)
+            words_refs = concordance(codecs.open(sfms[0],'rb',encoding='utf-8_sig'))
+    
+        # Open the master file if it exists and a temp output file.
+        # copying metadata to the output file.
+        if not os.path.exists(sfms[1]): open(sfms[1],'wb').close()
+        master_src = open(sfms[1],'r+b')
+        master_out = tempfile.NamedTemporaryFile()
+        # merge in the word referneces into the new master.
+        prev_num_words = opts.verbose and len(words_refs)
+        prev_num_refs  = opts.verbose and sum(imap(len, words_refs.itervalues()))
+        merge_master_file_with_book(master_src, master_out, words_refs)
+        # Replace the original with the new version.
+        # We need to use this verbose way rather than shutil.copy2 because 
+        #  Windows will not allow the NamedTemporaryFile object to be opened a
+        #  second time and closing it of deletes the temporary.
+        master_out.seek(0)
+        master_src.seek(0)
+        master_src.truncate()
+        shutil.copyfileobj(master_out,master_src)
+        master_src.close()
+        master_out.close()
+    except IOError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n'.format(err)))
+        sys.exit(2)
+    except SyntaxError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: USFM parse error: {0!s}\n'.format(err)))
+        sys.exit(3)     
+    except ValueError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: CSV parse error: {0!s}\n'.format(err)))
+        sys.exit(3)
+
+    if opts.verbose:
+        num_words = len(words_refs)
+        num_refs  = sum(imap(len, words_refs.itervalues()))
+        sys.stdout.write(#'{1} references to {0} existing words updated\n'
+                         '{3} references to {2} new words added\n'.format(
+                                                prev_num_words - num_words,
+                                                prev_num_refs - num_refs,
+                                                num_words, num_refs))
