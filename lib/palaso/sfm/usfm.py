@@ -101,9 +101,9 @@ class parser(sfm.parser):
     
     
     def __init__(self, source, stylesheet=default_stylesheet,
-                               default_meta=_default_meta):
+                               default_meta=_default_meta, private = True):
         super(parser, self).__init__(source, stylesheet, default_meta,
-                                     private_prefix='z')
+                                     private_prefix=private and 'z')
     
     
     def _ChapterNumber_(self, chapter_marker):
