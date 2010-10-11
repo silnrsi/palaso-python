@@ -13,12 +13,12 @@ Dennis Drescher for having done something very similar and showing how it
 can be done.
 '''
 
-from palaso import sfm
+import palaso.sfm as sfm
 from palaso.sfm import usfm, style
 from itertools import ifilter,groupby,imap
 import palaso.unicsv as csv
-#import csv
-import codecs, collections, operator, optparse, os.path, re, warnings, shutil, sys, tempfile, unicodedata
+import codecs, collections, operator, optparse, os.path, \
+        re, warnings, shutil, sys, tempfile, unicodedata
 
 
 
@@ -100,14 +100,18 @@ def decorate_references(source):
     return source
 
 
-def concordance(source, stylesheet_path, strict): 
-    refs = collections.defaultdict(references)
-    sty = usfm.default_stylesheet.copy()
-    if stylesheet_path:
-        sty.update(style.parse(open(stylesheet_path,'r')))
-    doc = sfm.sfilter(sfm.text_properties('publishable','vernacular'), 
-                decorate_references(
-                        usfm.parser(source, stylesheet=sty, private=strict)))
+def concordance(refs, source_path):
+    opts.verbose and sys.stdout.write('processing file: {0!r}\n'.format(source_path))
+    try:
+        with codecs.open(source_path, 'r', encoding='utf_8_sig') as source:
+            doc = sfm.sfilter(sfm.text_properties('publishable','vernacular'), 
+                        decorate_references(
+                                usfm.parser(source, stylesheet=opts.stylesheet, 
+                                                    private=opts.strict)))
+    except SyntaxError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
+        return refs
+    
     for txt in _flatten(doc):
         for word in words(txt):
             assert '\n' not in word, 'carriage return in word'
@@ -130,21 +134,25 @@ def update_row(wordrefs):
 
 
 def merge_master_file_with_book(infile, outfile, refs):
-    reader = csv.DictReader(infile)
-    fieldnames = reader.fieldnames or ('Word','References')
-    writer = csv.DictWriter(outfile, fieldnames)
-    
-    # write out the header row
-    writer.writerow(dict(zip(fieldnames,fieldnames)))
-    # write out an updated list
-    writer.writerows(imap(update_row(refs), enumerate(reader)))
-    # write out any new words
-    writer.writerows({'Word':w,'References':r} for (w,r) in refs.items())
-
-    infile.flush()
-    outfile.flush()
-	   
+    try:
+        reader = csv.DictReader(infile)
+        fieldnames = reader.fieldnames or ('Word','References')
+        writer = csv.DictWriter(outfile, fieldnames)
         
+        # write out the header row
+        writer.writerow(dict(zip(fieldnames,fieldnames)))
+        # write out an updated list
+        writer.writerows(imap(update_row(refs), enumerate(reader)))
+        # write out any new words
+        writer.writerows({'Word':w,'References':r} for (w,r) in refs.items())
+        
+        infile.flush()
+        outfile.flush()
+    except ValueError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: CSV parse error: {0!s}\n').format(err))
+        sys.exit(3)
+
+
 
 if __name__ == '__main__':
     parser = optparse.OptionParser(usage='%prog [options] <SFM FILE> <MASTER CSV FILE>\n' + __doc__)
@@ -179,22 +187,31 @@ if __name__ == '__main__':
         sys.stderr.write(parser.expand_prog_name('%prog: missing CSV or SFM FILE\n'))
         parser.print_help(file=sys.stderr)
         sys.exit(1)
+    master_path = sfms.pop()
+    
     opts.word = set(opts.word.decode('unicode_escape'))
     opts.nonword = set(opts.nonword.decode('unicode_escape'))
     if opts.word & opts.nonword:
         sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
         sys.exit(1)
     opts.warnings = opts.strict or opts.warnings
+    if opts.stylesheet:
+        opts.stylesheet = usfm.default_stylesheet.copy()
+        opts.stylesheet.update(style.parse(open(stylesheet_path,'r')))
+    else:
+        opts.stylesheet = usfm.default_stylesheet
 
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("always" if opts.warnings else "ignore", SyntaxWarning)
-            words_refs = concordance(codecs.open(sfms[0],'rb',encoding='utf-8_sig'), opts.stylesheet, opts.strict)
-    
+            words_refs = reduce(concordance, sfms,
+                                collections.defaultdict(references))
+        
         # Open the master file if it exists and a temp output file.
         # copying metadata to the output file.
-        if not os.path.exists(sfms[1]): open(sfms[1],'wb').close()
-        master_src = open(sfms[1],'r+b')
+        if not os.path.exists(master_path): 
+            open(master_path,'wb').close()
+        master_src = open(master_path,'r+b')
         master_out = tempfile.NamedTemporaryFile()
         # merge in the word referneces into the new master.
         prev_num_words = opts.verbose and len(words_refs)
@@ -211,14 +228,8 @@ if __name__ == '__main__':
         master_src.close()
         master_out.close()
     except IOError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n'.format(err)))
+        sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
         sys.exit(2)
-    except SyntaxError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: USFM parse error: {0!s}\n'.format(err)))
-        sys.exit(3)     
-    except ValueError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: CSV parse error: {0!s}\n'.format(err)))
-        sys.exit(3)
 
     if opts.verbose:
         num_words = len(words_refs)
