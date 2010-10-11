@@ -26,6 +26,7 @@ setup(name='palaso',
       scripts=filter(lambda x : x.rfind(".") == -1, glob('scripts/*/*')),
       license='LGPL',
       platforms=['Linux','Win32','Mac OS X'],
-      package_dir={'':'lib'}
+      package_dir={'':'lib'},
+      package_data={'palaso.sfm':['usfm.sty']}
      )
 
