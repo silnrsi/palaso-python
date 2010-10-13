@@ -196,7 +196,7 @@ class parser(collections.Iterable):
     def __get_style_lax(self, tag):
         meta = self.__sty.get(tag)
         if not meta:
-            self._error(SyntaxWarning, 'unknown marker \\{token}: not in styesheet', 
+            self._error(SyntaxWarning, u'unknown marker \\{token}: not in styesheet', 
                        tag)
             return self.__default_meta
         return meta
