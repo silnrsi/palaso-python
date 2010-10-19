@@ -47,7 +47,7 @@ class parser(sfm.parser):
     def __iter__(self):
         start,fields = self.__schema
         proto = dict((k,dv) for k,(_,dv) in fields.iteritems())
-        
+        default_field = (lambda x:x, None)
         def record(rec):
             rec_ = proto.copy()
             rec_.update(rec)
@@ -57,7 +57,7 @@ class parser(sfm.parser):
         
         def accum(db, m):
             try:
-                field = (m.name, fields.get(m.name)[0](m[0].rstrip()))
+                field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip()))
             except Exception, err:
                 self._error(type(err), err.msg, m)
             if m.name == start:
