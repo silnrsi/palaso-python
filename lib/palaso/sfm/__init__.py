@@ -59,7 +59,7 @@ class element(list):
     
     
     def __str__(self):
-        return '\\{0!s}'. format(' '.join([self.name] + self.args))
+        return u'\\{0!s}'. format(' '.join([self.name] + self.args))
 
 
 
@@ -183,11 +183,11 @@ class parser(collections.Iterable):
     
     def _error(self, err_type, msg, ev, *args, **kwds):
         if issubclass(err_type, StandardError):
-            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + msg).format(token=ev,source=self.source,
+            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
                                                                *args).encode('utf_8')
             raise err_type, msg
         elif issubclass(err_type, Warning):
-            msg = msg.format(token=ev,*args,**kwds)
+            msg = unicode(msg).format(token=ev,*args,**kwds).encode('utf_8')
             warnings.warn_explicit(msg, err_type, self.source, ev.pos.line)
         else:
             raise ValueError, u"'{0!r}' is not an StandardError or Warning object".format(err_type).encode('utf_8')
@@ -253,7 +253,7 @@ class parser(collections.Iterable):
                     if not sub_parse: return
                     
                     # Spawn a sub-node
-                    e = element(str(tag), tok.pos, parent=parent, meta=meta)
+                    e = element(tag, tok.pos, parent=parent, meta=meta)
                     e.extend(getattr(self,'_'+meta['TextType']+'_',self._default_) (e))
                     yield e
                 elif parent is None:
