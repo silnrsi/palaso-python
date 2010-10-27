@@ -44,8 +44,8 @@ class usfm_transducer(object) :
     def load_dict(self, fname, incol, outcol, tagcol = None) :
         morph_keys = []
         phrases = {}
-        fh = codecs.open(fname, 'r', 'utf_8_sig')
-        entries = csv.reader(fh)
+        fh = open(fname, 'rb')
+        entries = csv.reader(fh, skipinitialspace=True)
         for e in entries :
             k = self.enc.convert(e[incol], finished=True)
             if k == e[outcol] : continue
@@ -71,7 +71,7 @@ class usfm_transducer(object) :
         for k, v in phrases.items() :
             key = re.sub(ur'(?u)\w+', self.dlookup, k).lower()
             self.phrases[key] = v
-        self.phrase_keys = "|".join(sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y))))
+        self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
         fh.close()
 
     def convert_string(self, tnode) :
@@ -132,14 +132,15 @@ def strsub(findtxt, fn, txt) :
         if (j == -1) :
             return res + txt[i:]
         else :
-            res += txt[i:j-1]
+            res += txt[i:j]
             res += fn(txt[j:j+len(findtxt)])
             i = j + len(findtxt)
 
 def titleme(base, txt) :
     if base[0].upper() == base[0] :
-        txt[0] = txt[0].upper()
-    return txt
+        return txt[0].upper() + txt[1:]
+    else :
+        return txt
 
 def transduce(fname, opts) :
     def identity_mkr(*args) : return args
