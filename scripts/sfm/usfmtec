@@ -24,8 +24,8 @@ class usfm_transducer(object) :
 
     def __init__(self, case = '', tec = notec(), opts = {}) :
         self.caps = [1]
-        self.quotes = u"'\"\u2018\u2019\u201C\u201D()<>"
-        self.sentend = ur'[.!?][")>}\]\u201D\u2019]*\s*'
+        self.quotes = opts.capitalquotes.decode('raw_unicode_escape')
+        self.sentend = opts.capitalsentence.decode('raw_unicode_escape')
         self.case = case
         self.enc = tec
         self.opts = opts
@@ -41,7 +41,7 @@ class usfm_transducer(object) :
         else :
             self.ctags = set()
 
-    def load_dict(self, fname, incol, outcol, tagcol) :
+    def load_dict(self, fname, incol, outcol, tagcol = None) :
         morph_keys = []
         phrases = {}
         fh = codecs.open(fname, 'r', 'utf_8_sig')
@@ -64,7 +64,7 @@ class usfm_transducer(object) :
                 phrases[k] = e[outcol]
             else :                              # dictionary entry
                 self.dict[k] = e[outcol]
-            if e[tagcol] :                      # has tag constraints
+            if tagcol != None and e[tagcol] :                      # has tag constraints
                 self.tags[k] = set(e[tagcol].split())
         morph_keys.sort(cmp = lambda x, y : cmp(len(x), len(y)))
         self.morph_keys = "|".join(morph_keys)
@@ -162,12 +162,16 @@ def transduce(fname, opts) :
 
 if __name__ == '__main__':
     parser = optparse.OptionParser(usage='%prog [options] <SFM FILE>\n' + __doc__)
+    parser.set_defaults(capitalquotes="'\"\u2018\u2019\u201C\u201D()<>",
+        capitalsentence='[.!?][")>}\]\u201D\u2019]*\s*')
     parser.add_option("-b","--binary",action="store_true",help="Input is legacy encoded, not Unicode")
     parser.add_option("-c","--capitalise",action="store",help="regular expression match which is capitalised")
     parser.add_option("--capitaltags",action="store",help="list of tags to capitalise their contents")
+    parser.add_option("--capitalquotes",action="store",help="sets quotes chars for capitalisation, with \u escaping [default: %default]")
+    parser.add_option("--capitalsentence",action="store",help="sentence final regexp for capitalisation, with \u escaping [default: %default]")
     parser.add_option("-d","--dict",action="store",help="CSV dictionary of input output replacements")
-    parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column of CSV dictionary")
-    parser.add_option("--dict-output",action="store",type="int",default=1,dest="dictoutput",help="Output column of CSV dictionary")
+    parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column of CSV dictionary [%default]")
+    parser.add_option("--dict-output",action="store",type="int",default=1,dest="dictoutput",help="Output column of CSV dictionary [%default]")
     parser.add_option("--dict-context",action="store",type="int",dest="dicttag",help="Marker context column of CSV dictionary")
     parser.add_option("-n","--lines",action="store_true",help="Don't parse as USFM, just as plain text")
     parser.add_option("-o","--output",action="store",help="Specify output file or directory")
@@ -184,6 +188,7 @@ if __name__ == '__main__':
                      help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
 
     opts,sfms = parser.parse_args()
+
     if len(sfms) < 1:
         sys.stderr.write(parser.expand_prog_name('%prog: missing SFM FILE\n'))
         parser.print_help(file=sys.stderr)
