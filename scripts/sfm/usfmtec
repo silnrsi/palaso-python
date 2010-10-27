@@ -45,7 +45,7 @@ class usfm_transducer(object) :
         morph_keys = []
         phrases = {}
         fh = codecs.open(fname, 'r', 'utf_8_sig')
-        entries = csv.writer(fh)
+        entries = csv.reader(fh)
         for e in entries :
             k = self.enc.convert(e[incol], finished=True)
             if k == e[outcol] : continue
