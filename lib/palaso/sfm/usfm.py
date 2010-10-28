@@ -155,7 +155,9 @@ class parser(sfm.parser):
         if tok[0] == '\\':
             self._error(SyntaxError, 'missing caller parameter number after {0}',
                         tok, parent)
+        tok,rest = tok.lstrip().split(' ',1)
         parent.args = [unicode(tok.strip())]
+        if rest: self._tokens.put_back(rest)
         content = self._default_(parent)
         return chain.from_iterable(e if getattr(e,'name',None) == 'ft' else (e,) for e in content)
 
