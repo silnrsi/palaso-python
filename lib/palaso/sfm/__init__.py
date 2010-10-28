@@ -47,7 +47,7 @@ class element(list):
     
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta=None, content=[]):
         super(element,self).__init__(content)
-        self.name = name
+        self.name = unicode(name)
         self.pos = pos
         self.args = args
         self.parent = parent
@@ -247,7 +247,7 @@ class parser(collections.Iterable):
     def _default_(self, parent):
         get_meta = self.__get_style
         for tok in self._tokens:
-            if tok[0] == '\\':  # Parse markers.
+            if tok[0] == u'\\':  # Parse markers.
                 tag  = tok[1:]
                 
                 # Check for the expected end markers with no separator and
@@ -297,9 +297,10 @@ class parser(collections.Iterable):
                     self._tokens.put_back(tok)
                     return
             else:   # Pass non marker data through with a litte fix-up
-                tok = tok[1:] if tok[0] == ' ' else tok
-                tok.parent = parent
-                yield tok
+                tok = tok if len(parent) else tok[1:]
+                if tok:
+                    tok.parent = parent
+                    yield tok
     
     
     def _Milestone_(self, parent):
@@ -376,11 +377,14 @@ def text_properties(*props):
 def pprint(doc):
     def _marker(e,r, cr):
         m = e.meta['Endmarker']
-        return r + unicode(e) \
-                    + ('\n' if e.meta.get('StyleType') == 'Paragraph' \
-                            and e and isinstance(e[0], element) \
-                            else ' ') \
-                    + cr + (u'\\' + m + ' ' if m else u'')
+        r += unicode(e)
+        if cr or e.args:
+            r += '\n' if e and isinstance(e[0], element) \
+                         and e.meta.get('StyleType') == 'Paragraph'else ' '
+        r += cr
+        if m:
+            r += '\\' + m
+        return r
     
     return sreduce(_marker, lambda e,r: r + unicode(e), doc, u'')
 
