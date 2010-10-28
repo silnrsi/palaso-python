@@ -21,6 +21,8 @@ __history__ = '''
 	20101026 - tse - rewrote to enable the parser to use the stylesheets to 
 		direct how to parse document structure and TextType to permit
 		specific semantics on subsections.
+	20101028 - tse - Handle endmarkers as a special case so the do no require
+		a space to separate them from the following text.
 '''
 import collections, codecs, functools, operator, re, warnings
 from itertools import chain, groupby, ifilter, imap
@@ -247,6 +249,20 @@ class parser(collections.Iterable):
         for tok in self._tokens:
             if tok[0] == '\\':  # Parse markers.
                 tag  = tok[1:]
+                
+                # Check for the expected end markers with no separator and
+                # break them apart
+                if parent and parent.meta['Endmarker'] \
+                        and tag.startswith(parent.meta['Endmarker']):
+                    cut = len(parent.meta['Endmarker'])
+                    if cut != len(tag):
+                        if self._tokens.peek()[0] == u'\\':
+                            self._tokens.put_back(tag[cut:])
+                        else:
+                            # If the next token isn't a marker coaleces the 
+                            # remainder with it into a single text node.
+                            self._tokens.put_back(tag[cut:] + next(self._tokens,''))
+                        tag = tag[:cut]
                 meta = get_meta(tag)
                 if not meta['OccursUnder'] or (parent is not None and parent.name or None) in meta['OccursUnder']:
                     sub_parse = meta['TextType']
