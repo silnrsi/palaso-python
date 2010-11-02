@@ -297,7 +297,8 @@ class parser(collections.Iterable):
                     self._tokens.put_back(tok)
                     return
             else:   # Pass non marker data through with a litte fix-up
-                tok = tok if len(parent) else tok[1:]
+                if parent:
+                    tok = tok if len(parent) else tok[1:]
                 if tok:
                     tok.parent = parent
                     yield tok
