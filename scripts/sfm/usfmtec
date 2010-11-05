@@ -18,7 +18,7 @@ import palaso.unicsv as csv
 import codecs, optparse, os.path, re, warnings, sys
 
 class notec(object) :
-    def convert(txt, **kw) : return txt
+    def convert(self, txt, **kw) : return txt
 
 class usfm_transducer(object) :
 
@@ -74,12 +74,12 @@ class usfm_transducer(object) :
         self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
         fh.close()
 
-    def convert_string(self, tnode) :
+    def convert_node(self, tnode) :
         if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
             return tnode
         if tnode.parent.meta['StyleType'] == 'NoteText' :
             self.caps.append(1)
-        elif tnode.parent.meta['StyleType'] == 'Paragraph' or tnode.parent.name in self.ctags :
+        elif (tnode.parent.meta['StyleType'] == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
@@ -101,7 +101,7 @@ class usfm_transducer(object) :
         else :
             self.caps[-1] = 0
         if self.dict :
-            res = re.sub(ur'(?u)(\w+)', self.dlookup, res)
+            res = re.sub(ur'(?ui)(\w+)', self.dlookup, res)
         for k in self.phrase_keys :
             if not k in self.tags or self.tnode.parent.name in self.tags[k] :
                 res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
@@ -127,8 +127,9 @@ class usfm_transducer(object) :
 def strsub(findtxt, fn, txt) :
     res = ''
     i = 0
+    search = txt.lower()
     while True :
-        j = txt.find(findtxt, i)
+        j = search.find(findtxt, i)
         if (j == -1) :
             return res + txt[i:]
         else :
@@ -153,7 +154,7 @@ def transduce(fname, opts) :
         conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
-       doc = sfm.smap(identity_mkr, conv.convert_string, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
+       doc = sfm.smap(identity_mkr, conv.convert_node, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
     except SyntaxError, err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
     finally:
