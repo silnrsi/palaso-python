@@ -8,6 +8,8 @@ __author__  = 'Tim Eves <tim_eves@sil.org>'
 __history__ = '''
 	20100111 - tse - Initial version
 	20101026 - tse - rewrote to use new palaso.sfm.records module
+	20101109 - tse - Update to use unique field type's set object and fix 
+		poor quality error messages that fail to identify the source file.
 '''
 import re
 import palaso.sfm.records as records
