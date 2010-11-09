@@ -252,7 +252,7 @@ class parser(collections.Iterable):
                 
                 # Check for the expected end markers with no separator and
                 # break them apart
-                if parent and parent.meta['Endmarker'] \
+                if parent is not None and parent.meta['Endmarker'] \
                         and tag.startswith(parent.meta['Endmarker']):
                     cut = len(parent.meta['Endmarker'])
                     if cut != len(tag):
@@ -297,7 +297,7 @@ class parser(collections.Iterable):
                     self._tokens.put_back(tok)
                     return
             else:   # Pass non marker data through with a litte fix-up
-                if parent:
+                if parent is not None:
                     tok = tok if len(parent) else tok[1:]
                 if tok:
                     tok.parent = parent
