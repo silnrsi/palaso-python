@@ -57,8 +57,10 @@ def _munge_record(r):
 
 
 def parse(source):
-    source = imap(partial(_comment.sub,''), source)
-    recs = iter(records.parser(source, records.schema('Marker', _fields)))
+    no_comments = imap(partial(_comment.sub,''), source)
+    rec_parser = records.parser(no_comments, records.schema('Marker', _fields))
+    rec_parser.source = source.name
+    recs = iter(rec_parser)
     next(recs,None)
     return dict(imap(_munge_record, recs))
 

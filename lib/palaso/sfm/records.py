@@ -59,7 +59,7 @@ class parser(sfm.parser):
             try:
                 field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip()))
             except Exception, err:
-                self._error(type(err), err.msg, m)
+                self._error(type(err), err.msg if hasattr(err,'msg') else unicode(err), m)
             if m.name == start:
                 db.append(sfm.element(field[1], m.pos, content=[field]))
             else:
