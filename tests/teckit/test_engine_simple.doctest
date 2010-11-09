@@ -1,0 +1,103 @@
+These are some fairly simple tests of the engine module object
+
+>>> from palaso.teckit.engine import *
+
+---- Test with silipa93.tec ----
+Make an decoder and encoder
+>>> m = Mapping('data/silipa93.tec')
+>>> dec = Converter(m); enc = Converter(m,forward=False)
+
+Check left and right sides decoding info in teh coverter object
+>>> dec.lhsName; dec.lhsDescription
+'SIL-IPA93-2001'
+'SIL IPA93 Font encoding'
+>>> dec.rhsName; dec.rhsDescription
+'Unicode'
+'Unicode'
+
+Check extended info from UTR-22 these are optional and may return None if not 
+included in the mapping
+>>> dec.version; dec.contact; dec.regAuthority; dec.regName
+'8'
+'mailto:martin_hosken@sil.org'
+'SIL International'
+'IPA93'
+
+This attribute is absent for silipa93.tec and so returns None
+>>> dec.copyright
+
+Test forward direction
+>>> dec.convert('D"\xe2s i\xf9z ?\xab tHEstH',finished=True)
+u'\xf0i\u0303s i\u02d0z \u0294\u0259 t\u02b0\u025bst\u02b0'
+>>> print _.encode('utf-8')
+ðĩs iːz ʔə tʰɛstʰ
+
+Test reset
+dec.reset()
+
+Test incremental decoding
+>>> res  = dec.convert('D"\xe2s i\xf9')
+>>> res += dec.convert('z ?\xab t')
+>>> res +  dec.convert('HEstH',finished=True)
+u'\xf0i\u0303s i\u02d0z \u0294\u0259 t\u02b0\u025bst\u02b0'
+
+Test reverse direction
+>>> enc.convert(u'\u00F0i\u0303s i\u02D0z \u0294\u0259 t\u02B0\u025Bst\u02B0',finished=True)
+'D"\xe2s i\xf9z ?\xab tHEstH'
+
+Test incremental encoding
+>>> res  = enc.convert(u'\u00F0i\u0303s i\u02D0')
+>>> res += enc.convert(u'z \u0294\u0259 t')
+>>> res +  enc.convert(u'\u02B0\u025Bst\u02B0',finished=True)
+'D"\xe2s i\xf9z ?\xab tHEstH'
+
+Test replacment char options
+>>> enc.convert(u'\u00F0i\u0303s \ufffd',finished=True, options=Option.UseReplacementCharSilently)
+'D"\xe2s ?'
+
+This will generate a UnicodeWarning using the python warnings infrastructure, 
+but we cannot test that easily here.
+>>> enc.convert(u'\u00F0i\u0303s \ufffd',finished=True, options=Option.UseReplacementCharWithWarning)
+'D"\xe2s ?'
+
+>>> enc.convert(u'\u00F0i\u0303s \ufffd',finished=True, options=Option.DontUseReplacementChar)
+Traceback (most recent call last):
+    ...
+UnicodeEncodeError: 'sil-ipa93-2001<->unicode' codec can't encode character u'\ufffd' in position 5: convert stopped at unmapped character
+
+
+Test clean-up of the engines
+>>> del dec
+>>> del enc
+
+
+---- Test with academy.tec ----
+Make an decoder and encoder
+>>> m = Mapping('data/academy.tec')
+>>> dec = Converter(m); enc = Converter(m,forward=False)
+
+Test forward direction
+>>> dec.convert('upkdu|Gm:',finished=True)
+u'\u1000\u1005\u102f\u102d\u1000\u101b\u1039\u101d\u102c\u1038'
+>>> print _.encode('utf-8')
+ကစုိကရ္ဝား
+
+Test incremental decoding
+>>> res  = dec.convert('upk')
+>>> res += dec.convert('du|')
+>>> res +  dec.convert('Gm:',finished=True)
+u'\u1000\u1005\u102f\u102d\u1000\u101b\u1039\u101d\u102c\u1038'
+
+Test reverse direction
+>>> enc.convert(u'\u1000\u1005\u102F\u102D\u1000\u101B\u1039\u101D\u102C\u1038',finished=True)
+'upkdu|Gm:'
+
+Test incremental encoding
+>>> res  = enc.convert(u'\u1000\u1005\u102F')
+>>> res += enc.convert(u'\u102D\u1000\u101B\u1039')
+>>> res +  enc.convert(u'\u101D\u102C\u1038',finished=True)
+'upkdu|Gm:'
+
+Test clean-up of the engines
+>>> del dec
+>>> del enc

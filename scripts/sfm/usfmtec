@@ -1,0 +1,229 @@
+#!/usr/bin/env python2.6
+'''
+Convert the publishable vernacular text in a USFM file according to a given
+.tec mapping file. In addition, support dictionary replacement, and automatic
+case generation.
+'''
+__version__ = '0.1'
+__date__    = '12 October 2010'
+__author__  = 'Martin Hosken <martin_hosken@sil.org>'
+__credits__ = '''\
+Tim Eves provided the concordance program on which this is based.
+'''
+
+import palaso.sfm as sfm
+from palaso.sfm import usfm, style, pprint
+from palaso.teckit.engine import Converter, Mapping
+import palaso.unicsv as csv
+import codecs, optparse, os.path, re, warnings, sys
+
+class notec(object) :
+    def convert(txt, **kw) : return txt
+
+class usfm_transducer(object) :
+
+    def __init__(self, case = '', tec = notec(), opts = {}) :
+        self.caps = [1]
+        self.quotes = opts.capitalquotes.decode('raw_unicode_escape')
+        self.sentend = opts.capitalsentence.decode('raw_unicode_escape')
+        self.case = case
+        self.enc = tec
+        self.opts = opts
+        self.tags = {}
+        self.dict = {}
+        self.phrases = {}
+        self.phrase_keys = ''
+        self.morphs = {}
+        self.morph_keys = ''
+        self.morphid = '!'
+        if opts.capitaltags :
+            self.ctags = set(opts.capitaltags.split())
+        else :
+            self.ctags = set()
+
+    def load_dict(self, fname, incol, outcol, tagcol = None) :
+        morph_keys = []
+        phrases = {}
+        fh = open(fname, 'rb')
+        entries = csv.reader(fh, skipinitialspace=True)
+        for e in entries :
+            k = self.enc.convert(e[incol], finished=True)
+            if k == e[outcol] : continue
+            if k.find(self.morphid) != -1 :     # has stem marker
+                if k[0] == self.morphid :
+                    mk = '^' + k
+                    k = k[1:]
+                else :
+                    mk = k
+                if mk[-1] == self.morphid :
+                    mk = mk[0:-1] + '$'
+                    k = k[0:-1]
+                morph_keys.append(mk)
+                self.morphs[k] = e[outcol]
+            elif re.search(ur'(?u)\W', k) :     # phrase input
+                phrases[k] = e[outcol]
+            else :                              # dictionary entry
+                self.dict[k] = e[outcol]
+            if tagcol != None and e[tagcol] :                      # has tag constraints
+                self.tags[k] = set(e[tagcol].split())
+        morph_keys.sort(cmp = lambda x, y : cmp(len(x), len(y)))
+        self.morph_keys = "|".join(morph_keys)
+        for k, v in phrases.items() :
+            key = re.sub(ur'(?u)\w+', self.dlookup, k).lower()
+            self.phrases[key] = v
+        self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
+        fh.close()
+
+    def convert_string(self, tnode) :
+        if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
+            return tnode
+        if tnode.parent.meta['StyleType'] == 'NoteText' :
+            self.caps.append(1)
+        elif tnode.parent.meta['StyleType'] == 'Paragraph' or tnode.parent.name in self.ctags :
+            self.caps[-1] = 1
+        self.tnode = tnode
+        res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
+        if tnode.parent.meta['StyleType'] == 'NoteText' :
+            self.caps.pop()
+        return res
+
+    def convert(self, match) :
+        if self.opts.binary :
+            input = match.group(0).encode('latin_1')
+        else :
+            input = match.group(0)
+        res = self.enc.convert(input, finished=True)
+        if self.caps[-1] :
+            res = re.sub(ur'^(\s*[' + self.quotes + ur']*\s*)(.)',
+                            lambda m : m.group(1) + m.group(2).upper(), res)
+        if re.search(self.sentend + '$', res) :
+            self.caps[-1] = 1
+        else :
+            self.caps[-1] = 0
+        if self.dict :
+            res = re.sub(ur'(?u)(\w+)', self.dlookup, res)
+        for k in self.phrase_keys :
+            if not k in self.tags or self.tnode.parent.name in self.tags[k] :
+                res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
+        res = re.sub('(' + self.sentend + ur')(\w)', lambda m : m.group(1) + m.group(2).upper(), res)
+        res = re.sub('([' + self.quotes + ur'])(\w)([^' + self.quotes + ur']*?\s)', lambda m: m.group(1) + m.group(2).upper() + m.group(3), res)
+        if self.tnode.parent.meta['TextType'] == 'Title' :
+            res = re.sub(ur'(^\s*|\s)([' + self.quotes + ur']*)(\w)', lambda m : m.group(1) + m.group(2) + m.group(3).upper(), res)
+        if self.case :
+            res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
+        return res
+
+    def dlookup(self, match) :
+        key = match.group(0).lower()
+        if key in self.dict and (not key in self.tags or self.tnode.parent.name in self.tags[key]) :
+            return titleme(match.group(0), self.dict[key])
+        elif self.morph_keys :
+            return titleme(match.group(0), re.sub('((?iu)' + self.morph_keys + ')', 
+                            lambda m : self.morphs[m.group(0).lower()] if not m.group(0).lower() in self.tags or self.tnode.parent.name in self.tags[m.group(0).lower()] else m.group(0), match.group(0)))
+        else :
+            return match.group(0)
+
+
+def strsub(findtxt, fn, txt) :
+    res = ''
+    i = 0
+    while True :
+        j = txt.find(findtxt, i)
+        if (j == -1) :
+            return res + txt[i:]
+        else :
+            res += txt[i:j]
+            res += fn(txt[j:j+len(findtxt)])
+            i = j + len(findtxt)
+
+def titleme(base, txt) :
+    if base[0].upper() == base[0] :
+        return txt[0].upper() + txt[1:]
+    else :
+        return txt
+
+def transduce(fname, opts) :
+    def identity_mkr(*args) : return args
+
+    conv = usfm_transducer(case=opts.capitalise, opts=opts)
+    if opts.tec :
+        tec = Converter(Mapping(opts.tec), forward = not opts.reverse)
+        conv.enc = tec
+    if opts.dict :
+        conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
+    infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
+    try:
+       doc = sfm.smap(identity_mkr, conv.convert_string, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
+    except SyntaxError, err :
+        sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
+    finally:
+        infh.close()
+    return doc
+
+
+if __name__ == '__main__':
+    parser = optparse.OptionParser(usage='%prog [options] <SFM FILE>\n' + __doc__)
+    parser.set_defaults(capitalquotes="'\"\u2018\u2019\u201C\u201D()<>",
+        capitalsentence='[.!?][")>}\]\u201D\u2019]*\s*')
+    parser.add_option("-b","--binary",action="store_true",help="Input is legacy encoded, not Unicode")
+    parser.add_option("-c","--capitalise",action="store",help="regular expression match which is capitalised")
+    parser.add_option("--capitaltags",action="store",help="list of tags to capitalise their contents")
+    parser.add_option("--capitalquotes",action="store",help="sets quotes chars for capitalisation, with \u escaping [default: %default]")
+    parser.add_option("--capitalsentence",action="store",help="sentence final regexp for capitalisation, with \u escaping [default: %default]")
+    parser.add_option("-d","--dict",action="store",help="CSV dictionary of input output replacements")
+    parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column of CSV dictionary [%default]")
+    parser.add_option("--dict-output",action="store",type="int",default=1,dest="dictoutput",help="Output column of CSV dictionary [%default]")
+    parser.add_option("--dict-context",action="store",type="int",dest="dicttag",help="Marker context column of CSV dictionary")
+    parser.add_option("-n","--lines",action="store_true",help="Don't parse as USFM, just as plain text")
+    parser.add_option("-o","--output",action="store",help="Specify output file or directory")
+    parser.add_option("-t","--tec",action="store",help="TECKit .tec file to use for conversion")
+    parser.add_option("-r","--reverse",action="store_true",help="Run .tec file in reverse")
+    parser.add_option("-v","--verbose",action='store_true',default=False,
+                      help='Print out statistics and progress info')
+    parser.add_option("-w","--warnings",action='store_true',default=False,
+                      help='Print out syntax warnings discovered during SFM parsing')
+    parser.add_option("-s","--strict",action='store_true',default=False,
+                      help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
+    parser.add_option("-S","--stylesheet",action='store',type='string',
+                     metavar='PATH', default=None,
+                     help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
+
+    opts,sfms = parser.parse_args()
+
+    if len(sfms) < 1:
+        sys.stderr.write(parser.expand_prog_name('%prog: missing SFM FILE\n'))
+        parser.print_help(file=sys.stderr)
+        sys.exit(1)
+    
+    opts.warnings = opts.strict or opts.warnings
+    if opts.stylesheet:
+        opts.stylesheet = usfm.default_stylesheet.copy()
+        opts.stylesheet.update(style.parse(open(stylesheet_path,'r')))
+    else:
+        opts.stylesheet = usfm.default_stylesheet
+
+    work = []
+    first_def = -1
+    if not opts.output :
+        first_def = 0
+    elif not os.path.isdir(opts.output) :
+        work.append((sfms[0],opts.output))
+        first_def = 1
+    else :
+        work.extend(zip(sfms, map(lambda x: os.path.join(opts.stdout, os.path.split(x)[1]), sfms)))
+    if first_def > -1 :
+        work.extend(zip(sfms[first_def:], map(lambda x: x+"_u", sfms[first_def:])))
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("always" if opts.warnings else "ignore", SyntaxWarning)
+            for job in work :
+                res = pprint(transduce(job[0], opts))
+                ofh = codecs.open(job[1], "w", "utf-8")
+                ofh.write(res)
+                ofh.close()
+                
+    except IOError, err:
+        sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
+        sys.exit(2)
+

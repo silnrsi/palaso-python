@@ -1,0 +1,27 @@
+python-palaso (0.6.0) jaunty; urgency=low
+
+  * Re-implemented palaso.sfm as stylesheet guided parser
+    - Added default usfm.sty file
+    - Updated concordance tool to use new sfm parser and features
+
+ -- Tim Eves <tim_eves@sil.org>  Mon, 11 Oct 2010 16:05:00 +0700
+
+python-palaso (0.4.0b1) jaunty; urgency=low
+
+  * Added palaso.sfm
+
+ -- Tim Eves <tim_eves@sil.org>  Wed, 4 Nov 2009 22:04:43 +0700
+
+python-palaso (0.3.0b3) jaunty; urgency=low
+
+  * Added palaso.kmn and palaso.kmfl modules.
+    - Scripts to convert kmn to msklc and xml.
+    - Testing scripts for checking kmfl keyboards.
+
+ -- Tim Eves <tim_eves@sil.org>  Wed, 21 Oct 2009 16:21:14 +0700
+
+python-palaso (0.1.0a1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Tim Eves <tim_eves@sil.org>  Tue, 16 Jun 2009 17:48:42 +0700

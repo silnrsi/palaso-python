@@ -1,0 +1,8 @@
+# General project wide matches
+~$
+\.pyc$
+^((build|dist)/|MANIFEST$)
+^(\.(pydev)?project|\.settings)$
+
+# Specific matches
+^lib/palaso.kmfl.(c|h)$
