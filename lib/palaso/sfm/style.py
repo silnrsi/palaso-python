@@ -48,7 +48,7 @@ _comment = re.compile(r'\s*#.*$')
 
 
 def _munge_record(r):
-    tag = r.pop('Marker')
+    tag = r.pop('Marker').lstrip()
     ous = r['OccursUnder']
     if 'NEST' in ous:
         ous.remove('NEST')
