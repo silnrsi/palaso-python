@@ -14,8 +14,11 @@ __date__    = '11 October 2010'
 __author__  = 'Tim Eves <tim_eves@sil.org>'
 __history__ = '''
 	20101026 - tse - Initial version
-	20101109 - Fixes for poor error reporting and add a unique sequence 
+	20101109 - tse - Fixes for poor error reporting and add a unique sequence 
 		field type to return deduplicated sets as field types.
+		Extend the flag field type parser to accept common textual 
+		boolean false descriptions 'off','no' etc.
+		Make the field value parser accept empty field values.
 '''
 import collections, operator, sys
 import palaso.sfm as sfm
