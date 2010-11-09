@@ -34,7 +34,7 @@ from functools import partial
 
 __all__ = ('event','usfm',                          # Sub modules
            'position','element','text', 'parser',   # data types
-           'reduce','map_tree','pprint')               # functions
+           'reduce','map_tree','pprint')            # functions
 
 
 
@@ -300,8 +300,10 @@ class parser(collections.Iterable):
                     self._tokens.put_back(tok)
                     return
             else:   # Pass non marker data through with a litte fix-up
-                if parent is not None:
-                    tok = tok if len(parent) else tok[1:]
+                if parent is not None \
+                        and len(parent) == 0 \
+                        and tok[0] not in '\r\n':
+                    tok = tok[1:]
                 if tok:
                     tok.parent = parent
                     yield tok
@@ -384,7 +386,8 @@ def pprint(doc):
         r += unicode(e)
         if cr or e.args:
             r += '\n' if e and isinstance(e[0], element) \
-                         and e.meta.get('StyleType') == 'Paragraph'else ' '
+                         and e.meta.get('StyleType') == 'Paragraph' \
+                      else (' ' if not cr or cr[0:1] not in '\r\n' else '')
         r += cr
         if m:
             r += '\\' + m
