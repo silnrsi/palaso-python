@@ -145,7 +145,7 @@ class _put_back_iter(collections.Iterator):
 
 
 
-_default_meta = {'TextType':'default', 'OccursUnder':[None], 'Endmarker':None}
+_default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None}
 
 
 
@@ -179,7 +179,7 @@ class parser(collections.Iterable):
         self.__sty = stylesheet.copy()
         self.__sty.update(ifilter(operator.itemgetter(0), 
                           imap(lambda (k,m): (m['Endmarker'],
-                                              dict(em_def, OccursUnder=[k])), 
+                                              dict(em_def, OccursUnder=set([k]))), 
                                stylesheet.iteritems())))
     
     
@@ -233,7 +233,7 @@ class parser(collections.Iterable):
     
     @staticmethod
     def _pp_marker_list(tags):
-        return ', '.join('\\'+c if c else 'toplevel' for c in tags)
+        return ', '.join('\\'+c if c else 'toplevel' for c in sorted(tags))
     
     
     @staticmethod
@@ -275,10 +275,11 @@ class parser(collections.Iterable):
                 elif parent is None:
                     # We've failed to find a home for marker tag, poor thing.
                     if not meta['TextType']:
+                        assert len(meta['OccursUnder']) == 1
                         self._error(SyntaxError, 
                                       'orphan end marker {token}: '
                                       'no matching opening marker \\{0}', 
-                                      tok, meta['OccursUnder'][0])
+                                      tok, list(meta['OccursUnder'])[0])
                     else:
                         self._error(SyntaxError, 
                                       'orphan marker {token}: '

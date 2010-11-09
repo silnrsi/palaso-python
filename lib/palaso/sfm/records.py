@@ -29,7 +29,7 @@ _schema = schema
 
 def flag(v):                return v != None
 def sequence(p,delim=' '):  return lambda v: map(p,v.strip().split(delim))
-
+def unique(p):              return lambda v: set(p(v))
 
 
 class parser(sfm.parser):
