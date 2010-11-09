@@ -11,7 +11,7 @@ __history__ = '''
 '''
 import re
 import palaso.sfm.records as records
-from palaso.sfm.records import sequence,flag
+from palaso.sfm.records import sequence,flag,unique
 from itertools import imap
 from functools import partial
 
@@ -21,9 +21,9 @@ _fields = {'Marker'         : (str,             SyntaxError('missing Marker mark
            'Endmarker'      : (str,             None),
            'Name'           : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
            'Description'    : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
-           'OccursUnder'    : (sequence(str),   [None]),
+           'OccursUnder'    : (unique(sequence(str)),   [None]),
            'Rank'           : (int,             None),
-           'TextProperties' : (sequence(str),   []),
+           'TextProperties' : (unique(sequence(str)),   []),
            'TextType'       : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
            'StyleType'      : (str,             None),
            'FontSize'       : (int,             None),
@@ -52,7 +52,7 @@ def _munge_record(r):
     ous = r['OccursUnder']
     if 'NEST' in ous:
         ous.remove('NEST')
-        ous.append(tag)
+        ous.add(tag)
     return (tag, r)
 
 
