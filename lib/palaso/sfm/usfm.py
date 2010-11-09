@@ -18,7 +18,7 @@ __history__ = '''
 	20101026 - tse - rewrote to enable the parser to use the stylesheets to 
 		direct how to parse structure and USFM specific semantics.
 '''
-import bz2, contextlib, os, re, site, sys
+import bz2, contextlib, operator, os, re, site, sys
 import cPickle as pickle
 import palaso.sfm.style as style
 import palaso.sfm as sfm
@@ -36,20 +36,26 @@ _PALASO_DATA = os.path.join(
 def _check_paths(pred, paths):
     return next(ifilter(pred, imap(os.path.normpath, paths)),None)
 
+def _newer(cache, benchmark):
+    return os.path.getmtime(benchmark) <= os.path.getmtime(cache)
 
+def _is_fresh(cached_path, benchmarks):
+    return reduce(operator.and_, 
+                  imap(partial(_newer, cached_path), benchmarks))
 
 def _cached_stylesheet(path):
+    package_dir = os.path.dirname(sys.modules[__name__].__file__)
     source_path = _check_paths(os.path.exists, 
         [ os.path.join(_PALASO_DATA, path),
-          os.path.join(os.path.dirname(sys.modules[__name__].__file__), path)])
+          os.path.join(package_dir, path)])
     
     cached_path = os.path.normpath(os.path.join(
                         _PALASO_DATA,
                         path+os.extsep+'cz'))
     if os.path.exists(cached_path):
-        original = os.stat(source_path)
-        cached   = os.stat(cached_path)
-        if original.st_mtime <= cached.st_mtime:
+        import glob
+        if _is_fresh(cached_path, [source_path] 
+                + glob.glob(os.path.join(package_dir, '*.py'))):
             return cached_path
     else:
         path = os.path.dirname(cached_path)
