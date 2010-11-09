@@ -14,6 +14,8 @@ __date__    = '11 October 2010'
 __author__  = 'Tim Eves <tim_eves@sil.org>'
 __history__ = '''
 	20101026 - tse - Initial version
+	20101109 - Fixes for poor error reporting and add a unique sequence 
+		field type to return deduplicated sets as field types.
 '''
 import collections, operator, sys
 import palaso.sfm as sfm
@@ -27,7 +29,9 @@ _schema = schema
 
 
 
-def flag(v):                return v != None
+def flag(v):                return v is not None and \
+                                   v.strip().lower() \
+                                       not in ('0','no','off','false','none')
 def sequence(p,delim=' '):  return lambda v: map(p,v.strip().split(delim))
 def unique(p):              return lambda v: set(p(v))
 
@@ -57,7 +61,7 @@ class parser(sfm.parser):
         
         def accum(db, m):
             try:
-                field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip()))
+                field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip() if m else ''))
             except Exception, err:
                 self._error(type(err), err.msg if hasattr(err,'msg') else unicode(err), m)
             if m.name == start:

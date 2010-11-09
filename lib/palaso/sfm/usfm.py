@@ -17,6 +17,8 @@ __history__ = '''
 		package.
 	20101026 - tse - rewrote to enable the parser to use the stylesheets to 
 		direct how to parse structure and USFM specific semantics.
+	20101109 - tse - Ensure cached usfm.sty is upto date after package code 
+		changes.
 '''
 import bz2, contextlib, operator, os, re, site, sys
 import cPickle as pickle

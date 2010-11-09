@@ -23,6 +23,8 @@ __history__ = '''
 		specific semantics on subsections.
 	20101028 - tse - Handle endmarkers as a special case so the do no require
 		a space to separate them from the following text.
+	20101109 - tse - Fix separator space being included when it shouldn't and
+		use the unique field types set object to improve performance.
 '''
 import collections, codecs, functools, operator, re, warnings
 from itertools import chain, groupby, ifilter, imap
