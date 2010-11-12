@@ -1,4 +1,7 @@
 import re, itertools
+import os
+
+keyboard_template = os.path.join(os.path.dirname(__file__), 'keyboard.svg')
 
 # tuple in dict:
 # 0 - kmn item code
