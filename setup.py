@@ -27,6 +27,6 @@ setup(name='palaso',
       license='LGPL',
       platforms=['Linux','Win32','Mac OS X'],
       package_dir={'':'lib'},
-      package_data={'palaso.sfm':['usfm.sty']}
+      package_data={'palaso.sfm':['usfm.sty'], 'palaso.kmn':['keyboard.svg']}
      )
 
