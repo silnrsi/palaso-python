@@ -89,13 +89,13 @@ class usfm_transducer(object) :
     def convert_node(self, tnode) :
         if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
             return tnode
-        if tnode.parent.meta['StyleType'] == 'NoteText' :
+        if tnode.parent.meta['StyleType'] == 'Note' :
             self.caps.append(1)
         elif (tnode.parent.meta['StyleType'] == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
-        if tnode.parent.meta['StyleType'] == 'NoteText' :
+        if tnode.parent.meta['StyleType'] == 'Note' :
             self.caps.pop()
         return res
 
