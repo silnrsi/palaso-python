@@ -12,7 +12,7 @@ Tim Eves provided the concordance program on which this is based.
 '''
 
 import palaso.sfm as sfm
-from palaso.sfm import usfm, style, pprint
+from palaso.sfm import usfm, style, pprint, element, text
 from palaso.teckit.engine import Converter, Mapping
 import palaso.unicsv as csv
 import codecs, optparse, os.path, re, warnings, sys
@@ -21,6 +21,18 @@ from itertools import groupby
 
 word_cat = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Me', 'Pd', 'Cs', 'Co', 'Cn'])
 isletters = ""
+
+def sfmmap(elements, elemente, textf, doc) :
+    def _g(e) :
+        if isinstance(e,element) :
+            e = elements(e)
+            e[0:] = map(_g, e)
+            elemente(e)
+            return e
+        else :
+            e_ = textf(e)
+            return text(e_, e.pos, e)
+    return map(_g, doc)
 
 def isword(char) :
     if char in isletters : return True
@@ -86,17 +98,22 @@ class usfm_transducer(object) :
         self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
         fh.close()
 
+    def element_start(self, node) :
+        if getattr(node, 'parent', None) and node.parent.meta['StyleType'] == 'Note' :
+            self.caps.append(1)
+        return node
+    
+    def element_end(self, node) :
+        if getattr(node, 'parent', None) and node.parent.meta['StyleType'] == 'Note' :
+            self.caps.pop()
+
     def convert_node(self, tnode) :
         if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
             return tnode
-        if tnode.parent.meta['StyleType'] == 'Note' :
-            self.caps.append(1)
-        elif (tnode.parent.meta['StyleType'] == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
+        if (tnode.parent.meta['StyleType'] == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
-        if tnode.parent.meta['StyleType'] == 'Note' :
-            self.caps.pop()
         return res
 
     def convert(self, match) :
@@ -169,7 +186,7 @@ def transduce(fname, opts) :
         conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
-       doc = sfm.smap(identity_mkr, conv.convert_node, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
+       doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
     except SyntaxError, err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
     finally:
