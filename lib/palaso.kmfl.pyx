@@ -21,6 +21,8 @@ cdef extern from "kmfl/kmfl.h" :
 
     struct _xkeyboard :
         UINT group1
+        UINT nstores
+        UINT ngroups
 
     ctypedef _xstore XSTORE
     ctypedef _xrule XRULE
@@ -150,7 +152,10 @@ cdef class kmfl :
         kmfl_delete_keyboard_instance(self.kmsi)
 
     def num_rules(self) :
-        return self.kmsi.groups[self.kmsi.keyboard.group1].nrules
+        res = 0
+        for 0 <= i < self.kmsi.keyboard.ngroups :
+            res += self.kmsi.groups[i].nrules
+        return res
 
     def rule(self, num) :
         cdef XRULE rule
@@ -320,9 +325,12 @@ cdef class kmfl :
         cdef UINT *items
         res = ""
         snum = _storemap.get(sname.upper(), -1)
-        if not sname :
+        if snum == -1 :
             snum = int(sname)
 
+        if snum >= self.kmsi.keyboard.nstores : 
+            print "%d >= %d" % (snum, self.kmsi.keyboard.nstores)
+            return res
         s = self.kmsi.stores[snum]
         items = self.kmsi.strings + s.items
         for 0 <= i < s.len :
