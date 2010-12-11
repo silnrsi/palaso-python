@@ -1,0 +1,143 @@
+#!/usr/bin/python
+
+from palaso import kmn
+from palaso.kmfl import kmfl
+import sys, re
+
+item_char = 0
+item_keysym = 1
+item_any = 2
+item_index = 3
+item_outs = 4
+item_deadkey = 5
+item_context = 6
+item_nul = 7
+item_return = 8
+item_beep = 9
+item_use = 10
+item_match = 11
+item_nomatch = 12
+item_plus = 13
+item_call = 14
+item_notany = 15
+
+def item_type(x) : return (x >> 24) & 0xFF
+def item_base(x) : return x & 0xFFFF
+def item_index_offset(x) : return (x >> 16) & 0xFF
+
+xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" : '&apos;' }
+
+def entity_escape(cs) :
+    r = u''
+    for c in cs :
+        if ord(c) > 0x7F :
+            ent = "&#x%04X;" % ord(c)
+        else :
+            ent = xmlentities.get(c)
+        r += (ent if ent else c)
+    return r
+
+class rule(object) :
+    def __init__(self, inputs, outputs, deadin = 0, deadout = 0, iskey = True) :
+        self.key = inputs.pop() if iskey else None
+        self.inputs = inputs
+        self.outputs = outputs
+        self.deadin = deadin
+        self.deadout = deadout
+
+    def regexps(self) :
+        deltas = [0]
+        currdelta = 0
+        outs = ""
+        ins = "("
+        for i in self.inputs :
+            if not i or not i.startswith("[") :
+                currdelta += 1
+                ins += entity_escape(i)
+            else :
+                ins += "(" + entity_escape(i) + ")"
+            deltas.append(currdelta)
+        ins += ")"
+        for i in self.outputs :
+            m = re.match(r"\\(\d+)$", i)
+            if m :
+                offset = int(m.group(1))
+                v = "\\" + str(offset - deltas[offset])
+                outs += v
+            else :
+                outs += entity_escape(i)
+        return (ins, outs)
+
+    def asxml(self) :
+        ins, outs = self.regexps()
+        res = "<rule"
+        if len(self.inputs) : res += " input='%s'" % ins
+        if len(self.outputs) : res += " output='%s'" % outs
+        if self.deadin : res += " deadin='%d'" % self.deadin
+        if self.deadout : res += " deadout='%d'" % self.deadout
+        if self.key : res += " key='%s'" % self.key
+        res += "/>"
+        return res
+
+def process_rule(lhs, rhs, presets, iskey = True) :
+    flattens = set()
+    output = []
+    input = []
+    deadin = 0
+    deadout = 0
+    # print str(map(lambda x: "%X" % x, lhs)) + ", " + str(map(lambda x: "%X" % x, rhs))
+    for j in range(len(rhs)) :
+        r = rhs[j]
+        if item_type(r) == item_index :
+            offset = item_index_offset(r)
+            storenum = item_base(r)
+            if item_type(lhs[offset - 1]) == item_any :
+                lstorenum = item_base(lhs[offset - 1])
+                if lstorenum != storenum :
+                    newrhs = rhs[:]
+                    newlhs = lhs[:]
+                    store = kb.store(str(storenum))
+                    npre = presets[:]
+                    for k in range(len(store)) :
+                        npre[offset - 1] = k
+                        newrhs[j] = ord(store[k])
+                        newlhs[offset - 1] = ord(kb.store(str(lstorenum))[k])
+                        for res in process_rule(newlhs, newrhs, npre) : yield res
+                else :
+                    output += ["\\" + str(offset)]
+            else :
+                ind = presets[offset - 1]
+                print "storenum=%d index=%d" % (storenum, ind)
+                output += [unichr(ord(kb.store(str(storenum))[ind]))]
+        elif item_type(r) == item_context :
+            output += ["\\1"]
+        elif item_type(r) == item_outs :
+            output += ["".join(map(unichr, kb.store(str(item_base(r)))))]
+        elif item_type(r) == item_char :
+            output += [unichr(r)]
+        elif item_type(r) == item_deadkey :
+            deadout = item_base(r)
+
+    for j in range(len(lhs)) :
+        l = lhs[j]
+        if item_type(l) == item_char or item_type(l) == item_keysym :
+            input += [kmn.item_to_key(l)]
+        elif item_type(l) == item_any :
+            input += ["[" + kb.store(str(item_base(l))) + "]"]
+        elif item_type(l) == item_notany :
+            input += ["[^" + kb.store(str(item_base(l))) + "]"]
+        elif item_type(l) == item_deadkey :
+            deadin = item_base(l)
+        else :
+            print "found %X on lhs" % l
+            input += [""]
+    if len(input) and len(output) :
+        yield rule(input, output, deadin, deadout)
+
+kb = kmfl(sys.argv[1])
+rules = []
+for i in range(kb.num_rules()) :
+    (lhs, rhs) = kb.rule(i)
+    for r in process_rule(lhs, rhs, [0] * len(lhs)) :
+        print r.asxml()
+
