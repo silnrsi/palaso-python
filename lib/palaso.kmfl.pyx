@@ -160,6 +160,13 @@ cdef class kmfl :
     def rule(self, num) :
         cdef XRULE rule
         cdef UINT *base
+        count = 0
+        flags = 0
+        for 0 <= gpnum < self.kmsi.keyboard.ngroups :
+            count += self.kmsi.groups[gpnum].nrules
+            if count >= num :
+                flags = self.kmsi.groups[gpnum].flags
+                break
         rule = self.kmsi.rules[num]
         base = self.kmsi.strings + rule.lhs
         lhs = []
@@ -169,7 +176,7 @@ cdef class kmfl :
         rhs = []
         for 0 <= i < rule.olen :
             rhs.append(base[i])
-        return (lhs, rhs)
+        return (lhs, rhs, gpnum, flags)
 
     def run_items(self, items) :
         clear_history(self.kmsi)
