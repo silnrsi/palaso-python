@@ -2,7 +2,8 @@
 
 from palaso import kmn
 from palaso.kmfl import kmfl
-import sys, re
+import re, time
+from optparse import OptionParser
 
 item_char = 0
 item_keysym = 1
@@ -37,33 +38,45 @@ def entity_escape(cs) :
         r += (ent if ent else c)
     return r
 
+regexpentities = dict(map(lambda x: (x, "\\" + x), "[]{()?|."))
+
+def regexp_escape(cs) :
+    return u"".join(map(lambda x : regexpentities.get(x, x), cs))
+
 class rule(object) :
-    def __init__(self, inputs, outputs, deadin = 0, deadout = 0, iskey = True) :
+    def __init__(self, inputs, outputs, deadin = 0, deadout = 0, iskey = True, contextref = False) :
         self.key = inputs.pop() if iskey else None
         self.inputs = inputs
         self.outputs = outputs
         self.deadin = deadin
         self.deadout = deadout
+        self.contextref = contextref
 
     def regexps(self) :
         deltas = [0]
-        currdelta = 0
+        refed = [self.contextref] + [0] * len(self.inputs)
+        currdelta = 0 if self.contextref else 1
         outs = ""
-        ins = "("
-        for i in self.inputs :
-            if not i or not i.startswith("[") :
+        ins = "(" if self.contextref else ""
+        for i in self.outputs :
+            m = re.match(r"\\(\d+)$", i)
+            if m : refed[int(m.group(1)) - 1] = 1
+        for i in range(len(self.inputs)) :
+            inp = self.inputs[i]
+            if not inp or not refed[i + 1] :
                 currdelta += 1
-                ins += entity_escape(i)
+                ins += entity_escape(inp)
             else :
-                ins += "(" + entity_escape(i) + ")"
+                ins += "(" + entity_escape(inp) + ")"
             deltas.append(currdelta)
-        ins += ")"
+        ins += ")" if self.contextref else ""
         for i in self.outputs :
             m = re.match(r"\\(\d+)$", i)
             if m :
                 offset = int(m.group(1))
-                v = "\\" + str(offset - deltas[offset])
-                outs += v
+                if len(self.inputs) and offset <= len(deltas) :
+                    v = "\\" + str(offset - deltas[offset - 1])
+                    outs += v
             else :
                 outs += entity_escape(i)
         return (ins, outs)
@@ -75,17 +88,17 @@ class rule(object) :
         if len(self.outputs) : res += " output='%s'" % outs
         if self.deadin : res += " deadin='%d'" % self.deadin
         if self.deadout : res += " deadout='%d'" % self.deadout
-        if self.key : res += " key='%s'" % self.key
+        if self.key : res += " key='%s'" % entity_escape(self.key)
         res += "/>"
         return res
 
-def process_rule(lhs, rhs, presets, iskey = True) :
+def process_rule(lhs, rhs, presets, iskey = True, contextref = False) :
     flattens = set()
     output = []
     input = []
     deadin = 0
     deadout = 0
-    # print str(map(lambda x: "%X" % x, lhs)) + ", " + str(map(lambda x: "%X" % x, rhs))
+#    print str(map(lambda x: "%X" % x, lhs)) + ", " + str(map(lambda x: "%X" % x, rhs))
     for j in range(len(rhs)) :
         r = rhs[j]
         if item_type(r) == item_index :
@@ -97,22 +110,25 @@ def process_rule(lhs, rhs, presets, iskey = True) :
                     newrhs = rhs[:]
                     newlhs = lhs[:]
                     store = kb.store(str(storenum))
+                    lstore = kb.store(str(lstorenum))
                     npre = presets[:]
-                    for k in range(len(store)) :
+                    for k in range(len(lstore)) :
                         npre[offset - 1] = k
                         newrhs[j] = ord(store[k])
-                        newlhs[offset - 1] = ord(kb.store(str(lstorenum))[k])
-                        for res in process_rule(newlhs, newrhs, npre) : yield res
+                        newlhs[offset - 1] = ord(lstore[k])
+                        for res in process_rule(newlhs, newrhs, npre, iskey, contextref) : yield res
+                    return
                 else :
-                    output += ["\\" + str(offset)]
+                    output += ["\\" + str(offset + 1)]
             else :
                 ind = presets[offset - 1]
-                print "storenum=%d index=%d" % (storenum, ind)
+#                print "storenum=%d index=%d" % (storenum, ind)
                 output += [unichr(ord(kb.store(str(storenum))[ind]))]
         elif item_type(r) == item_context :
-            output += ["\\1"]
+            contextref = True
+            output += ["\\" + str(item_base(r) + 1)]
         elif item_type(r) == item_outs :
-            output += ["".join(map(unichr, kb.store(str(item_base(r)))))]
+            output += ["".join(map(lambda x: unichr(ord(x)), kb.store(str(item_base(r)))))]
         elif item_type(r) == item_char :
             output += [unichr(r)]
         elif item_type(r) == item_deadkey :
@@ -121,23 +137,66 @@ def process_rule(lhs, rhs, presets, iskey = True) :
     for j in range(len(lhs)) :
         l = lhs[j]
         if item_type(l) == item_char or item_type(l) == item_keysym :
-            input += [kmn.item_to_key(l)]
-        elif item_type(l) == item_any :
-            input += ["[" + kb.store(str(item_base(l))) + "]"]
-        elif item_type(l) == item_notany :
-            input += ["[^" + kb.store(str(item_base(l))) + "]"]
+            if iskey and j == len(lhs) - 1 :
+                input += [kmn.item_to_key(l)]
+            else :
+                input += [regexp_escape(kmn.item_to_char(l))]
+        elif item_type(l) == item_any  or item_type(l) == item_notany :
+            store = kb.store(str(item_base(l)))
+            if item_type(l) == item_any and len(store) == 1 :
+                input += [regexp_escape(store)]
+            else :
+                input += [("[" if item_type(l) == item_any else "[^") + regexp_escape(store) + "]"]
         elif item_type(l) == item_deadkey :
             deadin = item_base(l)
         else :
-            print "found %X on lhs" % l
+#            print "found %X on lhs" % l
             input += [""]
     if len(input) and len(output) :
-        yield rule(input, output, deadin, deadout)
+        yield rule(input, output, deadin, deadout, iskey = iskey, contextref = contextref)
 
-kb = kmfl(sys.argv[1])
-rules = []
+parser = OptionParser()
+parser.add_option("-l","--lang",help="Language tag for this LDML")
+
+(opts, argv) = parser.parse_args()
+id = {}
+if opts.lang :
+    m = re.match(r'^([^-_]+)(?:[-_]?([^-_]*)[-_]?(.*))$', opts.lang)
+    id['language'] = m.group(1)
+    if len(m.group(2)) == 4 :
+        id['script'] = m.group(2)
+    elif m.group(2) :
+        id['territory'] = m.group(2)
+
+kb = kmfl(argv[0])
+rules = {}
+name = kb.store("NAME")
+mnemonic = kb.store("MNEMONIC")
+mnemattr = ' mnemonic="1"' if mnemonic else ""
+print """<?xml version="1.0"?>
+<ldml>
+  <identity>"""
+
+for k, v in id.items() :
+    print '    <%s type="%s"/>' % (k, v)
+print '    <generation date="%s"/>' % (time.strftime('%Y-%m-%d'))
+print """  </identity>
+  <special>
+    <keyboards xmlns="http://www.palaso.org/ldml/0.2">
+      <keyboard name="%s"%s>""" % (name, mnemattr)
 for i in range(kb.num_rules()) :
-    (lhs, rhs) = kb.rule(i)
-    for r in process_rule(lhs, rhs, [0] * len(lhs)) :
-        print r.asxml()
+    (lhs, rhs, gpnum, flags) = kb.rule(i)
+    for r in process_rule(lhs, rhs, [0] * len(lhs), iskey = (flags & 1)) :
+        if r.key in rules :
+            rules[r.key].append(r)
+        else :
+            rules[r.key] = [r]
+for k in sorted(rules.keys()) :
+    for r in sorted(rules[k], cmp = lambda a, b : cmp(len(b.inputs), len(a.inputs))) :
+        print "        " + r.asxml()
 
+print """      </keyboard>
+    </keyboards>
+  </special>
+</ldml>
+"""
