@@ -46,7 +46,7 @@ def _is_fresh(cached_path, benchmarks):
                   imap(partial(_newer, cached_path), benchmarks))
 
 def _cached_stylesheet(path):
-    package_dir = os.path.dirname(sys.modules[__name__].__file__)
+    package_dir = os.path.dirname(__file__)
     source_path = _check_paths(os.path.exists, 
         [ os.path.join(_PALASO_DATA, path),
           os.path.join(package_dir, path)])
@@ -99,7 +99,7 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None}
 
 class parser(sfm.parser):
     default_meta = _default_meta
-    numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)\s+',re.UNICODE)
+    numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)(?=(\s|$))',re.UNICODE)
     
     
     @classmethod
@@ -116,7 +116,7 @@ class parser(sfm.parser):
     
     def _ChapterNumber_(self, chapter_marker):
         tok = next(self._tokens)
-        if tok[0] == '\\':
+        if not tok.lstrip() or tok.startswith('\\'):
             self._error(SyntaxError, 'missing chapter number after \\c', 
                                      chapter_marker)
         
@@ -124,9 +124,9 @@ class parser(sfm.parser):
         chapter = self.numeric_re.match(tok)
         if not chapter:
             self._error(SyntaxError, 'invalid chapter number after \\c: '
-                        '{token} is not a valid chapter number', tok.split(' ',1)[0])
+                        '\'{token}\' is not a valid chapter number', tok.lstrip().split(' ',1)[0])
         chapter_marker.args = [unicode(tok[chapter.start(1):chapter.end(1)])]
-        tok = tok[chapter.end():]
+        tok = tok[chapter.end():].lstrip()
         
         if tok and tok[0] != '\\': 
             self._error(SyntaxError, 'text cannot follow a chapter marker', tok)
@@ -138,7 +138,7 @@ class parser(sfm.parser):
     
     def _VerseNumber_(self, verse_marker):
         tok = next(self._tokens)
-        if tok[0] == '\\':
+        if not tok.lstrip() or tok.startswith('\\'):
             self._error(SyntaxError, 'missing verse number after \\v', 
                                      verse_marker)
         
@@ -146,7 +146,7 @@ class parser(sfm.parser):
         verse = self.numeric_re.match(tok)
         if not verse:
             self._error(SyntaxError, 'invalid verse number after \\v: '
-                        '{token} is not a valid verse number', tok.split(' ',1)[0])
+                        '\'{token}\' is not a valid verse number', tok.lstrip().split(' ',1)[0])
         verse_marker.args = [unicode(tok[verse.start(1):verse.end(1)])]
         tok = tok[verse.end():]
         
@@ -155,21 +155,23 @@ class parser(sfm.parser):
     _versenumber_ = _VerseNumber_
     
     
+    @staticmethod
+    def _canonicalise_footnote(content):
+        def g(e): return e if getattr(e,'name', None) == 'ft' else [e]
+        return chain.from_iterable(imap(g, content))
+    
+    
     def _NoteText_(self,parent):
-        if parent.meta['StyleType'] != 'Note':
-            return self._default_(parent)
-
+        if parent.meta['StyleType'] != 'Note': return self._default_(parent)
         tok = next(self._tokens)
-        if tok[0] == '\\':
-            self._error(SyntaxError, 'missing caller parameter number after {0}',
-                        tok, parent)
-        tok,rest = tok.lstrip().split(' ',1)
+        if not tok.lstrip() or tok.startswith('\\'):
+            self._error(SyntaxError, 'missing caller parameter number after \\{token.name}',
+                        parent)
+        
+        tok, rest = (tok.lstrip().split(' ',1) + [''])[:2]
         parent.args = [unicode(tok.strip())]
         if rest: self._tokens.put_back(rest)
-        content = self._default_(parent)
-        return chain.from_iterable(e if getattr(e,'name',None) == 'ft' else (e,) for e in content)
-
-
+        return self._canonicalise_footnote(self._default_(parent))
 
 _test = ['test text\n', '\\test text\\\\words\n', 'more text \\test2\n', 'inline \\i text\\i* more text']
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-The SFM parser module. It provides the basic stylesheet guided sfm parser and 
-default TextType parser.  This parser provides detailed error and diagnostic 
-messages including accurate line and column information as well as context 
-information for structure errors. 
+The SFM parser module. It provides the basic stylesheet guided sfm parser 
+and default TextType parser.  This parser provides detailed error and 
+diagnostic messages including accurate line and column information as well
+as context information for structure errors. 
 The default marker meta data makes this produce only top-level marker-text
 pairs.
 '''
@@ -44,43 +44,143 @@ position = collections.namedtuple('position', 'line col')
 
 
 class element(list):
-    __slots__ = ('pos', 'name', 'args', 'parent', 'meta')
+    """
+    A sequence type that for holding the a marker and it's child nodes
+    >>> element('marker')
+    element(u'marker', pos=position(line=1, col=1))
+    
+    >>> str(element('marker'))
+    '\\\\marker'
+    
+    >>> str(element('marker', args=['1','2']))
+    '\\\\marker 1 2'
+    
+    >>> e = element('marker', args=['1'],
+    ...             content=[text('some text '),
+    ...                      element('marker2', content=[text('more text\\n')]),
+    ...                      element('blah',content=[text('\\n')]),
+    ...                      element('blah',content=[text('\\n')]),
+    ...                      element('yak', args=['yak'])])
+    >>> len(e)
+    5
+    >>> e.name
+    u'marker'
+    >>> e.pos
+    position(line=1, col=1)
+    >>> e.meta
+    {}
+    >>> print str(e)
+    \\marker 1 some text \\marker2 more text
+    \\blah
+    \\blah
+    \\yak yak
+    >>> element('marker') == element('marker')
+    True
+    >>> element('marker') == element('different')
+    False
+    """
+    __slots__ = ('pos', 'name', 'args', 'parent', 'meta', 'annotations')
     
     
-    def __init__(self, name, pos=position(1,1), args=[], parent=None, meta=None, content=[]):
+    def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
         super(element,self).__init__(content)
         self.name = unicode(name)
         self.pos = pos
         self.args = args
         self.parent = parent
         self.meta = meta
+        self.annotations = {}
     
     
     def __repr__(self):
-        return u'element({0!r},pos={1!r},args={2!r})'.format(self.name, 
-                                                             self.pos, 
-                                                             self.args)
+        args = [repr(self.name), u'pos='+repr(self.pos)] \
+            + (self.args and [u'args=' + repr(self.args)]) \
+            + (self   and [u'content=' + super(element,self).__repr__()])
+        return u'element({0!s})'.format(', '.join(args))
+    
+    
+    def __eq__(self, rhs):
+        assert isinstance(rhs, element), 'rhs must be an element type'
+        return self.name == rhs.name \
+           and self.args == rhs.args \
+           and (not self.meta or not rhs.meta or self.meta == rhs.meta) \
+           and (not self.annotations or not rhs.annotations 
+                                     or self.meta == rhs.meta) \
+           and super(element,self).__eq__(rhs)
     
     
     def __str__(self):
-        return u'\\{0!s}'. format(' '.join([self.name] + self.args))
+        marker = u'\\' + ' '.join([self.name] + self.args)
+        endmarker = self.meta.get('Endmarker',u'')
+        body = ''.join(imap(unicode, self))
+        sep = ''
+        if self:
+            if isinstance(self[0], element) \
+               and self.meta.get('StyleType') == 'Paragraph':
+                sep = '\n'
+            elif not body.startswith(('\r\n','\n')):
+                sep = u' '
+        if endmarker and '*implicit-closed' not in self.annotations:
+            body += u'\\' + endmarker
+        return sep.join([marker, body])
 
 
 
 class text(unicode):
-    def __new__(cls, content, pos=position(0,0), parent=None):
+    '''
+    >>> from pprint import pprint
+
+    An extended unicode string type that tracks position and 
+    parent/child relationship.
+    
+    >>> text('a test')
+    text(u'a test', pos=position(line=1, col=1))
+    
+    >>> text('prefix ',position(3,10)) + text('suffix',position(1,6))
+    text(u'prefix suffix', pos=position(line=3, col=10))
+    
+    >>> text('a few short words')[12:]
+    text(u'words', pos=position(line=1, col=13))
+    
+    >>> text('   yuk spaces   ').lstrip()
+    text(u'yuk spaces   ', pos=position(line=1, col=4))
+    
+    >>> text('   yuk spaces   ').rstrip()
+    text(u'   yuk spaces', pos=position(line=1, col=1))
+    
+    >>> text('   yuk spaces   ').strip()
+    text(u'yuk spaces', pos=position(line=1, col=4))
+    
+    >>> pprint(text('a few short words').split(' '))
+    [text(u'a', pos=position(line=1, col=1)),
+     text(u'few', pos=position(line=1, col=3)),
+     text(u'short', pos=position(line=1, col=7)),
+     text(u'words', pos=position(line=1, col=13))]
+    
+    >>> list(map(str, text('a few short words').split(' ')))
+    ['a', 'few', 'short', 'words']
+    
+    >>> text.concat([text(u'a ', pos=position(line=1, col=1)), 
+    ...              text(u'few ', pos=position(line=1, col=3)), 
+    ...              text(u'short ', pos=position(line=1, col=7)),
+    ...              text(u'words', pos=position(line=1, col=13))])
+    text(u'a few short words', pos=position(line=1, col=1))
+    '''
+    
+    
+    def __new__(cls, content, pos=position(1,1), parent=None):
         return super(text,cls).__new__(cls, content)
     
     
-    def __init__(self, content, pos=position(0,0), parent=None):
+    def __init__(self, content, pos=position(1,1), parent=None):
         self.pos = pos
         self.parent = parent
     
-    
     @staticmethod
     def concat(iterable):
-        i = next(iterable)
-        return text(u''.join(chain([i],iterable)), i.pos)
+        i = iter(iterable)
+        h = next(i)
+        return text(u''.join(chain([h],i)), h.pos, h.parent)
     
     
     def split(self, sep, maxsplit=-1):
@@ -90,27 +190,35 @@ class text(unicode):
             e = tail.find(sep)
             if e == -1:
                 result.append(tail)
-                tail=text(u'',position(self.pos.line,self.pos.col+len(tail)))
+                tail=text(u'',position(self.pos.line,self.pos.col+len(tail)), self.parent)
                 break
             result.append(tail[:e])
             tail = tail[e+len(sep):]
             maxsplit -= 1
-        result.append(tail)
         return result
     
     
     def lstrip(self,*args,**kwds):
         l = len(self)
         s_ = super(text,self).lstrip(*args,**kwds)
-        return text(s_, position(self.pos.line, self.pos.col + l-len(s_)))
+        return text(s_, position(self.pos.line, self.pos.col + l-len(s_)), self.parent)
+    
+    
+    def rstrip(self,*args,**kwds):
+        s_ = super(text,self).rstrip(*args,**kwds)
+        return text(s_, self.pos, self.parent)
+    
+    
+    def strip(self,*args,**kwds):
+        return self.lstrip(*args,**kwds).rstrip(*args,**kwds)
     
     
     def __repr__(self):
-        return u'text({0!s},pos={1!r})'.format(super(text,self).__repr__(), getattr(self,'pos',position(0,0)))
+        return u'text({0!s}, pos={1!r})'.format(super(text,self).__repr__(), self.pos)
     
     
     def __add__(self, rhs):
-        return text(super(text,self).__add__(rhs),self.pos)
+        return text(super(text,self).__add__(rhs),self.pos,self.parent)
     
     
     def __getslice__(self, i, j): return self.__getitem__(slice(i,j))
@@ -119,11 +227,35 @@ class text(unicode):
     def __getitem__(self,i):
         return text(super(text,self).__getitem__(i), 
                     position(self.pos.line, self.pos.col 
-                                + (i.start if isinstance(i,slice) else i)))
+                                + (i.start if isinstance(i,slice) else i)),self.parent)
 
 
 
 class _put_back_iter(collections.Iterator):
+    '''
+    >>> i=_put_back_iter([1,2,3])
+    >>> next(i)
+    1
+    >>> next(i)
+    2
+    >>> i.put_back(256)
+    >>> next(i)
+    256
+    >>> i.peek()
+    3
+    >>> i.put_back(512)
+    >>> i.peek()
+    512
+    >>> next(i); next(i)
+    512
+    3
+    >>> next(i)
+    Traceback (most recent call last):
+    ...
+    StopIteration
+    '''
+    
+    
     def __init__(self, iterable):
         self.__itr = iter(iterable)
         self.__pbq = []
@@ -152,6 +284,79 @@ _default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':No
 
 
 class parser(collections.Iterable):
+    '''
+    >>> from pprint import pprint
+    >>> import warnings
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("ignore")
+    ...     pprint(list(parser([r"\\marker text",
+    ...                         r"\\escaped backslash\\\\character"])))
+    [element(u'marker', pos=position(line=1, col=1), content=[text(u'text', pos=position(line=1, col=9))]),
+     element(u'escaped', pos=position(line=2, col=1), content=[text(u'backslash\\\\\\\\character', pos=position(line=2, col=10))])]
+    >>> doc=r"""
+    ... \\id MAT EN
+    ... \\ide UTF-8
+    ... \\rem from MATTHEW
+    ... \\h Mathew
+    ... \\toc1 Mathew
+    ... \\mt1 Mathew
+    ... \\mt2 Gospel Of Matthew"""
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("ignore")
+    ...     pprint(list(parser(doc.splitlines(True))))
+    [text(u'\\n', pos=position(line=1, col=1)),
+     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
+     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6))]),
+     element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))]),
+     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
+     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
+     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
+     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+
+    >>> tss = parser.extend_stylesheet({},'id','ide','rem','h','toc1','mt1','mt2')
+    >>> pprint(tss)
+    {'h': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'id': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'ide': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'mt1': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'mt2': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'rem': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+     'toc1': {'Endmarker': None,
+              'OccursUnder': set([None]),
+              'TextType': 'default'}}
+    
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser(doc.splitlines(True), tss)))
+    [text(u'\\n', pos=position(line=1, col=1)),
+     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
+     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6))]),
+     element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))]),
+     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
+     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
+     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
+     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+    >>> tss['rem'] = tss['rem'].copy()
+    >>> tss['rem']['OccursUnder'] = set(['ide'])
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser(doc.splitlines(True), tss)))
+    [text(u'\\n', pos=position(line=1, col=1)),
+     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
+     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6)), element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))])]),
+     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
+     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
+     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
+     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+    >>> del tss['mt1']
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser(doc.splitlines(True), tss)))
+    Traceback (most recent call last):
+    ...
+    SyntaxWarning: unknown marker \mt1: not in styesheet
+    '''
+    
     default_meta = _default_meta
     __tokeniser = re.compile(r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',re.DOTALL | re.UNICODE)
     
@@ -292,22 +497,29 @@ class parser(collections.Iterable):
                     # 'character' style markers'.
                     if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
                         self._error(SyntaxError, 
-                            'invalid end marker {token}: \\{0} '
+                            'invalid end marker {token}: \\{0.name} '
                             '(line {0.pos.line},{0.pos.col}) '
-                            'is only be closed with \\{1}', tok, parent,
+                            'can only be closed with \\{1}', tok, parent,
                             parent.meta['Endmarker'])
-                    
                     self._tokens.put_back(tok)
+                    parent.annotations['implicit-closed'] = True
                     return
             else:   # Pass non marker data through with a litte fix-up
                 if parent is not None \
                         and len(parent) == 0 \
-                        and tok[0] not in '\r\n':
+                        and not tok.startswith(('\r\n','\n')):
                     tok = tok[1:]
                 if tok:
                     tok.parent = parent
                     yield tok
-    
+        if parent is not None:
+            if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
+                self._error(SyntaxError, 
+                    'unexpected end-of-file: \\{token.name} '
+                    '(line {token.pos.line},{token.pos.col}) '
+                    'has not been closed with \\{0}', parent,
+                    parent.meta['Endmarker'])
+            parent.annotations['implicit-closed'] = True
     
     def _Milestone_(self, parent):
         return tuple()
@@ -315,7 +527,6 @@ class parser(collections.Iterable):
     
     _Other_ = _default_
     _other_ = _Other_
-
 
 
 def sreduce(elementf, textf, trees, initial=None):
@@ -381,20 +592,7 @@ def text_properties(*props):
 
 
 def pprint(doc):
-    def _marker(e,r, cr):
-        m = e.meta['Endmarker']
-        r += unicode(e)
-        if cr or e.args:
-            r += '\n' if e and isinstance(e[0], element) \
-                         and e.meta.get('StyleType') == 'Paragraph' \
-                      else (' ' if not cr or cr[0:1] not in '\r\n' else '')
-        r += cr
-        if m:
-            r += '\\' + m
-        return r
-    
-    return sreduce(_marker, lambda e,r: r + unicode(e), doc, u'')
-
+    return ''.join(imap(unicode, doc))
 
 
 def copy(doc):
