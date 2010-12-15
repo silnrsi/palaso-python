@@ -9,6 +9,7 @@ __history__ = '''
 	20101026 - tse - rewrote to use new palaso.sfm module
 '''
 import palaso.sfm as sfm
+import warnings
 
 
 
@@ -35,11 +36,11 @@ def transduce(parser, handler, source):
         if isinstance(e, basestring): 
             return line + handler.text(e.pos, e.parent, e)
         
-        line += u'\\' + handler.start(e.pos, e.parent.name, e.name, e.args)
+        line += u'\\' + handler.start(e.pos, e.parent and e.parent.name, e.name, e.args)
         body = reduce(_g, e, u'')
-        line += body if body.startswith(endofline) else u' ' + body
-        tag = handler.end(e.pos, e.parent.name, e.name)
-        if tag: line += u'\\' + tag + u' '
+        line += body if not body or not body.startswith('\\\\') and body.startswith(('\r\n','\n','\\')) else u' ' + body
+        tag = handler.end(e.pos, e.parent and e.parent.name, e.name)
+        if tag: line += u'\\' + tag
         return line
     
     
@@ -49,7 +50,7 @@ def transduce(parser, handler, source):
         warnings.simplefilter("always", SyntaxWarning)
         
         doc = parser(source)
-        return reduce(_g, trees, u'').splitlines(True)
+        return reduce(_g, doc, u'').splitlines(True)
 
 
 
