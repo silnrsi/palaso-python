@@ -157,7 +157,12 @@ class parser(sfm.parser):
     
     @staticmethod
     def _canonicalise_footnote(content):
-        def g(e): return e if getattr(e,'name', None) == 'ft' else [e]
+        def g(e):
+            if getattr(e,'name', None) == 'ft':
+                e.parent.annotations['content-promoted'] = True
+                return e
+            else:
+                return [e]
         return chain.from_iterable(imap(g, content))
     
     
