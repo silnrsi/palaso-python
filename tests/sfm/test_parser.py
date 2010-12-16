@@ -209,7 +209,9 @@ class USFMTestCase(unittest.TestCase):
 
     def test_footnote_content(self):
         def ft(src,doc): return (r'\id TEST\mt '+src, [elem('id', text('TEST'), elem('mt', doc))])
-        tests = [ft(r'\f + \fk Issac:\ft In Hebrew means "laughter"\f*',                            elem(('f','+'), elem('fk',text('Issac:')), text('In Hebrew means "laughter"'))),
+        tests = [ft(r'\f - bare text\f*',           elem(('f','-'), text('bare text'))),
+                 ft(r'\f - \ft bare text\ft*\f*',   elem(('f','-'), text('bare text'))),
+                 ft(r'\f + \fk Issac:\ft In Hebrew means "laughter"\f*',                            elem(('f','+'), elem('fk',text('Issac:')), text('In Hebrew means "laughter"'))),
                  ft(r'\f + \fk Issac:\fk*In Hebrew means "laughter"\f*',                            elem(('f','+'), elem('fk',text('Issac:')), text('In Hebrew means "laughter"'))),
                  ft(r'\f + \fr 1.14 \fq religious festivals;\ft or \fq seasons.\f*',                elem(('f','+'), elem('fr',text('1.14 ')), elem('fq',text('religious festivals;')), text('or '), elem('fq',text('seasons.')))),
                  ft(r'\f + \fr 1.14 \fr*\fq religious festivals;\fq*or \fq seasons.\fq*\f*',        elem(('f','+'), elem('fr',text('1.14 ')), elem('fq',text('religious festivals;')), text('or '), elem('fq',text('seasons.'))))]

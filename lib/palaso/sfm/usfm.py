@@ -100,7 +100,7 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None}
 class parser(sfm.parser):
     default_meta = _default_meta
     numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)(?=(\s|$))',re.UNICODE)
-    
+    caller_re = re.compile(r'\s*([-+\w])(?=(\s|$))',re.UNICODE)
     
     @classmethod
     def extend_stylesheet(cls, *names, **kwds):
@@ -168,9 +168,14 @@ class parser(sfm.parser):
             self._error(SyntaxError, 'missing caller parameter number after \\{token.name}',
                         parent)
         
-        tok, rest = (tok.lstrip().split(' ',1) + [''])[:2]
-        parent.args = [unicode(tok.strip())]
-        if rest: self._tokens.put_back(rest)
+        caller = self.caller_re.match(tok)
+        if not caller:
+            self._error(SyntaxError, 'invalid footnote caller after \\f: '
+                        '\'{token}\' is not a valid footnote caller number', tok.lstrip().split(' ',1)[0])
+        parent.args = [unicode(tok[caller.start(1):caller.end(1)])]
+        tok = tok[caller.end():]
+        
+        if tok: self._tokens.put_back(tok)
         return self._canonicalise_footnote(self._default_(parent))
 
 _test = ['test text\n', '\\test text\\\\words\n', 'more text \\test2\n', 'inline \\i text\\i* more text']

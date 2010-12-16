@@ -195,6 +195,7 @@ class text(unicode):
             result.append(tail[:e])
             tail = tail[e+len(sep):]
             maxsplit -= 1
+        if tail: result.append(tail)
         return result
     
     
