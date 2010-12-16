@@ -196,6 +196,10 @@ class SFMTestCase(unittest.TestCase):
         self.assertRaises(SyntaxError,list,usfm.parser(['\\id TEST     \\p 1 text']))
         self.assertRaises(SyntaxError,list,usfm.parser(['\\id TEST\\mt \\f + text\\fe*']))
         self.assertRaises(SyntaxError,list,usfm.parser(['\\id TEST\\mt \\f + text']))
+    
+    def test_endmarker_is_prefix(self):
+        self.assertEqual(list(usfm.parser(['\\id TEST\\mt \\f + text\\f*suffixed text'])), [elem('id', text('TEST'), elem('mt', elem(('f','+'), text('text')), text('suffixed text')))])
+        self.assertEqual(list(usfm.parser(['\\id TEST\\mt \\f + \\fr ref \\ft text\\f*suffixed text'])), [elem('id', text('TEST'), elem('mt', elem(('f','+'), elem('fr', text('ref ')), text('text')), text('suffixed text')))])
 
 
 class USFMTestCase(unittest.TestCase):

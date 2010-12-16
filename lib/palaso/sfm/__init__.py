@@ -452,16 +452,13 @@ class parser(collections.Iterable):
         return chain.from_iterable(g if istag else (text.concat(g),) for istag,g in gs)
     
     
-    def _default_(self, parent):
-        get_meta = self.__get_style
-        for tok in self._tokens:
-            if tok[0] == u'\\':  # Parse markers.
-                tag  = tok[1:]
-                
-                # Check for the expected end markers with no separator and
-                # break them apart
-                if parent is not None and parent.meta['Endmarker'] \
-                        and tag.startswith(parent.meta['Endmarker']):
+    def __extract_tag(self, parent, tok):
+        # Check for the expected end markers with no separator and
+        # break them apart
+        if parent is not None:
+            tag = tok[1:]
+            while parent.meta['Endmarker']:
+                if tag.startswith(parent.meta['Endmarker']):
                     cut = len(parent.meta['Endmarker'])
                     if cut != len(tag):
                         if self._tokens.peek()[0] == u'\\':
@@ -470,7 +467,17 @@ class parser(collections.Iterable):
                             # If the next token isn't a marker coaleces the 
                             # remainder with it into a single text node.
                             self._tokens.put_back(tag[cut:] + next(self._tokens,''))
-                        tag = tag[:cut]
+                        return tok[:cut+1]
+                parent = parent.parent
+        return tok
+    
+    
+    def _default_(self, parent):
+        get_meta = self.__get_style
+        for tok in self._tokens:
+            if tok[0] == u'\\':  # Parse markers.
+                tok  = self.__extract_tag(parent, tok)
+                tag = tok[1:]
                 meta = get_meta(tag)
                 if not meta['OccursUnder'] or (parent is not None and parent.name or None) in meta['OccursUnder']:
                     sub_parse = meta['TextType']
