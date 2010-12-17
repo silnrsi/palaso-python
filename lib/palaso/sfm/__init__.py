@@ -47,7 +47,7 @@ class element(list):
     """
     A sequence type that for holding the a marker and it's child nodes
     >>> element('marker')
-    element(u'marker', pos=position(line=1, col=1))
+    element(u'marker')
     
     >>> str(element('marker'))
     '\\\\marker'
@@ -93,7 +93,7 @@ class element(list):
     
     
     def __repr__(self):
-        args = [repr(self.name), u'pos='+repr(self.pos)] \
+        args = [repr(self.name)] \
             + (self.args and [u'args=' + repr(self.args)]) \
             + (self   and [u'content=' + super(element,self).__repr__()])
         return u'element({0!s})'.format(', '.join(args))
@@ -134,37 +134,45 @@ class text(unicode):
     parent/child relationship.
     
     >>> text('a test')
-    text(u'a test', pos=position(line=1, col=1))
+    text(u'a test')
     
-    >>> text('prefix ',position(3,10)) + text('suffix',position(1,6))
-    text(u'prefix suffix', pos=position(line=3, col=10))
+    >>> text('prefix ',position(3,10)).pos, text('suffix',position(1,6)).pos
+    (position(line=3, col=10), position(line=1, col=6))
     
-    >>> text('a few short words')[12:]
-    text(u'words', pos=position(line=1, col=13))
+    >>> t = text('prefix ',position(3,10)) + text('suffix',position(1,6))
+    >>> t, t.pos
+    (text(u'prefix suffix'), position(line=3, col=10))
     
-    >>> text('   yuk spaces   ').lstrip()
-    text(u'yuk spaces   ', pos=position(line=1, col=4))
+    >>> t = text('a few short words')[12:]
+    >>> t, t.pos
+    (text(u'words'), position(line=1, col=13))
     
-    >>> text('   yuk spaces   ').rstrip()
-    text(u'   yuk spaces', pos=position(line=1, col=1))
+    >>> t = text('   yuk spaces   ').lstrip()
+    >>> t, t.pos
+    (text(u'yuk spaces   '), position(line=1, col=4))
+    
+    >>> t = text('   yuk spaces   ').rstrip()
+    >>> t, t.pos
+    (text(u'   yuk spaces'), position(line=1, col=1))
     
     >>> text('   yuk spaces   ').strip()
-    text(u'yuk spaces', pos=position(line=1, col=4))
+    text(u'yuk spaces')
     
-    >>> pprint(text('a few short words').split(' '))
-    [text(u'a', pos=position(line=1, col=1)),
-     text(u'few', pos=position(line=1, col=3)),
-     text(u'short', pos=position(line=1, col=7)),
-     text(u'words', pos=position(line=1, col=13))]
+    >>> pprint([(t,t.pos) for t in text('a few short words').split(' ')])
+    [(text(u'a'), position(line=1, col=1)),
+     (text(u'few'), position(line=1, col=3)),
+     (text(u'short'), position(line=1, col=7)),
+     (text(u'words'), position(line=1, col=13))]
     
     >>> list(map(str, text('a few short words').split(' ')))
     ['a', 'few', 'short', 'words']
     
-    >>> text.concat([text(u'a ', pos=position(line=1, col=1)), 
-    ...              text(u'few ', pos=position(line=1, col=3)), 
-    ...              text(u'short ', pos=position(line=1, col=7)),
-    ...              text(u'words', pos=position(line=1, col=13))])
-    text(u'a few short words', pos=position(line=1, col=1))
+    >>> t=text.concat([text(u'a ', pos=position(line=1, col=1)), 
+    ...                text(u'few ', pos=position(line=1, col=3)), 
+    ...                text(u'short ', pos=position(line=1, col=7)),
+    ...                text(u'words', pos=position(line=1, col=13))])
+    >>> t, t.pos
+    (text(u'a few short words'), position(line=1, col=1))
     '''
     
     
@@ -215,7 +223,7 @@ class text(unicode):
     
     
     def __repr__(self):
-        return u'text({0!s}, pos={1!r})'.format(super(text,self).__repr__(), self.pos)
+        return u'text({0!s})'.format(super(text,self).__repr__())
     
     
     def __add__(self, rhs):
@@ -292,8 +300,8 @@ class parser(collections.Iterable):
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser([r"\\marker text",
     ...                         r"\\escaped backslash\\\\character"])))
-    [element(u'marker', pos=position(line=1, col=1), content=[text(u'text', pos=position(line=1, col=9))]),
-     element(u'escaped', pos=position(line=2, col=1), content=[text(u'backslash\\\\\\\\character', pos=position(line=2, col=10))])]
+    [element(u'marker', content=[text(u'text')]),
+     element(u'escaped', content=[text(u'backslash\\\\\\\\character')])]
     >>> doc=r"""
     ... \\id MAT EN
     ... \\ide UTF-8
@@ -305,14 +313,14 @@ class parser(collections.Iterable):
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser(doc.splitlines(True))))
-    [text(u'\\n', pos=position(line=1, col=1)),
-     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
-     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6))]),
-     element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))]),
-     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
-     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
-     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
-     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+    [text(u'\\n'),
+     element(u'id', content=[text(u'MAT EN\\n')]),
+     element(u'ide', content=[text(u'UTF-8\\n')]),
+     element(u'rem', content=[text(u'from MATTHEW\\n')]),
+     element(u'h', content=[text(u'Mathew\\n')]),
+     element(u'toc1', content=[text(u'Mathew\\n')]),
+     element(u'mt1', content=[text(u'Mathew\\n')]),
+     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
 
     >>> tss = parser.extend_stylesheet({},'id','ide','rem','h','toc1','mt1','mt2')
     >>> pprint(tss)
@@ -329,26 +337,26 @@ class parser(collections.Iterable):
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
-    [text(u'\\n', pos=position(line=1, col=1)),
-     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
-     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6))]),
-     element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))]),
-     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
-     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
-     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
-     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+    [text(u'\\n'),
+     element(u'id', content=[text(u'MAT EN\\n')]),
+     element(u'ide', content=[text(u'UTF-8\\n')]),
+     element(u'rem', content=[text(u'from MATTHEW\\n')]),
+     element(u'h', content=[text(u'Mathew\\n')]),
+     element(u'toc1', content=[text(u'Mathew\\n')]),
+     element(u'mt1', content=[text(u'Mathew\\n')]),
+     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
     >>> tss['rem'] = tss['rem'].copy()
     >>> tss['rem']['OccursUnder'] = set(['ide'])
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
-    [text(u'\\n', pos=position(line=1, col=1)),
-     element(u'id', pos=position(line=2, col=1), content=[text(u'MAT EN\\n', pos=position(line=2, col=5))]),
-     element(u'ide', pos=position(line=3, col=1), content=[text(u'UTF-8\\n', pos=position(line=3, col=6)), element(u'rem', pos=position(line=4, col=1), content=[text(u'from MATTHEW\\n', pos=position(line=4, col=6))])]),
-     element(u'h', pos=position(line=5, col=1), content=[text(u'Mathew\\n', pos=position(line=5, col=4))]),
-     element(u'toc1', pos=position(line=6, col=1), content=[text(u'Mathew\\n', pos=position(line=6, col=7))]),
-     element(u'mt1', pos=position(line=7, col=1), content=[text(u'Mathew\\n', pos=position(line=7, col=6))]),
-     element(u'mt2', pos=position(line=8, col=1), content=[text(u'Gospel Of Matthew', pos=position(line=8, col=6))])]
+    [text(u'\\n'),
+     element(u'id', content=[text(u'MAT EN\\n')]),
+     element(u'ide', content=[text(u'UTF-8\\n'), element(u'rem', content=[text(u'from MATTHEW\\n')])]),
+     element(u'h', content=[text(u'Mathew\\n')]),
+     element(u'toc1', content=[text(u'Mathew\\n')]),
+     element(u'mt1', content=[text(u'Mathew\\n')]),
+     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
     >>> del tss['mt1']
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")

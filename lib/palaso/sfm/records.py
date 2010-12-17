@@ -72,10 +72,10 @@ class parser(sfm.parser):
     >>> pprint(list(parser(doc.splitlines(True), schema('Marker',{}))))
     [{},
      {u'Bold': '',
-      u'FontSize': text(u'12', pos=position(line=4, col=20)),
-      u'Marker': text(u'toc1', pos=position(line=1, col=9)),
-      u'Name': text(u'toc1 - File - Long Table of Contents Text', pos=position(line=2, col=16)),
-      u'OccursUnder': text(u'h h1 h2 h3', pos=position(line=3, col=23))}]
+      u'FontSize': text(u'12'),
+      u'Marker': text(u'toc1'),
+      u'Name': text(u'toc1 - File - Long Table of Contents Text'),
+      u'OccursUnder': text(u'h h1 h2 h3')}]
     >>> demo_schema = schema('Marker', 
     ...     {'Marker' : (str, SyntaxError('Marker start marker missing')),
     ...      'Name'   : (str, SyntaxError('Marker {0} defintion missing: {1}')),
