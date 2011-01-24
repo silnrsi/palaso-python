@@ -15,9 +15,9 @@ can be done.
 
 import palaso.sfm as sfm
 from palaso.sfm import usfm, style
-from itertools import ifilter,groupby,imap
+from itertools import chain,ifilter,groupby,imap
 import palaso.unicsv as csv
-import codecs, collections, operator, optparse, os.path, \
+import codecs, collections, glob, operator, optparse, os.path, \
         re, warnings, shutil, sys, tempfile, unicodedata
 
 
@@ -126,7 +126,12 @@ def update_row(wordrefs):
         if word in wordlog:
             raise ValueError, 'duplicates: Word "{0}" at row {1} is repeated at row {2} of master file'.format(word.encode('utf-8'),wordlog[word]+2,ln+2)
         wordlog[word] = ln
-        newrefs = wordrefs.pop(word)
+        try:
+            newrefs = wordrefs.pop(word)
+        except KeyError:
+            if opts.unused_warning: 
+                sys.stderr.write(parser.expand_prog_name('%prog: CSV merge warning: possible unused word "{0}" at row {1} of master file\n'.format(word.encode('utf_8'), ln+2)))
+            newrefs = set()
         oldrefs = references(row['References'])
         if newrefs - oldrefs: row['References'] = oldrefs | newrefs 
         return row
@@ -160,6 +165,8 @@ if __name__ == '__main__':
                       help='Print out statistics and progress info')
     parser.add_option("-w","--warnings",action='store_true',default=False,
                       help='Print out syntax warnings discovered during SFM parsing')
+    parser.add_option("-u","--unused-warning",action='store_true',default=False,
+                      help='Print out warnings when possibly unsused words are found.')
     parser.add_option("-s","--strict",action='store_true',default=False,
                       help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
     parser.add_option("-S","--stylesheet",action='store',type='string',
@@ -188,6 +195,7 @@ if __name__ == '__main__':
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     master_path = sfms.pop()
+    sfms = chain.from_iterable(imap(glob.iglob, sfms))
     
     opts.word = set(opts.word.decode('unicode_escape'))
     opts.nonword = set(opts.nonword.decode('unicode_escape'))
