@@ -73,7 +73,7 @@ class DictReader:
 
 class DictWriter:
     def __init__(self, f, fieldnames, restval='', extrasaction='raise', dialect=excel, encoding='utf-8', *args, **kwds):
-        self.__writer=csv.DictWriter(_utf8_recoder(f,encoding), fieldnames, dialect=dialect, *args, **kwds)
+        self.__writer=csv.DictWriter(_utf8_recoder(f,encoding), fieldnames, extrasaction=extrasaction, dialect=dialect, *args, **kwds)
     
     @staticmethod
     def __make_row(row):
