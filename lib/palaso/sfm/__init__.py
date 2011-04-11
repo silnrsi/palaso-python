@@ -120,7 +120,7 @@ class element(list):
                 sep = '\n'
             elif not body.startswith(('\r\n','\n')):
                 sep = u' '
-        if endmarker and '*implicit-closed' not in self.annotations:
+        if endmarker and 'implicit-closed' not in self.annotations:
             body += u'\\' + endmarker
         return sep.join([marker, body])
 
