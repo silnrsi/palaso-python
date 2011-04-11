@@ -184,7 +184,8 @@ cdef class kmfl :
             kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
         res = []
         for 1 <= i <= self.kmsi.nhistory :
-            res.insert(0,unichr(self.kmsi.history[i]))
+            if item_type(self.kmsi.history[i]) == 0 :
+                res.insert(0,unichr(self.kmsi.history[i]))
         return "".join(res)
 
     def interpret_items(self, items) :
