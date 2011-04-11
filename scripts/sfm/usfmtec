@@ -99,12 +99,12 @@ class usfm_transducer(object) :
         fh.close()
 
     def element_start(self, node) :
-        if getattr(node, 'parent', None) and node.parent.meta['StyleType'] == 'Note' :
+        if node.meta['StyleType'] == 'Note' :
             self.caps.append(1)
         return node
     
     def element_end(self, node) :
-        if getattr(node, 'parent', None) and node.parent.meta['StyleType'] == 'Note' :
+        if node.meta['StyleType'] == 'Note' :
             self.caps.pop()
 
     def convert_node(self, tnode) :
@@ -160,16 +160,18 @@ def strsub(findtxt, fn, txt) :
     res = ''
     i = 0
     search = txt.lower()
+    l = len(findtxt)
+    ls = len(txt)
     while True :
         j = search.find(findtxt, i)
         if (j == -1) :
             return res + txt[i:]
-        elif j > 0 and isword(txt[j-1]) :
+        elif (j > 0 and isword(txt[j-1])) or (l + j < ls and isword(txt[j + l])) :
             res += txt[i:j + 1]
             i = j + 1
         else :
             res += txt[i:j]
-            i = j + len(findtxt)
+            i = j + l
             res += fn(txt[j:i])
 
 def titleme(base, txt) :
