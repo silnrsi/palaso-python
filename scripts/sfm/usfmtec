@@ -164,10 +164,13 @@ def strsub(findtxt, fn, txt) :
         j = search.find(findtxt, i)
         if (j == -1) :
             return res + txt[i:]
+        elsif j > 0 and isword(txt[j-1]) :
+            res += txt[i:j + 1]
+            i = j + 1
         else :
             res += txt[i:j]
-            res += fn(txt[j:j+len(findtxt)])
             i = j + len(findtxt)
+            res += fn(txt[j:i])
 
 def titleme(base, txt) :
     if base[0].upper() == base[0] :
