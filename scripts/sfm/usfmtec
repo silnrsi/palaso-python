@@ -4,8 +4,8 @@ Convert the publishable vernacular text in a USFM file according to a given
 .tec mapping file. In addition, support dictionary replacement, and automatic
 case generation.
 '''
-__version__ = '0.1'
-__date__    = '12 October 2010'
+__version__ = '0.1.1'
+__date__    = '11 April 2011'
 __author__  = 'Martin Hosken <martin_hosken@sil.org>'
 __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
@@ -226,8 +226,13 @@ if __name__ == '__main__':
     parser.add_option("-S","--stylesheet",action='store',type='string',
                      metavar='PATH', default=None,
                      help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
+    parser.add_option("-V","--version",action="store_true",help="Print program version and exit")
 
     opts,sfms = parser.parse_args()
+
+    if opts.version :
+        sys.stdout.write(__version__+"\n")
+        sys.exit(0)
 
     if len(sfms) < 1:
         sys.stderr.write(parser.expand_prog_name('%prog: missing SFM FILE\n'))
