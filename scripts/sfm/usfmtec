@@ -137,10 +137,10 @@ class usfm_transducer(object) :
         for k in self.phrase_keys :
             if not k in self.tags or self.tnode.parent.name in self.tags[k] :
                 res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
-        res = re.sub('(' + self.sentend + ur')(\w)', lambda m : m.group(1) + m.group(2).upper(), res)
-        res = re.sub('([' + self.quotes + ur'])(\w)([^' + self.quotes + ur']*?\s)', lambda m: m.group(1) + m.group(2).upper() + m.group(3), res)
+        res = re.sub('(' + self.sentend + ur')(.)', lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
+        res = re.sub('([' + self.quotes + ur'])(.)([^' + self.quotes + ur']*?\s)', lambda m: m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)) + m.group(3), res)
         if self.tnode.parent.meta['TextType'] == 'Title' :
-            res = re.sub(ur'(^\s*|\s)([' + self.quotes + ur']*)(\w)', lambda m : m.group(1) + m.group(2) + m.group(3).upper(), res)
+            res = re.sub(ur'(^\s*|\s)([' + self.quotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
         if self.case :
             res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
         return res
