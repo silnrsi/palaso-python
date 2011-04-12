@@ -26,7 +26,7 @@ __history__ = '''
 	20101109 - tse - Fix separator space being included when it shouldn't and
 		use the unique field types set object to improve performance.
 '''
-import collections, codecs, functools, operator, re, warnings
+import collections, codecs, functools, operator, re, warnings, os
 from itertools import chain, groupby, ifilter, imap
 from functools import partial
 
@@ -117,7 +117,7 @@ class element(list):
         if self:
             if isinstance(self[0], element) \
                and self.meta.get('StyleType') == 'Paragraph':
-                sep = '\n'
+                sep = os.linesep
             elif not body.startswith(('\r\n','\n')):
                 sep = u' '
         if endmarker and 'implicit-closed' not in self.annotations:
