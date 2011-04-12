@@ -19,6 +19,11 @@ import codecs, optparse, os.path, re, warnings, sys
 import unicodedata
 from itertools import groupby
 
+class scrparser(usfm.parser) :
+    def _canonicalise_footnote(self, content) :
+        return content
+
+
 word_cat = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Me', 'Pd', 'Cs', 'Co', 'Cn'])
 isletters = ""
 
@@ -191,7 +196,7 @@ def transduce(fname, opts) :
         conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
-       doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, usfm.parser(infh, stylesheet=opts.stylesheet, private=opts.strict))
+       doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, private=opts.strict))
     except SyntaxError, err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
     finally:
