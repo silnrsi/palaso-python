@@ -104,13 +104,21 @@ class usfm_transducer(object) :
         fh.close()
 
     def element_start(self, node) :
-        if node.meta['StyleType'] == 'Note' :
-            self.caps.append(1)
+        try :
+            if node.meta['StyleType'] == 'Note' :
+                self.caps.append(1)
+        except KeyError as e:
+            e.args = ("Element: %s at %r" % (node.name, node.pos), )
+            raise e
         return node
     
     def element_end(self, node) :
-        if node.meta['StyleType'] == 'Note' :
-            self.caps.pop()
+        try :
+            if node.meta['StyleType'] == 'Note' :
+                self.caps.pop()
+        except KeyError as e:
+            e.args = ("Element: %s at %r" % (node.name, node.pos), )
+            raise e
 
     def convert_node(self, tnode) :
         if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
