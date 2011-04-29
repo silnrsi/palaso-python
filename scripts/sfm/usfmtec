@@ -140,7 +140,7 @@ class usfm_transducer(object) :
                             lambda m : m.group(1) + m.group(2).upper(), res)
         if re.search(self.sentend + '$', res) :
             self.caps[-1] = 1
-        else :
+        elif re.match(ur'^\s*\S', res) :
             self.caps[-1] = 0
         if self.dict :
             cres = ""
