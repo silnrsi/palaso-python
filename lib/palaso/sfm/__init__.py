@@ -120,6 +120,8 @@ class element(list):
                 sep = os.linesep
             elif not body.startswith(('\r\n','\n')):
                 sep = u' '
+        elif self.meta.get('StyleType') == 'Character' :
+            body = ' '
         if endmarker and 'implicit-closed' not in self.annotations:
             body += u'\\' + endmarker
         return sep.join([marker, body])
