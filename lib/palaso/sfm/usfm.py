@@ -148,7 +148,7 @@ class parser(sfm.parser):
             self._error(SyntaxError, 'invalid verse number after \\v: '
                         '\'{token}\' is not a valid verse number', tok.lstrip().split(' ',1)[0])
         verse_marker.args = [unicode(tok[verse.start(1):verse.end(1)])]
-        tok = tok[verse.end():]
+        tok = tok[verse.end():].lstrip()
         
         if tok: self._tokens.put_back(tok)
         return tuple()
