@@ -74,6 +74,7 @@ class usfm_transducer(object) :
         fh = open(fname, 'rb')
         entries = csv.reader(fh, skipinitialspace=True)
         for e in entries :
+            if not len(e) : continue
             k = self.enc.convert(e[incol], finished=True)
             if k == e[outcol] : continue
             if k.find(self.morphid) != -1 :     # has stem marker
