@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 '''
 Convert the publishable vernacular text in a USFM file according to a given
 .tec mapping file. In addition, support dictionary replacement, and automatic
@@ -99,7 +99,7 @@ class usfm_transducer(object) :
         for k, v in phrases.items() :
             key = ""
             for m, s in groupby(k, isword) :
-                key += self.dlookup("".join(s)) if m else "".join(s)
+                key += self.dlookup("".join(s)).tolower() if m else "".join(s)
             self.phrases[key] = v
         self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
         fh.close()
