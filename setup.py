@@ -2,9 +2,9 @@
 
 from distutils.core import setup
 from glob import glob
-import platform
+import platform, sys
 
-if platform.system() == "Windows" :
+if platform.system() == "Windows" or '--nokmn' in sys.argv:
     ext = []
     cmd = {}
 else :
