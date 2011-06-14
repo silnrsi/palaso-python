@@ -101,7 +101,7 @@ keynames = [None] * 255
 ekeynames = [None] * 255
 for k in shifted + unshifted :
     ksym = kmn.char_keysym(k)
-    sc, vkey, mod, kn, ekn = kmn.keysym_klcinfo(ksym)
+    sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(ksym)
     keynames[sc] = kn
     ekeynames[sc] = ekn
     res = km.interpret_items([kmn.keysym_item(ksym)])
@@ -116,10 +116,10 @@ for k in shifted + unshifted :
 for d in deads :
     for k in shifted + unshifted :
         ksym = kmn.char_keysym(k)
-        res = km.interpret_items([kmn.keysym_item(ksym)])
+        res = km.interpret_items([d[0], kmn.keysym_item(ksym)])
         d[1][k] = res
         if ksym == d[0] :
-            sc, vkey, mod, kn, ekn = kmn.keysym_klcinfo(ksym)
+            sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(ksym)
             keys[sc][mod] = (sc, vkey, 1, res)
             d[2] = res[0]
 
@@ -155,6 +155,7 @@ if len(ligs) > 0 :
     for l in ligs :
         codestr = res_str(l[2])
         myprint(lig(l[0], l[1], codestr))
+
 myprint('''
 
 KEYNAME
