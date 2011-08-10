@@ -5,7 +5,6 @@ from palaso import kmn
 from palaso.kmfl import kmfl
 
 header = r"""
-#define WINAPI  __stdcall
 #define NULL 0
 
 typedef unsigned short wchar_t;
@@ -274,7 +273,13 @@ unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n')
 parser.add_option("-n","--name", action='store', help='MSKLC Project name')
 parser.add_option("-o","--output", action="store", help='File to output .c to defaults to stdout')
+#parser.add_option("-d","--deffile", action="store", help=".def file to output")
 parser.add_option("-r","--resource", action="store", help='File to output .rc to defaults to stdout')
+parser.add_option("--copyright", action="store", help="Set copyright message overriding the COPYRIGHT store")
+parser.add_option("--author", action="store", help="Set author overriding the AUTHOR store")
+parser.add_option("--language", action="store", help="Override &ethnologuecode store")
+parser.add_option("--version", action="store", help="Override &version with w.x.y.z")
+parser.add_option("--langname", action="store", help="Set langauge name")
 
 (opts,kmns) = parser.parse_args()
 if len(kmns) == 0:
@@ -283,10 +288,16 @@ if len(kmns) == 0:
     sys.exit(1)
 
 kb = kmns[0]
-if not opts.name :
-    opts.name = re.sub(r'\..*$', '', os.path.basename(kb)).replace(' ', '')
 
+overrides = {
+    'name' : 'NAME',
+    'copyright' : 'COPYRIGHT',
+    'author' : 'AUTHOR',
+    'language' : 'ETHNOLOGUE',
+}
 km = kmfl(kb)
+for k, v in overrides.items() :
+    opts.ensure_value(k, km.store(v))
 
 if opts.output :
     outfile = file(opts.output, "w")
@@ -295,8 +306,17 @@ else :
 
 if opts.resource :
     resfile = file(opts.resource, "w")
+elif opts.output :
+    resfile = file(os.path.splitext(opts.output)[0] + ".rc", "w")
 else :
     resfile = sys.stdout
+
+#if opts.deffile :
+#    deffile = file(opts.deffile, "w")
+#elif opts.output :
+#    deffile = file(os.path.splitext(opts.output)[0] + ".def", "w")
+#else :
+#    deffile = sys.stdout
 
 # iterate the rules to find all key rules and see if any have odd modifiers
 # then make a map of modifier codes and count them. Then we know how
@@ -305,7 +325,7 @@ mods = [[] for i in range(8)]
 modids = []
 for i in range(km.num_rules()) :
     (lhs, rhs, gpnum, flags) = km.rule(i)
-    if flags & 1 : continue
+    if not flags & 1 : continue
     sym = kmn.item_to_key(lhs[-1])
     if not sym : continue
     (sc, vkey, mod, kn, ekn, vkc) = kmn.keysym_klcinfo(sym)
@@ -351,7 +371,7 @@ modres += "}\n};\n"
 deads = []
 ligs = []
 keys = [[None] * (1 << logmod) for i in xrange(255)]    # declare array keys[255][2] !!
-deadkeys = [[{}] * len(modids) for i in xrange(255)]    # declare array keys[255][2] !!
+deadkeys = [[{} for j in xrange(len(modids))] for i in xrange(255)]    # declare array keys[255][2] !!
 maxliglength = 0
 keynames = {}
 extkeynames = {}
@@ -370,7 +390,7 @@ for m in mods :
             deads.append(ksym)
         elif len(res) > 1 :
             keys[vkc][mod] = unichr(0xF002)
-            ligs.append((vkey, mod, res))
+            ligs.append((vkc, mod, res))
             if len(res) > maxliglength : maxliglength = len(res)
         else :
             keys[vkc][mod] = kmn.item_to_char(res[0])
@@ -385,19 +405,22 @@ for k, v in extkeynames.items() :
 if resextkeynames :
     resextkeynames = "ROSDATA VSC_LPWSTR aExtKeyName[] = {\n" + resextkeynames + "    {0, NULL}\n};\n"
 
+dkeys = [[None] * (1 << logmod) for i in range(256)]
 for d in deads :
     sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(d)
     for m in mods :
         for ksym in m :
-            sc2, vkey2, mod2, ekn2, vkc2 = kmn.keysym_klcinfo(ksym)
+            sc2, vkey2, mod2, kn2, ekn2, vkc2 = kmn.keysym_klcinfo(ksym)
             i = kmn.keysym_item(ksym)
-            res = km.interpret_items([d, i])
+            res = km.interpret_items([kmn.keysym_item(d), i])
             if len(res) > 2 :
-                sys.stderr.write("Can't combine deadkeys and ligatures")
+                sys.stderr.write("Can't combine deadkeys and ligatures with %s and %s\n" % (d, ksym))
                 # error
             elif len(res) > 1 :
-                dkeys[vkc][modgroups[mod]] = kmn.item_to_char(res[0])
-            deadkeys[vkc][modgroups[mod]][keys[vkc2][mod2]] = kmn.item_to_char(res[-1])
+                if res[0] >> 24 < 2 : 
+                    dkeys[vkc][modgroups[mod]] = kmn.item_to_char(res[0])
+            else :
+                deadkeys[vkc][modgroups[mod]][keys[vkc2][mod2]] = kmn.item_to_char(res[-1])
 
 donekeys = [0] * 256
 keyres = ""
@@ -417,7 +440,7 @@ for l in range(len(modids) - 1, 0, -1) :
             keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(x)), r[2:])) + "},\n"
             if unichr(0xF001) in r[2:] :
                 keyres += "    { -1,    0,  "
-                keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(dkeys[r[0]][i])), range(0, len(r) - 2))) + "},\n"
+                keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(dkeys[r[0]][i]) if r[2+i] == unichr(0xF001) else 0xF000), range(0, len(r) - 2))) + "},\n"
         keyres = keyres[0:-2] + "\n};\n"
         listres += "    { (PVK_TO_WCHARS1)aVkToWch%d, %d, sizeof(aVkToWch%d) },\n" % (l + 1, l + 1, l + 1)
 listres += "    { NULL, 0, 0 }\n};\n"
@@ -433,7 +456,8 @@ if deadres :
     resdeadname = "ROSDATA LPWSTR aDeadKeyName[] = {\n"
     for d in dkeys :
         for m in d :
-            resdeadname = "    \"%s\",\n" % (unicodedata.name(m))
+            if m : resdeadname += "    \"%s\",\n" % (unicodedata.name(m))
+    resdeadname += '    ""\n};'
 else:
     deadres = "#define aDeadKey NULL\n"
     resdeadname = "#define aDeadKeyName NULL\n"
@@ -443,7 +467,7 @@ if maxliglength :
     ligres += "#define MAXLIGLENGTH %d\n#define LIGSIZE sizeof(LIGATURE%d)\n" % (maxliglength, maxliglength)
     ligres += "ROSDATA LIGATURE%d aLigature[] = {\n" % (maxliglength)
     for l in ligs :
-        t = [map(lambda x: ord(kmn.item_to_char(x)), l[2:])]
+        t = map(lambda x: ord(kmn.item_to_char(x)), l[2])
         t.extend([0xF000] * (maxliglength - len(t)))
         ligres += "    { 0x%02x,   %d,  " % (l[0], modgroups[l[1]])
         ligres += ",\t".join(map(lambda x: "0x%04X" % x, t))
@@ -482,7 +506,7 @@ ROSDATA KBDTABLES aKbdTables = {
     aLigature
 };
 
-PKBDTABLES KbdLayerDescription(void) {
+PKBDTABLES KbdLayerDescriptor(void) {
     return &aKbdTables;
 }
 '''
@@ -500,5 +524,66 @@ outfile.write(resdeadname)
 outfile.write(tail)
 if outfile != sys.stdout : outfile.close()
 
+strinfo = {
+    '1000' : 'name',
+    '1100' : 'langname',
+    '1200' : 'language'
+}
+resstrings = {}
+for s, v in strinfo.items() :
+    resstrings[s] = getattr(opts, v)
+
+resrheader = '''
+LANGUAGE 9, 1
+
+'''
+for s, v in resstrings.items() :
+    resrheader += "STRINGTABLE\nBEGIN\n  %s, \"%s\"\nEND\n\n" % (s, v)
+
+rversion = ", ".join(((opts.version if opts.version else "0") + ".0.0.0").split(".")[0:4])
+
+resrheader += '''
+1 VERSIONINFO
+ FILEVERSION %s
+ PRODUCTVERSION %s
+ FILEFLAGSMASK 0x3f
+ FILEOS 0x40004
+ FILETYPE 0x2
+ FILESUBTYPE 0x2
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "000004B0"
+    BEGIN
+''' % (rversion, rversion)
+
+sinfo = {}
+if getattr(opts, 'author', None) : sinfo['CompanyName'] = opts.author
+if getattr(opts, 'name', None) : sinfo['FileDescription'] = opts.name
+sinfo['FileVersion'] = rversion
+if getattr(opts, 'copyright', None) : sinfo['LegalCopyright'] = opts.copyright
+sinfo['OriginalFilename'] = os.path.splitext(os.path.basename(kmns[0]))[0]
+sinfo["ProductVersion"] = rversion
+for s, v in sinfo.items() :
+    resrheader += "      VALUE \"%s\", \"%s\"\n" % (s, v)
+resrheader +='''
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0, 1200
+  END
+END
+'''
+
+resfile.write(resrheader)
 if resfile != sys.stdout : resfile.close()
+
+#deffile.write('''
+#LIBRARY %s
+#
+#EXPORTS
+#    KbdLayerDescriptor @1
+#''' % (os.path.splitext(opts.output)[0].upper()))
+#if deffile != sys.stdout : deffile.close()
 

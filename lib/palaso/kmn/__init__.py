@@ -175,7 +175,7 @@ _vkextras = {
 #    'K_CLEAR' : (12),
     'K_RETURN' : (13),
     'K_SHIFT' : (16),
-    'K_CONTROL' : (17),
+    'K_CTRL' : (17),
     'K_MENU' : (18),
 #    'K_PAUSE' : (19),
     'K_CAPITAL' : (20),
@@ -348,7 +348,7 @@ def items_to_keys(items) :
 
 def item_to_key(item) :
     if (item >> 24) > 1 :
-        return 0
+        return ""
     elif item > 0x1000000 :
         mods = (item & 0xFF0000) >> 16
         key = item & 0xFFFF
@@ -356,9 +356,11 @@ def item_to_key(item) :
         for m in _modkeys :
             if mods == 0: break
             modifier = _modifiers[m][0]
-            if (mods & modifier) != 0 :
+            if (mods & modifier) == modifier :
                 modstr += m + " "
                 mods &= ~modifier
+                # lowercase uppercase keys (0x11 any shift)
+                if modifier & 0x11 : key += 0x20
         if not modstr and key < 0x100:
             return escape(unichr(key))
 
@@ -431,6 +433,7 @@ def keysym_klcinfo(sym) :
     sc = 0
     kn = ""
     ekn = ""
+    vkc = 0
     if re.match(r'\[[^\]]+\]$', sym) :
         words = re.split(r'\s+', sym[1:-1].strip())
         for w in words[:-1] :
