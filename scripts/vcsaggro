@@ -123,7 +123,7 @@ class git :
 
 from optparse import OptionParser
 from palaso.contexts import defaultapp
-import gtkhtml2
+import webkit
 import gtk
 
 htmlhdr="""
@@ -182,13 +182,8 @@ with defaultapp() :
     if htmlstr != "" :
         base = gtk.Window()
         scroll = gtk.ScrolledWindow()
-        view = gtkhtml2.View()
-        doc = gtkhtml2.Document()
-        doc.clear()
-        doc.open_stream('text/html')
-        doc.write_stream(htmlhdr + htmlstr + htmlftr)
-        doc.close_stream()
-        view.set_document(doc)
+        view = webkit.WebView()
+        view.load_html_string(htmlhdr + htmlstr + htmlftr, "home")
         scroll.add(view)
         base.add(scroll)
         base.set_default_size(750, 400)
