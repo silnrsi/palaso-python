@@ -51,8 +51,10 @@ class usfm_transducer(object) :
 
     def __init__(self, case = '', tec = notec(), opts = {}) :
         self.caps = [1]
-        self.quotes = opts.capitalquotes.decode('raw_unicode_escape')
-        self.sentend = opts.capitalsentence.decode('raw_unicode_escape')
+        self.oquotes = opts.openquotes.decode('raw_unicode_escape')
+        self.cquotes = opts.closequotes.decode('raw_unicode_escape')
+        self.punc = opts.sentencepunc.decode('raw_unicode_escape')
+        self.capquotes = opts.capitalopenquotes.decode('raw_unicode_escape') if opts.capitalopenquotes else self.oquotes
         self.case = case
         self.enc = tec
         self.opts = opts
@@ -137,9 +139,9 @@ class usfm_transducer(object) :
             input = match.group(0)
         res = self.enc.convert(input, finished=True)
         if self.caps[-1] :
-            res = re.sub(ur'^(\s*[' + self.quotes + ur']*\s*)(.)',
+            res = re.sub(ur'^([\s' + self.oquotes + ur']*)(.)',
                             lambda m : m.group(1) + m.group(2).upper(), res)
-        if re.search(self.sentend + '$', res) :
+        if re.search(ur'[{1}][{0}]*\s*$'.format(self.cquotes, self.punc), res) :
             self.caps[-1] = 1
         elif re.match(ur'^\s*\S', res) :
             self.caps[-1] = 0
@@ -151,10 +153,12 @@ class usfm_transducer(object) :
         for k in self.phrase_keys :
             if not k in self.tags or self.tnode.parent.name in self.tags[k] :
                 res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
-        res = re.sub('(' + self.sentend + ur')(.)', lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
-        res = re.sub('([' + self.quotes + ur'])(.)([^' + self.quotes + ur']*?\s)', lambda m: m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)) + m.group(3), res)
-        if self.tnode.parent.meta['TextType'] == 'Title' :
-            res = re.sub(ur'(^\s*|\s)([' + self.quotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
+        res = re.sub(ur'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
+        if self.capquotes :
+            # not sure why the second self.capquotes is here
+            res = re.sub('(?<=[' + self.capquotes + ur'])(.)(?=[^' + self.capquotes + ur']*?\s)', lambda m: m.group(1).upper() if isword(m.group(1)[0]) else m.group(1), res)
+        if self.tnode.parent.meta['TextType'] == 'Title' and self.capquotes:
+            res = re.sub(ur'(^\s*|\s)([' + self.capquotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
         if self.case :
             res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
         return res
@@ -215,13 +219,16 @@ def transduce(fname, opts) :
 
 if __name__ == '__main__':
     parser = optparse.OptionParser(usage='%prog [options] <SFM FILE>\n' + __doc__)
-    parser.set_defaults(capitalquotes="'\"\u2018\u2019\u201C\u201D()<>",
-        capitalsentence='[.!?][")>}\]\u201D\u2019]*\s*')
+    parser.set_defaults(sentencepunc=".!?",
+        openquotes="'\"\u2018\u201C\[{(<\u00AB",
+        closequotes="'\"\u2019\u201D\]})>\u00BB")
     parser.add_option("-b","--binary",action="store_true",help="Input is legacy encoded, not Unicode")
     parser.add_option("-c","--capitalise",action="store",help="regular expression match which is capitalised")
     parser.add_option("--capitaltags",action="store",help="list of tags to capitalise their contents")
-    parser.add_option("--capitalquotes",action="store",help="sets quotes chars for capitalisation, with \u escaping [default: %default]")
-    parser.add_option("--capitalsentence",action="store",help="sentence final regexp for capitalisation, with \u escaping [default: %default]")
+    parser.add_option("--openquotes",action="store",help="list of opening quote chars as a string with \u escaping [default: %default]")
+    parser.add_option("--closequotes",action="store",help="list of closing quote chars as a string with \u escaping [default: %default]")
+    parser.add_option("--sentencepunc",action="store",help="list of sentence final punctuation with \u escaping [default: %default]")
+    parser.add_option("--capitalopenquotes",action="store",help="list of chars that force a new sentence [default value of --openquotes]")
     parser.add_option("--letters",action="store",help="more word forming characters, with \u escaping")
     parser.add_option("-d","--dict",action="store",help="CSV dictionary of input output replacements")
     parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column of CSV dictionary [%default]")
