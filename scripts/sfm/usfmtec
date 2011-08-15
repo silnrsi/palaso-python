@@ -155,8 +155,7 @@ class usfm_transducer(object) :
                 res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
         res = re.sub(ur'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
         if self.capquotes :
-            # not sure why the second self.capquotes is here
-            res = re.sub('(?<=[' + self.capquotes + ur'])(.)(?=[^' + self.capquotes + ur']*?\s)', lambda m: m.group(1).upper() if isword(m.group(1)[0]) else m.group(1), res)
+            res = re.sub('(?<=[' + self.capquotes + ur'])(.)', lambda m: m.group(1).upper() if isword(m.group(1)[0]) else m.group(1), res)
         if self.tnode.parent.meta['TextType'] == 'Title' and self.capquotes:
             res = re.sub(ur'(^\s*|\s)([' + self.capquotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
         if self.case :
