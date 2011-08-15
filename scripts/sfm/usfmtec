@@ -43,6 +43,12 @@ def isword(char) :
     if char in isletters : return True
     return unicodedata.category(char) in word_cat
 
+def aswords(txt) :
+    ''' returns array of word forming, punc, word forming, punc '''
+    g = [(i[0], "".join(i[1])) for i in groupby(txt, isword)]
+    res = [i[1] for i in g]
+    if not g[0][0] : res.insert(0, "")
+    return res
 
 class notec(object) :
     def convert(self, txt, **kw) : return txt
@@ -72,7 +78,6 @@ class usfm_transducer(object) :
 
     def load_dict(self, fname, incol, outcol, tagcol = None) :
         morph_keys = []
-        phrases = {}
         fh = open(fname, 'rb')
         entries = csv.reader(fh, skipinitialspace=True)
         for e in entries :
@@ -91,18 +96,13 @@ class usfm_transducer(object) :
                 morph_keys.append(mk)
                 self.morphs[k] = e[outcol]
             elif len(filter(isword, k)) != len(k) :
-                phrases[k] = e[outcol]
+                self.phrases[k] = e[outcol]
             else :                              # dictionary entry
                 self.dict[k] = e[outcol]
             if tagcol != None and e[tagcol] :                      # has tag constraints
                 self.tags[k] = set(e[tagcol].split())
-        morph_keys.sort(cmp = lambda x, y : cmp(len(x), len(y)))
+        morph_keys.sort(cmp = lambda x, y : cmp(len(y), len(x)))
         self.morph_keys = "|".join(morph_keys)
-        for k, v in phrases.items() :
-            key = ""
-            for m, s in groupby(k, isword) :
-                key += self.dlookup("".join(s)).lower() if m else "".join(s)
-            self.phrases[key] = v
         self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(y), len(x)))
         fh.close()
 
@@ -145,57 +145,54 @@ class usfm_transducer(object) :
             self.caps[-1] = 1
         elif re.match(ur'^\s*\S', res) :
             self.caps[-1] = 0
-        if self.dict :
-            cres = ""
-            for k, v in groupby(res, isword) :
-                cres += self.dlookup("".join(v)) if k else "".join(v)
-            res = cres
-        for k in self.phrase_keys :
-            if not k in self.tags or self.tnode.parent.name in self.tags[k] :
-                res = strsub(k, lambda x: titleme(x, self.phrases[k]), res)
+        pdict = self.build_phrases()
+        rlist = aswords(res)
+        res = ""
+        while len(rlist) :
+            l = len(rlist)
+            wd = rlist.pop(0)
+            if wd :
+                case = wd[0].isupper()
+                wd = wd[0].lower() + wd[1:]
+                found = False
+                if wd in pdict :
+                    for p in pdict[wd] :
+                        if len(p) <= l and p[1:] == rlist[0:len(p)-1] :
+                            del rlist[0:len(p)-1]
+                            wd = self.phrases["".join(p)]
+                            found = True
+                            break
+                if not found and wd in self.dict and (not wd in self.tags or self.tnode.parent.name in self.tags[wd]) :
+                    wd = self.dict[wd]
+                    found = True
+                elif self.morph_keys and not found :
+                    wd = re.sub('((?iu)' + self.morph_keys + ')', 
+                                lambda m : self.morphs[wd] if wd in self.tags and self.tnode.parent.name in self.tags[wd] else wd, wd)
+                if case :
+                    wd = wd[0].upper() + wd[1:]
+            if len(rlist) :
+                res += wd + rlist.pop(0)
+            else :
+                res += wd
+
         res = re.sub(ur'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
-        if self.capquotes :
-            res = re.sub('(?<=[' + self.capquotes + ur'])(.)', lambda m: m.group(1).upper() if isword(m.group(1)[0]) else m.group(1), res)
+
         if self.tnode.parent.meta['TextType'] == 'Title' and self.capquotes:
             res = re.sub(ur'(^\s*|\s)([' + self.capquotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
+        elif self.capquotes :
+            res = re.sub('(?<=[' + self.capquotes + ur'])([' + self.oquotes + ']*)(.)', lambda m: m.group(1) + m.group(2).upper() if isword(m.group(2)[0]) else m.group(1) + m.group(2), res)
+
         if self.case :
             res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
         return res
 
-    def dlookup(self, val) :
-        key = val.lower()
-        if key in self.dict and (not key in self.tags or self.tnode.parent.name in self.tags[key]) :
-            return titleme(val, self.dict[key])
-        elif self.morph_keys :
-            return titleme(val, re.sub('((?iu)' + self.morph_keys + ')', 
-                            lambda m : self.morphs[val.lower()] if not val.lower() in self.tags or self.tnode.parent.name in self.tags[val.lower()] else val, val))
-        else :
-            return val
-
-
-def strsub(findtxt, fn, txt) :
-    res = ''
-    i = 0
-    search = txt.lower()
-    l = len(findtxt)
-    ls = len(txt)
-    while True :
-        j = search.find(findtxt, i)
-        if (j == -1) :
-            return res + txt[i:]
-        elif (j > 0 and isword(txt[j-1])) or (l + j < ls and isword(txt[j + l])) :
-            res += txt[i:j + 1]
-            i = j + 1
-        else :
-            res += txt[i:j]
-            i = j + l
-            res += fn(txt[j:i])
-
-def titleme(base, txt) :
-    if base[0].upper() == base[0] :
-        return txt[0].upper() + txt[1:]
-    else :
-        return txt
+    def build_phrases(self) :
+        res = {}
+        for k in self.phrase_keys :
+            if k in self.tags and self.tnode.parent.name in self.tags[k] : continue
+            p = aswords(k)
+            res[p[0]] = p
+        return res
 
 def transduce(fname, opts) :
     def identity_mkr(*args) : return args
