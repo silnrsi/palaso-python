@@ -230,6 +230,43 @@ def analyseAnchorRelations(anchorMap, g) :
         elif a[1] == "base" or a[1] == "exit" :
             anchorMap[a[0]] = ("cursive" if a[1] == "exit" else a[1], None)
 
+namemap = ('copyright', 'family', 'subfamily', 'fontid', 'fullname', 'version', 'psname',
+    'trademark', 'vendor', 'designer', 'description', 'vendor_url', 'designer_url', 'license',
+    'license_url', 'reserved', 'preferred_family', 'preferred_subfamily', 'compat_full',
+    'text', 'CID_name')
+    
+
+def setname(font, elem) :
+    num = elem.get('num')
+    lid = int(elem.get('lid', 1033))
+    text = (elem.text + expandname(elem, lid)).strip()
+    if num == 'name' :
+        f.familyname = text
+        if f.weight != "Normal" :
+            f.fullname = text + " " + f.weight
+        else :
+            f.fullname = text
+        fulltext = f.fullname.sub(" ", "")
+        f.fontname = fulltext
+        return
+    elif num in namemap :
+        num = namemap.index(num)
+    f.appendSFNTName(lid, num, text)
+
+def expandname(elem, lid) :
+    res = ""
+    for c in elem :
+        if c.tag == "name" :
+            num = c.get('num')
+            if num in namemap : num = namemap.index(num)
+            for n in f.sfnt_names :
+                if n[0] == lid and n[1] == num :
+                    res += n[2]
+                    break
+            res += c.tail
+    return res
+
+
 parser = OptionParser()
 parser.add_option("-c","--config",help="Configuration file to process")
 parser.add_option("-f","--font",action="append",help="Extra font to reference")
@@ -302,4 +339,37 @@ for g in glyphs :
             g1.addAnchorPoint(a, point_relations[a][0], v[0][0], v[0][1])
         if v[1] :
             g1.addAnchorPoint(a, "mark", v[1][0], v[1][1])
+
+# handle <names>
+for s in etree.getroot().iterfind("names/string") :
+    setname(f, s)
+
+# handle <font> attributes
+felem = etree.getroot()
+finfos = {
+    'ascent' : ('ascent', 'hhea_ascent', 'os2_typoascent', 'os2_winascent'),
+    'descent' : ('descent', 'hhea_descent', 'os2_typodescent', 'os2_windescent'),
+    'linegap' : ('hhea_linegap', 'os2_typolinegap', 'os2_winlinegap')
+}
+for k, v in finfos.items() :
+    num = int(felem.get(k, 0))
+    if num
+        for a in v :
+            setattr(f, a, num)
+
+cpinfos = {
+    'cp' : (2, 'os2_codepages'),
+    'coverage' : (4, 'os2_unicoderanges')
+}
+for k, v in cpinfos.items() :
+    val = felem.get(k, None)
+    if val :
+        val = "0" * (8 * v[0] - len(val)) + val
+        res = []
+        for i in range(v[0] * 8, 0, -8) :
+            res.append(int(val[i-8:i], 16))
+        setattr(f, v[1]) = tuple(res)
+
+
+
 f.save(args[0])

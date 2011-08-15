@@ -103,7 +103,7 @@ class usfm_transducer(object) :
             for m, s in groupby(k, isword) :
                 key += self.dlookup("".join(s)).lower() if m else "".join(s)
             self.phrases[key] = v
-        self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(x), len(y)))
+        self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(y), len(x)))
         fh.close()
 
     def element_start(self, node) :
