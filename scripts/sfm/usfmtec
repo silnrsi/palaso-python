@@ -77,7 +77,7 @@ class usfm_transducer(object) :
             self.ctags = set()
         if opts.normalize :
             self.normal = 'NF' + opts.normalize.upper()
-        else
+        else :
             self.normal = None
 
     def load_dict(self, fname, incol, outcol, tagcol = None) :
