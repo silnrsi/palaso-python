@@ -84,13 +84,14 @@ class usfm_transducer(object) :
             if not len(e) : continue
             k = self.enc.convert(e[incol], finished=True)
             if k.find(self.morphid) != -1 :     # has stem marker
-                if k[0] == self.morphid :
+                if k[0] != self.morphid :
                     mk = '^' + k
-                    k = k[1:]
                 else :
                     mk = k
-                if mk[-1] == self.morphid :
-                    mk = mk[0:-1] + '$'
+                    k = k[1:]
+                if mk[-1] != self.morphid :
+                    mk = mk + '$'
+                else :
                     k = k[0:-1]
                 morph_keys.append(mk)
                 self.morphs[k] = e[outcol]
