@@ -91,12 +91,13 @@ class usfm_transducer(object) :
                 if k[0] != self.morphid :
                     mk = '^' + k
                 else :
-                    mk = k
+                    mk = k[1:]
                     k = k[1:]
-                if mk[-1] != self.morphid :
+                if k[-1] != self.morphid :
                     mk = mk + '$'
                 else :
                     k = k[0:-1]
+                    mk = mk[0:-1]
                 morph_keys.append(mk)
                 self.morphs[k] = e[outcol].strip()
             elif len(filter(isword, k)) != len(k) :
@@ -179,7 +180,7 @@ class usfm_transducer(object) :
                     found = True
                 elif self.morph_keys and not found :
                     wd = re.sub('((?iu)' + self.morph_keys + ')', 
-                                lambda m : self.morphs[wd] if wd in self.tags and self.tnode.parent.name in self.tags[wd] else wd, wd)
+                                lambda m : self.morphs[m.group(1)] if m.group(1) not in self.tags or self.tnode.parent.name in self.tags[wd] else m.group(1), wd)
                 if case :
                     wd = wd[0].upper() + wd[1:]
             if len(rlist) :
