@@ -138,7 +138,7 @@ class usfm_transducer(object) :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
-        if self.normal : res = unicode.normalize(res, self.normal)
+        if self.normal : res = unicodedata.normalize(self.normal, res)
         return res
 
     def convert(self, match) :
