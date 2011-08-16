@@ -75,6 +75,8 @@ class usfm_transducer(object) :
             self.ctags = set(opts.capitaltags.split())
         else :
             self.ctags = set()
+        if opts.normalize :
+            self.normal = 'NF' + opts.normalize.upper()
 
     def load_dict(self, fname, incol, outcol, tagcol = None) :
         morph_keys = []
@@ -136,6 +138,7 @@ class usfm_transducer(object) :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
+        if self.normal : res = unicode.normalize(res, self.normal)
         return res
 
     def convert(self, match) :
@@ -233,6 +236,7 @@ if __name__ == '__main__':
     parser.add_option("-o","--output",action="store",help="Specify output file or directory")
     parser.add_option("-t","--tec",action="store",help="TECKit .tec file to use for conversion")
     parser.add_option("-r","--reverse",action="store_true",help="Run .tec file in reverse")
+    parser.add_option("--normalize",action="store",help="Unicode normalize converted text [c,d,kc,kd]")
     parser.add_option("-v","--verbose",action='store_true',default=False,
                       help='Print out statistics and progress info')
     parser.add_option("-w","--warnings",action='store_true',default=False,
