@@ -67,7 +67,7 @@ class usfm_transducer(object) :
         self.tags = {}
         self.dict = {}
         self.phrases = {}
-        self.phrase_keys = ''
+        self.phrase_keys = {}
         self.morphs = {}
         self.morph_keys = ''
         self.morphid = '!'
@@ -83,7 +83,6 @@ class usfm_transducer(object) :
         for e in entries :
             if not len(e) : continue
             k = self.enc.convert(e[incol], finished=True)
-            if k == e[outcol] : continue
             if k.find(self.morphid) != -1 :     # has stem marker
                 if k[0] == self.morphid :
                     mk = '^' + k
@@ -103,7 +102,13 @@ class usfm_transducer(object) :
                 self.tags[k] = set(e[tagcol].split())
         morph_keys.sort(cmp = lambda x, y : cmp(len(y), len(x)))
         self.morph_keys = "|".join(morph_keys)
-        self.phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(y), len(x)))
+        phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(y), len(x)))
+        for k in phrase_keys :
+            p = aswords(k)
+            if p[0] in self.phrase_keys :
+                self.phrase_keys[p[0]].append(p)
+            else :
+                self.phrase_keys[p[0]] = [p]
         fh.close()
 
     def element_start(self, node) :
@@ -145,7 +150,6 @@ class usfm_transducer(object) :
             self.caps[-1] = 1
         elif re.match(ur'^\s*\S', res) :
             self.caps[-1] = 0
-        pdict = self.build_phrases()
         rlist = aswords(res)
         res = ""
         while len(rlist) :
@@ -155,11 +159,13 @@ class usfm_transducer(object) :
                 case = wd[0].isupper()
                 wd = wd[0].lower() + wd[1:]
                 found = False
-                if wd in pdict :
-                    for p in pdict[wd] :
+                if wd in self.phrase_keys :
+                    for p in self.phrase_keys[wd] :
                         if len(p) <= l and p[1:] == rlist[0:len(p)-1] :
+                            s = "".join(p)
+                            if s in self.tags and self.tnode.parent.name not in self.tags[s] : continue
                             del rlist[0:len(p)-1]
-                            wd = self.phrases["".join(p)]
+                            wd = self.phrases[s]
                             found = True
                             break
                 if not found and wd in self.dict and (not wd in self.tags or self.tnode.parent.name in self.tags[wd]) :
@@ -184,14 +190,6 @@ class usfm_transducer(object) :
 
         if self.case :
             res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
-        return res
-
-    def build_phrases(self) :
-        res = {}
-        for k in self.phrase_keys :
-            if k in self.tags and self.tnode.parent.name in self.tags[k] : continue
-            p = aswords(k)
-            res[p[0]] = p
         return res
 
 def transduce(fname, opts) :
