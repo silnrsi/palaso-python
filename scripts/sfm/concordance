@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 '''
 Count the words in a USFM file skipping punctuation and non-publication 
 markers updating a master concordance CSV file with any new references 
