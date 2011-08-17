@@ -242,7 +242,7 @@ if __name__ == '__main__':
     parser.add_option("--normalize",action="store",help="Unicode normalize converted text [c,d,kc,kd]")
     parser.add_option("-v","--verbose",action='store_true',default=False,
                       help='Print out statistics and progress info')
-    parser.add_option("-w","--warnings",action='store_true',default=False,
+    parser.add_option("-w","--warnings",action='store_true',default=True,
                       help='Print out syntax warnings discovered during SFM parsing')
     parser.add_option("-s","--strict",action='store_true',default=False,
                       help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
@@ -264,6 +264,7 @@ if __name__ == '__main__':
     
     opts.warnings = opts.strict or opts.warnings
     if opts.stylesheet:
+        stylesheet_path = opts.stylesheet
         opts.stylesheet = usfm.default_stylesheet.copy()
         opts.stylesheet.update(style.parse(open(stylesheet_path,'r')))
     else:
