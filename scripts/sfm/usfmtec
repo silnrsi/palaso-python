@@ -212,6 +212,7 @@ def transduce(fname, opts) :
        doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, private=opts.strict))
     except SyntaxError, err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
+        sys.exit(1)
     finally:
         infh.close()
     return doc
