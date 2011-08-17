@@ -18,7 +18,7 @@ from palaso.sfm import usfm, style
 from itertools import chain,ifilter,groupby,imap
 import palaso.unicsv as csv
 import codecs, collections, glob, operator, optparse, os.path, \
-        re, warnings, shutil, sys, tempfile, unicodedata
+        warnings, shutil, sys, tempfile, unicodedata
 
 
 
@@ -109,7 +109,7 @@ def concordance(refs, source_path):
                                 usfm.parser(source, stylesheet=opts.stylesheet, 
                                                     private=opts.strict)))
     except SyntaxError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
+        sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
         return refs
     
     for txt in _flatten(doc):

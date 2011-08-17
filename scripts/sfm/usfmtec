@@ -11,7 +11,6 @@ __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
 '''
 
-import palaso.sfm as sfm
 from palaso.sfm import usfm, style, pprint, element, text
 from palaso.teckit.engine import Converter, Mapping
 import palaso.unicsv as csv
@@ -212,7 +211,7 @@ def transduce(fname, opts) :
     try:
        doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, private=opts.strict))
     except SyntaxError, err :
-        sys.stderr.write(parser.expand_prog_name('%prog: failed to parser USFM: {0!s}\n').format(err))
+        sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
     finally:
         infh.close()
     return doc
