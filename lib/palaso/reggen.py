@@ -1,7 +1,7 @@
 
 """Module to generate strings from a regexp"""
 
-import sre_parse, sre_constants
+import sre_parse
 from random import randrange, choice
 
 class MatchObj :
@@ -18,7 +18,7 @@ class MatchObj :
         return res
     def copy(self) :
         return self.__copy__()
-    def end(groupid = 0) :
+    def end(self, groupid = 0) :
         if groupid :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return self.endpos[groupid]
@@ -26,7 +26,7 @@ class MatchObj :
                 return self.patient
         else :
             return len(self.string) - 1
-    def start(groupid = 0) :
+    def start(self, groupid = 0) :
         if groupid :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return self.startpos[groupid]
@@ -34,7 +34,7 @@ class MatchObj :
                 return self.patient
         else :
             return 0
-    def span(groupid = 0) :
+    def span(self, groupid = 0) :
         if groupid :
             if self.endpos[groupid] > self.startpos[groupid] :
                 return (self.startpos[groupid], self.endpos[groupid])
@@ -108,7 +108,7 @@ def _proc(pattern, data, match) :
             subdata = [data[1][2][0]] * data[1][0]
         else :
             subdata = [data[1][2][0]] * data[1][1]
-            for n in range(data[1][1] - data[1][0], 0, -1) :
+            for _ in range(data[1][1] - data[1][0], 0, -1) :
                 for s in _rec_proc(pattern, subdata, 0, match) :
                     yield s
                 del subdata[-1]
