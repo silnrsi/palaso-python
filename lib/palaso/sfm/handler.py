@@ -24,7 +24,7 @@ class handler(object):
         return text
     
     def end(self, pos, ctag, tag):
-       return ''
+        return ''
     
     def error(self, *warn_msg):
         self.errors.append(warnings.WarningMessage(*warn_msg))
@@ -70,15 +70,14 @@ def parse(parser,handler,source):
         warnings.simplefilter("always", SyntaxWarning)
         
         doc = parser(source)
-        return reduce(_g, trees, u'').splitlines(True)
+        return reduce(_g, doc, u'').splitlines(True)
 
 
 
 if __name__ == '__main__':
     import palaso.sfm.usfm as usfm
-    import sfm
     import sys, codecs
     mat=codecs.open(sys.argv[1],'rb',encoding='utf-8_sig')
     out=codecs.open(sys.argv[2],'wb',encoding='utf-8',buffering=1)
-    out.writelines(sfm.transduce(sfm.handler(), mat))
+    out.writelines(transduce(usfm.parser, sfm.handler(), mat))
 
