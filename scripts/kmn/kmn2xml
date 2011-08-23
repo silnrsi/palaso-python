@@ -29,7 +29,7 @@ xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" :
 
 header = u'''\
 <?xml version='1.0' encoding='UTF-8'?>
-<keyboard font='{font}' size='{size}' name='{name}'>
+<keyboard font='{font}' size='{size}' modifiers='{modifiers}' name='{name}'>
 '''.format
 
 key = u'''\
@@ -51,12 +51,16 @@ def quote(cs):
 def output_chars(keypresses):
     return [quote(kb.run_items([it])) for it in kmn.keysyms_items(keypresses)]
 
+def output_modified_chars(keytops, mod) :
+    keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops)
+    return [quote(kb.run_items([it])) for it in kmn.keysyms_items("".join(keys))]
 
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n' + __doc__)
 parser.add_option("-f","--font",action='store',metavar='FONTNAME',
                   help='Specify the preferred font for the keyboard output')
 parser.add_option("-s","--size",action='store',type="float", metavar='POINTS',
                   help='The size of the output characters')
+parser.add_option("-m","--modifiers",action="store",help="Modifiers to apply to keytops")
 
 (opts,kmns) = parser.parse_args()
 if len(kmns) == 0:
@@ -68,6 +72,11 @@ kb = kmfl(kmns[0])
 out = codecs.getwriter('utf_8')(sys.stdout)
 out.write(header(font=opts.font or '', 
                  size=opts.font and opts.size or '',
-                 name=kb.store('NAME')))
-out.writelines(map(key, key_tops, output_chars(unshifted), output_chars(shifted)))
+                 name=kb.store('NAME'),
+                 modifiers=opts.modifiers or ''))
+if opts.modifiers :
+    out.writelines(map(key, key_tops, output_modified_chars(unshifted, opts.modifiers),
+                                      output_modified_chars(shifted, opts.modifiers)))
+else :
+    out.writelines(map(key, key_tops, output_chars(unshifted), output_chars(shifted)))
 out.write(footer)
