@@ -181,7 +181,9 @@ cdef class kmfl :
     def run_items(self, items) :
         clear_history(self.kmsi)
         for i in items :
-            kmfl_interpret(self.kmsi, i & 0xFFFF, (i >> 16) & 0xFF)
+            mod = (i >> 16) & 0xFF
+            mod = ((mod & 0xF0) << 4) | (mod & 0x0F)
+            kmfl_interpret(self.kmsi, i & 0xFFFF, mod)
         res = []
         for 1 <= i <= self.kmsi.nhistory :
             if item_type(self.kmsi.history[i]) == 0 :
