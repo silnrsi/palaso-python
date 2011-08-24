@@ -67,7 +67,11 @@ def processFiles(keyboardFile,outputsvg):
 def parseKeyboardFile(file):
     global name
     dom = parse(file)
-    name = dom.getElementsByTagName('keyboard')[0].getAttribute('name')
+    kbd = dom.getElementsByTagName('keyboard')[0]
+    name = kbd.getAttribute('name')
+    m = kbd.getAttribute('modifiers')
+    if m :
+        name += " (" + m + ")"
     keys = dom.getElementsByTagName('key')
     for key in keys:
         keyId = key.getAttribute('id')
