@@ -270,7 +270,7 @@ class Segment(object) :
             length = len(string)
         if isinstance(scriptid, basestring) :
             scriptid = gr2.gr_str_to_tag(scriptid)
-        self.seg = gr2.gr_make_seg(font.font, face.face, scriptid, feats.fval if feats else 0, 1, string, length, rtl)
+        self.seg = gr2.gr_make_seg(font.font, face.face, scriptid, (feats.fval if feats else 0), 1, string.encode('utf_8'), length, rtl)
 
     def __del__(self) :
         gr2.gr_seg_destroy(self.seg)
@@ -293,16 +293,20 @@ class Segment(object) :
     @property
     def slots(self) :
         s = gr2.gr_seg_first_slot(self.seg)
+        res = []
         while s :
-            yield Slot(s)
+            res.append(Slot(s))
             s = gr2.gr_slot_next_in_segment(s)
+        return res
 
     @property
     def revslots(self) :
         s = gr2.gr_seg_last_slot(self.seg)
+        res = []
         while s :
-            yield Slot(s)
+            res.append(Slot(s))
             s = gr2.gr_slot_prev_in_segment(s)
+        return res
 
     def justify(start, font, width, flags, first = None, last = None) :
         gr2.gr_seg_justify(self.seg, start.slot, font.font, width, flags, first.slot if first else 0, last.slot if last else 0)
