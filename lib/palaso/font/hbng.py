@@ -20,9 +20,6 @@ def fn(name, res, *params) :
     f.restype = res
     f.argtypes = params
 
-def nulldestroy(data) :
-    pass
-
 # hb-buffer.h
 class GlyphInfo(Structure) :
     _fields_ = [('codepoint', c_uint32),
@@ -239,10 +236,10 @@ class Buffer(object) :
     def __init__(self, text, script=None, lang=None, unicodefuncs=None, **kwds) :
         """Takes a text string, script (string, optional), lang (string, optional)
         """
-        length = len(text.encode('utf_8'))
-        self.text = text
+        self.text = text.encode('utf_8')
+        length = len(self.text)
         self.buffer = hbng.hb_buffer_create(len(text))
-        hbng.hb_buffer_add_utf8(self.buffer, text, length, 0, length)
+        hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
         if not script :
             script = hbng.hb_buffer_get_script(self.buffer)
         else :
@@ -253,6 +250,9 @@ class Buffer(object) :
         hbng.hb_buffer_set_script(self.buffer, script)
         hbng.hb_buffer_set_language(self.buffer, lang)
         hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
+
+    def __del__(self) :
+        hbng.hb_buffer_destroy(self.buffer)
 
 # feats = {'feat' : (20, 0, 10), 'fea1' : 1}
     def shape(self, font, feats = None, options = None, shapers = None, **kwds) :
@@ -292,7 +292,7 @@ class Buffer(object) :
 class FTFace(object) :
     def __init__(self, ftface) :
         self.ftface = ftface
-        self.face = hbng.hb_ft_face_create(ftface._FT_Face, fndestroy(nulldestroy))
+        self.face = hbng.hb_ft_face_create(ftface._FT_Face, fndestroy(0))
 
     def __del__(self) :
         hbng.hb_face_destroy(self.face)
@@ -300,7 +300,7 @@ class FTFace(object) :
 class FTFont(object) :
     def __init__(self, ftface) :
         self.ftface = ftface
-        self.font = hbng.hb_ft_font_create(ftface._FT_Face, fndestroy(nulldestroy))
+        self.font = hbng.hb_ft_font_create(ftface._FT_Face, fndestroy(0))
 
     def __del__(self) :
         hbng.hb_font_destroy(self.font)
