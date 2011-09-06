@@ -149,6 +149,7 @@ class usfm_transducer(object) :
         else :
             input = match.group(0)
         res = self.enc.convert(input, finished=True)
+        if res.strip() == '' : return res
         if self.caps[-1] :
             res = re.sub(ur'^([\s' + self.oquotes + ur']*)(.)',
                             lambda m : m.group(1) + m.group(2).upper(), res)
