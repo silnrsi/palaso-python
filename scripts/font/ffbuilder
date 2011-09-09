@@ -246,12 +246,12 @@ def setname(font, elem) :
             f.fullname = text + " " + f.weight
         else :
             f.fullname = text
-        fulltext = f.fullname.sub(" ", "")
+        fulltext = f.fullname.replace(" ", "")
         f.fontname = fulltext
         return
     elif num in namemap :
         num = namemap.index(num)
-    f.appendSFNTName(lid, num, text)
+    f.appendSFNTName(lid, int(num), text)
 
 def expandname(elem, lid) :
     res = ""
@@ -263,11 +263,11 @@ def expandname(elem, lid) :
                 if n[0] == lid and n[1] == num :
                     res += n[2]
                     break
-            res += c.tail
+            if c.tail : res += c.tail
     return res
 
 
-parser = OptionParser()
+parser = OptionParser(usage='%prog [options] infont outfont')
 parser.add_option("-c","--config",help="Configuration file to process")
 parser.add_option("-f","--font",action="append",help="Extra font to reference")
 (opts, args) = parser.parse_args()
@@ -317,16 +317,16 @@ f.encoding = "Unicode"
 for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
         'hhea_ascent', 'hhea_ascent_add', 'hhea_descent', 'hhea_descent_add',
         'hhea_linegap', 'horizontalBaseline', 'italicangle', 'macstyle',
-        'os2_codepage', 'os2_family_class', 'os2_fstype', 'os2_panose',
+        'os2_codepages', 'os2_family_class', 'os2_fstype', 'os2_panose',
         'os2_strikeypos', 'os2_strikeysize', 'os2_subxoff', 'os2_subxsize',
         'os2_subyoff', 'os2_subysize', 'os2_supxoff', 'os2_supxsize',
         'os2_supyoff', 'os2_supysize', 'os2_typoascent', 'os2_typoascent_add',
         'os2_typodescent', 'os2_typodescent_add', 'os2_typolinegap',
-        'os2_use_typo_metrics', 'os2_unicoderanges', 'os2_vendor',
-        'os2_version', 'os2_weight', 'os2_width_width_slope_only',
+        'os2_use_typo_metrics', 'os2_vendor', # 'os2_unicoderanges', 
+        'os2_version', 'os2_weight', 'os2_weight_width_slope_only',
         'os2_width', 'os2_winascent', 'os2_winascent_add', 'os2_windescent',
         'os2_windescent_add', 'sfnt_names', 'upos', 'uwidth', 'version',
-        'vertical_baseline', 'weight') :
+        'verticalBaseline', 'weight') :
     setattr(f, a, getattr(fonts[0], a, None))
 
 for a, av in point_relations.items() :
@@ -369,13 +369,13 @@ finfos = {
 }
 for k, v in finfos.items() :
     num = int(felem.get(k, 0))
-    if num
+    if num :
         for a in v :
             setattr(f, a, num)
 
 cpinfos = {
     'cp' : (2, 'os2_codepages'),
-    'coverage' : (4, 'os2_unicoderanges')
+    # 'coverage' : (4, 'os2_unicoderanges')
 }
 for k, v in cpinfos.items() :
     val = felem.get(k, None)
@@ -384,6 +384,6 @@ for k, v in cpinfos.items() :
         res = []
         for i in range(v[0] * 8, 0, -8) :
             res.append(int(val[i-8:i], 16))
-        setattr(f, v[1]) = tuple(res)
+        setattr(f, v[1], tuple(res))
 
 f.save(args[0])
