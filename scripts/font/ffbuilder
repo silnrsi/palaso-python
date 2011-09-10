@@ -312,7 +312,7 @@ for g in glyphs : g.resolveReferences(point_relations)
 
 # generate output font
 f = fontforge.font()
-f.encoding = "Unicode"
+f.encoding = "Original"
 
 for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
         'hhea_ascent', 'hhea_ascent_add', 'hhea_descent', 'hhea_descent_add',
