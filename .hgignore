@@ -6,3 +6,9 @@
 
 # Specific matches
 ^lib/palaso.kmfl.(c|h)$
+
+# vi backups
+(^|/)\..*?\.swp$
+
+# private directories
+^dev[^/]*/
