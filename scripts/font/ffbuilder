@@ -87,6 +87,9 @@ class Glyph :
                 self.lsb = int(e.get("lsb", -1))
             elif e.tag == "base" :
                 (font, name) = findGlyph(e)
+                g = font[name]
+                for k, v in g.temporary['properties'].items() :
+                    self.props[k] = v
                 child = GlyphRef(font, name)
                 self.addChild(child)
                 child.readXml(e)
@@ -109,9 +112,10 @@ class Glyph :
             scale = psMat.compose(scale, psMat.translate(adv, 0))
         if self.advance < 0 :
             if self.glyph :
-                self.advance = self.glyph.width
+                self.advance = pointMult((self.glyph.width, 0), self.scale)[0]
             else :
                 self.advance = adv
+            if self.advance < 0 : self.advance = 0
 
     def addRealGlyph(self, glyph, scale) :
         self.realGlyphs.append((glyph, scale))
@@ -190,7 +194,7 @@ class GlyphRef :
     def setGlyphAnchors(self, glyph, anchorMap) :
         for a in glyph.anchorPoints :
             if a[0] not in self.anchors : self.anchors[a[0]] = [None] * 3
-            self.anchors[a[0]][anchortypes[a[1]][0]] = pointMult((a[2], a[3]), self.scale)
+            self.anchors[a[0]][anchortypes[a[1]][0]] = (a[2], a[3])  # pointMult((a[2], a[3]), self.scale)
             if a[1] == "basemark" :
                 b = anchorMap[a[0]][1]
                 if b :
@@ -266,6 +270,15 @@ def expandname(elem, lid) :
             if c.tail : res += c.tail
     return res
 
+def readprops(f) :
+    for name in f :
+        g = f[name]
+        g.temporary = {'properties' : {}}
+        if g.comment :
+            for l in g.comment.splitlines() :
+                p = l.split(':')
+                if len(p) == 2 :
+                    g.temporary['properties'][p[0].strip()] = p[1].strip()
 
 parser = OptionParser(usage='%prog [options] infont outfont')
 parser.add_option("-c","--config",help="Configuration file to process")
@@ -280,6 +293,7 @@ for f in opts.font :
     font = fontforge.open(os.path.abspath(f))
     fonts.append(font)
     font.temporary = { 'names' : {}}
+    readprops(font)
 
 # Create Glyphs for each entry in config file
 glyphs = []
@@ -291,6 +305,7 @@ for e in etree.getroot().iterfind("glyphs/glyph") :
     glyphs.append(g)
 # identify output Glyph for each referenced glyph
     g.resolveGlyph()
+
 for g in glyphs : g.resolveGlyph(True)
 count = 0
 for f in fonts :
@@ -331,13 +346,18 @@ for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
 
 for a, av in point_relations.items() :
     addAnchorClass(f, a, "mark" if av[0] == "basemark" else av[0])
-for i in ('.notdef', 'CR', '.null') :
+for i in ('.notdef', 'nonmarkingreturn', '.null') :
     copyglyph(fonts[0][i], f.createChar(-1, i))
     
 for g in glyphs :
     if g.glyph :
         g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name)
         copyglyph(g.glyph, g1)
+        g1.transform(g.scale, ("round",))
+        c = ""
+        for k, v in g.props.items() :
+            c += "{0}: {1}\n".format(k, v)
+        g1.comment = c
         g.outglyph = g1
 for g in glyphs :
     if not g.glyph :
