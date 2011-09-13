@@ -38,6 +38,7 @@ class Glyph :
 
     def handleboths(self, pointinfo) :
         s = set(map(lambda x: x.name, self.aps))
+        self.marks = {}
         for p in self.aps :
             if p.name not in pointinfo or pointinfo[p.name] != "both" : continue
             if p.type == "mark" or self.isDia :
@@ -45,6 +46,7 @@ class Glyph :
                 if n not in s :
                     s.add(n)
                     self.aps.append(p.copy(n))
+                if p.type == "mark" : self.marks[p.name] = p
 
 pointinfo = {}
 glyphs = {}               
@@ -128,7 +130,7 @@ if opts.apxml :
         for p in gl.aps :
             if p.type == "mark" :
                 g.addAnchorPoint(p.name, p.type, p.x, p.y)
-            else :
+            elif p.name not in gl.marks :
                 g.addAnchorPoint(p.name, "basemark" if pointinfo[p.name] == "mark" else "base", p.x, p.y)
         c = ""
         for k, v in gl.props.items() :
