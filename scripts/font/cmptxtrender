@@ -15,22 +15,28 @@ def name(tt, gl) :
 
 parser = OptionParser(usage = '%progs [options] infont1 infont2')
 parser.add_option("-t","--text",help="text file to test each line from")
+parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
-parser.add_option("-e","--engine",help="renderer to use [graphite]")
+parser.add_option("-e","--engine",help="renderer to use [gr]")
 parser.add_option("-l","--lang",help="language to tag text with")
 parser.add_option("-s","--script",help="script of text")
 parser.add_option("-r","--rtl",action="store_true",help="right to left")
 (opts, args) = parser.parse_args()
 
 shapers = {
-    'graphite' : GrFont,
-    'hb' : HbFont
+    'gr' : GrFont,
+    'ot' : HbFont
 }
 
-if opts.engine not in shapers : opts.engine = "graphite"
+if opts.engine not in shapers : opts.engine = "gr"
 if not opts.lang : opts.lang = 0
 if not opts.script : opts.script = 0
 if not opts.rtl : opts.rtl = 0
+if opts.output :
+    outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
+else :
+    outfile = codecs.EncodeFile(sys.stdout, "utf_8")
+
 feats = {}
 if opts.feat :
     for f in opts.feat :
@@ -51,7 +57,8 @@ for l in f.readlines() :
     gl1 = map(lambda x: name(tt1, x), font1.glyphs(l))
     gl2 = map(lambda x: name(tt2, x), font2.glyphs(l))
     if gl1 != gl2 :
-        print "{0:3d}: {1} - {2} {3}".format(count, l.encode('utf_8'), gl1, gl2)
+        outfile.write("{0:3d}: {1} - {2} {3}\n".format(count, l.encode('utf_8'), gl1, gl2))
         errors += 1
+outfile.close()
 sys.exit(errors)
 
