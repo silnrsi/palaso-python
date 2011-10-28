@@ -93,4 +93,25 @@ def copy_anchors(tgt, ref, pos, scale):
         tap = rap[:2] + ((rap[2]-rx)*sx+rx,(rap[3]-ry)*sy+ry) + rap[4:]
         tgt.addAnchorPoint(*tap)
 
+def layer_area(layer) :
+    area = 0.
+    for j in range(len(layer)) :
+        c = layer[j]
+        for i in range(len(c)) :
+            area += c[i-1].x * c[i].y - c[i].x * c[i-1].y
+    return area / 2
+
+def layer_centroid(layer) :
+    cx = 0.
+    cy = 0.
+    a = layer_area(layer)
+    if abs(a) < .00001 : return complex(0, 0)
+    for j in range(len(layer)) :
+        c = layer[j]
+        for i in range(len(c)) :
+            t = c[i-1].x * c[i].y - c[i].x * c[i-1].y
+            cx += (c[i-1].x + c[i].x) * t
+            cy += (c[i-1].y + c[i].y) * t
+    return complex(cx / a / 6, cy / a / 6)
+
 
