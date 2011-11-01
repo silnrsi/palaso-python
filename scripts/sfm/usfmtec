@@ -118,7 +118,7 @@ class usfm_transducer(object) :
 
     def element_start(self, node) :
         try :
-            if node.meta['StyleType'] == 'Note' :
+            if node.meta.get('StyleType') == 'Note' :
                 self.caps.append(1)
         except KeyError as e:
             e.args = ("Element: %s at %r" % (node.name, node.pos), )
@@ -127,7 +127,7 @@ class usfm_transducer(object) :
     
     def element_end(self, node) :
         try :
-            if node.meta['StyleType'] == 'Note' :
+            if node.meta.get('StyleType') == 'Note' :
                 self.caps.pop()
         except KeyError as e:
             e.args = ("Element: %s at %r" % (node.name, node.pos), )
@@ -136,7 +136,7 @@ class usfm_transducer(object) :
     def convert_node(self, tnode) :
         if not (set(tnode.parent.meta['TextProperties']) & set(('publishable', 'vernacular'))) :
             return tnode
-        if (tnode.parent.meta['StyleType'] == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
+        if (tnode.parent.meta.get('StyleType') == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags :
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
@@ -210,7 +210,7 @@ def transduce(fname, opts) :
         conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
-       doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
+        doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
     except SyntaxError, err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
         sys.exit(1)

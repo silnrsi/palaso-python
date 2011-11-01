@@ -290,7 +290,7 @@ class _put_back_iter(collections.Iterator):
 
 
 
-_default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None}
+_default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None, 'StyleType':None}
 
 class level:
     Marker          = 0
@@ -496,7 +496,7 @@ class parser(collections.Iterable):
                 else:
                     # Do implicit closure only for non-inline markers or 
                     # 'character' style markers'.
-                    if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
+                    if parent.meta['Endmarker'] and 'Character' not in parent.meta.get('StyleType',[]):
                         self._error(level.Structure, 
                             'invalid end marker {token}: \\{0.name} '
                             '(line {0.pos.line},{0.pos.col}) '
@@ -514,7 +514,7 @@ class parser(collections.Iterable):
                     tok.parent = parent
                     yield tok
         if parent is not None:
-            if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
+            if parent.meta['Endmarker'] and 'Character' not in parent.meta.get('StyleType',[]):
                 self._error(level.Structure, 
                     'unexpected end-of-file: \\{token.name} '
                     '(line {token.pos.line},{token.pos.col}) '
