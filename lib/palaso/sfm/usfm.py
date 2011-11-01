@@ -94,7 +94,7 @@ default_stylesheet=_load_cached_stylesheet('usfm.sty')
 
 
 
-_default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None}
+_default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None, 'StyleType':None}
 
 
 
@@ -176,7 +176,7 @@ class parser(sfm.parser):
     
     
     def _NoteText_(self,parent):
-        if parent.meta['StyleType'] != 'Note': return self._default_(parent)
+        if parent.meta.get('StyleType') != 'Note': return self._default_(parent)
         
         tok = next(self._tokens)
         caller = self.caller_re.match(tok)
