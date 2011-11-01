@@ -20,10 +20,11 @@ __history__ = '''
 	20101109 - tse - Ensure cached usfm.sty is upto date after package code 
 		changes.
 '''
-import bz2, contextlib, operator, os, re, site, sys
+import bz2, contextlib, operator, os, re, site
 import cPickle as pickle
 import palaso.sfm.style as style
 import palaso.sfm as sfm
+from palaso.sfm import level
 from itertools import chain, ifilter, imap
 from functools import *
 
@@ -64,7 +65,7 @@ def _cached_stylesheet(path):
         if not os.path.exists(path):
             os.makedirs(path)
     
-    import bz2, pickletools
+    import pickletools
     with contextlib.closing(bz2.BZ2File(cached_path, 'wb')) as zf:
         zf.write(pickletools.optimize(
             pickle.dumps(style.parse(open(source_path,'r')))))
@@ -99,8 +100,9 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None}
 
 class parser(sfm.parser):
     default_meta = _default_meta
-    numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)(?=(\s|$))',re.UNICODE)
-    caller_re = re.compile(r'\s*([-+\w])(?=(\s|$))',re.UNICODE)
+    numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)',re.UNICODE)
+    caller_re = re.compile(r'\s*([-+\w])',re.UNICODE)
+    sep_re = re.compile(r'\s|$',re.UNICODE)
     
     @classmethod
     def extend_stylesheet(cls, *names, **kwds):
@@ -109,46 +111,53 @@ class parser(sfm.parser):
     
     
     def __init__(self, source, stylesheet=default_stylesheet,
-                               default_meta=_default_meta, private = True):
+                               default_meta=_default_meta, *args, **kwds):
         super(parser, self).__init__(source, stylesheet, default_meta,
-                                     private_prefix=private and 'z')
+                                     private_prefix='z',*args, **kwds)
     
     
     def _ChapterNumber_(self, chapter_marker):
         tok = next(self._tokens)
-        if not tok.lstrip() or tok.startswith('\\'):
-            self._error(SyntaxError, 'missing chapter number after \\c', 
-                                     chapter_marker)
-        
-        # Match against digits:
         chapter = self.numeric_re.match(tok)
         if not chapter:
-            self._error(SyntaxError, 'invalid chapter number after \\c: '
-                        '\'{token}\' is not a valid chapter number', tok.lstrip().split(' ',1)[0])
-        chapter_marker.args = [unicode(tok[chapter.start(1):chapter.end(1)])]
-        tok = tok[chapter.end():].lstrip()
-        
-        if tok and tok[0] != '\\': 
-            self._error(SyntaxError, 'text cannot follow a chapter marker', tok)
-        
-        if tok: self._tokens.put_back(tok)
+            self._error(level.Content, 'missing chapter number after \\c', 
+                                     chapter_marker)
+            chapter_marker.args = [u'\uFFFD']
+        else:
+            chapter_marker.args = [unicode(tok[chapter.start(1):chapter.end(1)])]
+            tok = tok[chapter.end():]
+        #import pdb; pdb.set_trace()
+        if tok and not self.sep_re.match(tok):
+            self._error(level.Content, 'missing space after chapter number \'{chapter}\'',
+                                    tok, chapter=chapter_marker.args[0])
+        tok  = tok.lstrip()
+        if tok:
+            if tok[0] == '\\': 
+                self._tokens.put_back(tok)
+            else:
+                self._error(level.Structure, 'text cannot follow chapter marker \'{0}\'', tok, chapter_marker, )
+                chapter_marker.append(sfm.element(None, meta=self.default_meta, content=[tok]))
+                tok = None
+                
         return self._default_(chapter_marker)
     _chapternumber_ = _ChapterNumber_
-    
-    
+
+      
     def _VerseNumber_(self, verse_marker):
         tok = next(self._tokens)
-        if not tok.lstrip() or tok.startswith('\\'):
-            self._error(SyntaxError, 'missing verse number after \\v', 
-                                     verse_marker)
-        
-        # Match against digits:
         verse = self.numeric_re.match(tok)
         if not verse:
-            self._error(SyntaxError, 'invalid verse number after \\v: '
-                        '\'{token}\' is not a valid verse number', tok.lstrip().split(' ',1)[0])
-        verse_marker.args = [unicode(tok[verse.start(1):verse.end(1)])]
-        tok = tok[verse.end():].lstrip()
+            self._error(level.Content, 'missing verse number after \\v', 
+                                     verse_marker)
+            verse_marker.args = [u'\uFFFD']
+        else:
+            verse_marker.args = [unicode(tok[verse.start(1):verse.end(1)])]
+            tok = tok[verse.end():]
+        
+        if not self.sep_re.match(tok):
+            self._error(level.Content, 'missing space after verse number \'{verse}\'',
+                                    tok, verse=verse_marker.args[0])
+        tok = tok.lstrip()
         
         if tok: self._tokens.put_back(tok)
         return tuple()
@@ -168,18 +177,22 @@ class parser(sfm.parser):
     
     def _NoteText_(self,parent):
         if parent.meta['StyleType'] != 'Note': return self._default_(parent)
-        tok = next(self._tokens)
-        if not tok.lstrip() or tok.startswith('\\'):
-            self._error(SyntaxError, 'missing caller parameter number after \\{token.name}',
-                        parent)
         
+        tok = next(self._tokens)
         caller = self.caller_re.match(tok)
         if not caller:
-            self._error(SyntaxError, 'invalid footnote caller after \\f: '
-                        '\'{token}\' is not a valid footnote caller number', tok.lstrip().split(' ',1)[0])
-        parent.args = [unicode(tok[caller.start(1):caller.end(1)])]
-        tok = tok[caller.end():]
+            self._error(level.Content, 'missing caller parameter after \\{token.name}',
+                        parent)
+            parent.args = [u'\uFFFD']
+        else:
+            parent.args = [unicode(tok[caller.start(1):caller.end(1)])]
+            tok = tok[caller.end():]
         
+        if not self.sep_re.match(tok):
+            self._error(level.Content, 'missing space after caller parameter \'{caller}\'',
+                                    tok, caller=parent.args[0])
+        
+        tok = tok.lstrip()
         if tok: self._tokens.put_back(tok)
         return self._canonicalise_footnote(self._default_(parent))
 

@@ -84,7 +84,7 @@ class element(list):
     
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
         super(element,self).__init__(content)
-        self.name = unicode(name)
+        self.name = unicode(name) if name else None
         self.pos = pos
         self.args = args
         self.parent = parent
@@ -110,7 +110,7 @@ class element(list):
     
     
     def __str__(self):
-        marker = u'\\' + ' '.join([self.name] + self.args)
+        marker = (u'\\' + ' '.join([self.name] + self.args)) if self.name else ''
         endmarker = self.meta.get('Endmarker',u'')
         body = ''.join(imap(unicode, self))
         sep = ''
@@ -292,7 +292,11 @@ class _put_back_iter(collections.Iterator):
 
 _default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None}
 
-
+class level:
+    Marker          = 0
+    Content         = 1
+    Structure       = 2
+    Unrecoverable   = 100
 
 class parser(collections.Iterable):
     '''
@@ -371,7 +375,6 @@ class parser(collections.Iterable):
     default_meta = _default_meta
     __tokeniser = re.compile(r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',re.DOTALL | re.UNICODE)
     
-    
     @classmethod
     def extend_stylesheet(cls, stylesheet, *names):
         return dict(((m,cls.default_meta) for m in names), **stylesheet)
@@ -379,18 +382,16 @@ class parser(collections.Iterable):
     
     def __init__(self, source, stylesheet={}, 
                                default_meta=_default_meta, 
-                               private_prefix=None):
+                               private_prefix=None, error_level=level.Content):
         # Pick the marker lookup failure mode.
         assert default_meta or not private_prefix, 'default_meta must be provided when using private_prefix'
-        if   private_prefix:    self.__get_style = self.__get_style_pua_strict
-        elif default_meta:      self.__get_style = self.__get_style_lax
-        else:                   self.__get_style = self.__get_style_full_strict
         
         # Set simple attributes
         self.source  = source.name if hasattr(source,'name') else '<string>'
         self.__default_meta = default_meta
         self.__pua_prefix   = private_prefix
         self._tokens        = _put_back_iter(self.__lexer(source))
+        self._error_level   = error_level
         
         # Compute end marker stylesheet definitions
         em_def = {'TextType':None, 'Endmarker':None}
@@ -401,47 +402,29 @@ class parser(collections.Iterable):
                                stylesheet.iteritems())))
     
     
-    def _error(self, err_type, msg, ev, *args, **kwds):
-        if issubclass(err_type, StandardError):
+    def _error(self, severity, msg, ev, *args, **kwds):
+        if severity >= self._error_level:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
-                                                               *args).encode('utf_8')
-            raise err_type, msg
-        elif issubclass(err_type, Warning):
-            msg = unicode(msg).format(token=ev,*args,**kwds).encode('utf_8')
-            warnings.warn_explicit(msg, err_type, self.source, ev.pos.line)
+                                                               *args,**kwds).encode('utf_8')
+            raise SyntaxError, msg
         else:
-            raise ValueError, u"'{0!r}' is not an StandardError or Warning object".format(err_type).encode('utf_8')
+            msg = unicode(msg).format(token=ev,*args,**kwds).encode('utf_8')
+            warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
     
-    def __get_style_lax(self, tag):
-        meta = self.__sty.get(tag)
-        if not meta:
-            self._error(SyntaxWarning, u'unknown marker \\{token}: not in styesheet', 
-                       tag)
-            return self.__default_meta
-        return meta
-    
-    
-    def __get_style_full_strict(self, tag):
-        meta = self.__sty.get(tag)
-        if not meta:
-            self._error(SyntaxError, 'unknown marker \\{token}: not in styesheet', 
-                       tag)
-        return meta
-    
-    
-    def __get_style_pua_strict(self, tag):
+    def __get_style(self, tag):
         meta = self.__sty.get(tag)
         if not meta:
             if tag.startswith(self.__pua_prefix):
-                self._error(SyntaxWarning, 
+                self._error(-1, 
                             'unknown private marker \\{token}: '
                             'not it stylesheet using default marker definition', 
                             tag)
-                meta = self.__default_meta
             else:
-                self._error(SyntaxError, 'unknown marker \\{token}: not in styesheet', 
+                self._error(level.Marker, 'unknown marker \\{token}: not in styesheet', 
                             tag)
+            return self.__default_meta
+
         return meta
     
     
@@ -501,12 +484,12 @@ class parser(collections.Iterable):
                     # We've failed to find a home for marker tag, poor thing.
                     if not meta['TextType']:
                         assert len(meta['OccursUnder']) == 1
-                        self._error(SyntaxError, 
+                        self._error(level.Unrecoverable, 
                                       'orphan end marker {token}: '
                                       'no matching opening marker \\{0}', 
                                       tok, list(meta['OccursUnder'])[0])
                     else:
-                        self._error(SyntaxError, 
+                        self._error(level.Unrecoverable, 
                                       'orphan marker {token}: '
                                       'may only occur under {0}', tok, 
                                       self._pp_marker_list(meta['OccursUnder']))
@@ -514,7 +497,7 @@ class parser(collections.Iterable):
                     # Do implicit closure only for non-inline markers or 
                     # 'character' style markers'.
                     if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
-                        self._error(SyntaxError, 
+                        self._error(level.Structure, 
                             'invalid end marker {token}: \\{0.name} '
                             '(line {0.pos.line},{0.pos.col}) '
                             'can only be closed with \\{1}', tok, parent,
@@ -532,7 +515,7 @@ class parser(collections.Iterable):
                     yield tok
         if parent is not None:
             if parent.meta['Endmarker'] and 'Character' not in parent.meta['StyleType']:
-                self._error(SyntaxError, 
+                self._error(level.Structure, 
                     'unexpected end-of-file: \\{token.name} '
                     '(line {token.pos.line},{token.pos.col}) '
                     'has not been closed with \\{0}', parent,

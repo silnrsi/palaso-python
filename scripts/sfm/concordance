@@ -107,7 +107,7 @@ def concordance(refs, source_path):
             doc = sfm.sfilter(sfm.text_properties('publishable','vernacular'), 
                         decorate_references(
                                 usfm.parser(source, stylesheet=opts.stylesheet, 
-                                                    private=opts.strict)))
+                                                    error_level=opts.error_level)))
     except SyntaxError, err:
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
         return refs
@@ -163,12 +163,16 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage='%prog [options] <SFM FILE> <MASTER CSV FILE>\n' + __doc__)
     parser.add_option("-v","--verbose",action='store_true',default=False,
                       help='Print out statistics and progress info')
-    parser.add_option("-w","--warnings",action='store_true',default=True,
-                      help='Print out syntax warnings discovered during SFM parsing')
-    parser.add_option("-u","--unused-warning",action='store_true',default=True,
+    parser.add_option("","--no-warnings",action='store_false',dest='warnings', default=True,
+                      help='Silence syntax warnings discovered during SFM parsing')
+    parser.add_option("-u","--unused-warning",action='store_true',default=False,
                       help='Print out warnings when possibly unsused words are found.')
-    parser.add_option("-s","--strict",action='store_true',default=False,
+    parser.add_option("-s","--strict",action='store_const', dest='error_level', const=usfm.level.Marker, 
+                      default=usfm.level.Content,
                       help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
+    parser.add_option("-l","--loose",action='store_const', dest='error_level', const=usfm.level.Unrecoverable, 
+                      default=usfm.level.Content,
+                      help='Turn on loose parsing mode. Nothing short of orphan markers or unterminated inlines will halt the parser.')
     parser.add_option("-S","--stylesheet",action='store',type='string',
                      metavar='PATH', default=None,
                      help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
@@ -202,7 +206,6 @@ if __name__ == '__main__':
     if opts.word & opts.nonword:
         sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
         sys.exit(1)
-    opts.warnings = opts.strict or opts.warnings
     if opts.stylesheet:
         stylesheet_path = opts.stylesheet
         opts.stylesheet = usfm.default_stylesheet.copy()
