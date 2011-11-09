@@ -388,10 +388,16 @@ for m in mods :
         if (res[0] >> 24) == 5 :
             keys[vkc][mod] = unichr(0xF001)
             deads.append(ksym)
-        elif len(res) > 1 :
+        elif len(res) > 1 or kmn.item_to_char(res[0]) > 0xFFFF :
             keys[vkc][mod] = unichr(0xF002)
             ligs.append((vkc, mod, res))
-            if len(res) > maxliglength : maxliglength = len(res)
+            liglen = 0
+            for r in res :
+                if kmn.item_to_char(r) > 0xFFFF :
+                    liglen += 2
+                else :
+                    liglen += 1
+            if liglen > maxliglength : maxliglength = liglen
         else :
             keys[vkc][mod] = kmn.item_to_char(res[0])
 
@@ -467,7 +473,13 @@ if maxliglength :
     ligres += "#define MAXLIGLENGTH %d\n#define LIGSIZE sizeof(LIGATURE%d)\n" % (maxliglength, maxliglength)
     ligres += "ROSDATA LIGATURE%d aLigature[] = {\n" % (maxliglength)
     for l in ligs :
-        t = map(lambda x: ord(kmn.item_to_char(x)), l[2])
+        t = []
+        for c in l[2] :
+            char = ord(kmn.item_to_char(c))
+            if char > 0xFFFF :
+                t.extend([0xD800 + char / 1024, 0xDC00 + (char & 1023)])
+            else :
+                t.append(char)
         t.extend([0xF000] * (maxliglength - len(t)))
         ligres += "    { 0x%02x,   %d,  " % (l[0], modgroups[l[1]])
         ligres += ",\t".join(map(lambda x: "0x%04X" % x, t))
