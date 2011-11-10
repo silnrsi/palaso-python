@@ -362,7 +362,7 @@ def item_to_key(item) :
                 # lowercase uppercase keys (0x11 any shift)
                 if modifier & 0x11 : key += 0x20
         if not modstr and key < 0x100:
-            return escape(unichr(key))
+            return char_keysym(unichr(key))
 
         if _keynames.has_key(key) :
             keystr = _keynames[key]
@@ -370,7 +370,7 @@ def item_to_key(item) :
             keystr = "XK_" + unichr(key & 0xFF)
         return "[" + modstr + keystr + "]"
     else :
-        return escape(unichr(item))
+        return char_keysym(unichr(item))
 
 def item_to_char(item) :
     sym = item_to_key(item)
@@ -444,6 +444,9 @@ def keysym_klcinfo(sym) :
             vkey = _msrawmap[vkey]
         else :
             vkey = vkey.replace("K_", "")
+    else :
+        if sym == sym.upper() : mod = modifiers['Shift'][2]
+        item, cap, sc, vkc, kn, ekn = _rawkeys["K_" + sym.upper()]
     return (sc, vkey, mod, kn, ekn, vkc)
 
 def escape(keyname) :
