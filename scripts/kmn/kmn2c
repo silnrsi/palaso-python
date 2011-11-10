@@ -369,8 +369,8 @@ modres += "}\n};\n"
 
 
 deads = []
-ligs = []
 keys = [[None] * (1 << logmod) for i in xrange(255)]    # declare array keys[255][2] !!
+ligs = [[None] * (1 << logmod) for i in xrange(255)]    # declare array keys[255][2] !!
 deadkeys = [[{} for j in xrange(len(modids))] for i in xrange(255)]    # declare array keys[255][2] !!
 maxliglength = 0
 keynames = {}
@@ -388,9 +388,9 @@ for m in mods :
         if (res[0] >> 24) == 5 :
             keys[vkc][mod] = unichr(0xF001)
             deads.append(ksym)
-        elif len(res) > 1 or kmn.item_to_char(res[0]) > 0xFFFF :
+        elif len(res) > 1 or ord(kmn.item_to_char(res[0])) > 0xFFFF :
             keys[vkc][mod] = unichr(0xF002)
-            ligs.append((vkc, mod, res))
+            ligs[vkc][mod] = res
             liglen = 0
             for r in res :
                 if kmn.item_to_char(r) > 0xFFFF :
@@ -448,7 +448,7 @@ for l in range(len(modids) - 1, 0, -1) :
                 keyres += "    { -1,    0,  "
                 keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(dkeys[r[0]][i]) if r[2+i] == unichr(0xF001) else 0xF000), range(0, len(r) - 2))) + "},\n"
         keyres = keyres[0:-2] + "\n};\n"
-        listres += "    { (PVK_TO_WCHARS1)aVkToWch%d, %d, sizeof(aVkToWch%d) },\n" % (l + 1, l + 1, l + 1)
+        listres += "    { (PVK_TO_WCHARS1)aVkToWch%d, %d, sizeof(aVkToWch%d[0]) },\n" % (l + 1, l + 1, l + 1)
 listres += "    { NULL, 0, 0 }\n};\n"
 
 deadres = ""
@@ -472,18 +472,21 @@ ligres = ""
 if maxliglength :
     ligres += "#define MAXLIGLENGTH %d\n#define LIGSIZE sizeof(LIGATURE%d)\n" % (maxliglength, maxliglength)
     ligres += "ROSDATA LIGATURE%d aLigature[] = {\n" % (maxliglength)
-    for l in ligs :
-        t = []
-        for c in l[2] :
-            char = ord(kmn.item_to_char(c))
-            if char > 0xFFFF :
-                t.extend([0xD800 + char / 1024, 0xDC00 + (char & 1023)])
-            else :
-                t.append(char)
-        t.extend([0xF000] * (maxliglength - len(t)))
-        ligres += "    { 0x%02x,   %d,  " % (l[0], modgroups[l[1]])
-        ligres += ",\t".join(map(lambda x: "0x%04X" % x, t))
-        ligres += " },\n"
+    for k in range(len(ligs)) :
+        for m in range(len(ligs[k])) :
+            l = ligs[k][m]
+            if not l : continue
+            t = []
+            for c in l :
+                char = ord(kmn.item_to_char(c))
+                if char > 0xFFFF :
+                    t.extend([0xD800 + char / 1024, 0xDC00 + (char & 1023)])
+                else :
+                    t.append(char)
+            t.extend([0xF000] * (maxliglength - len(t)))
+            ligres += "    { 0x%02x,   %d,  " % (k, modgroups[m])
+            ligres += ",\t".join(map(lambda x: "0x%04X" % x, t))
+            ligres += " },\n"
     ligres += "    { 0, 0, " + ", ".join("0" * maxliglength) + " }\n};\n"
 else :
     ligres += "#define MAXLIGLENGTH 0\n#define LIGSIZE 0\n#define aLigature NULL\n"
