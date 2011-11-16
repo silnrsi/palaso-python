@@ -12,12 +12,7 @@ class TTXLEFont(LEFontInstance) :
         self.tables = {}
 
     def getFontTable(self, table) :
-        if table in self.tables :
-            res = self.tables[table]
-        else :
-            res = self.ttx.getTableData(table)
-            self.tables[table] = res
-        return res
+        return self.ttx.getTableData(table)
 
     def getAscent(self) :
         self.ttx['hhea'].ascent * self.size * 1. / self.upem
@@ -48,7 +43,7 @@ class TTXLEFont(LEFontInstance) :
         y = 0.
         try :
             y = self.ttx['vmtx'][name][0] * self.size * 1. / self.upem
-        except :
+        except KeyError :
             pass
         return (x, y)
 

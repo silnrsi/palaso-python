@@ -1,7 +1,10 @@
 
 import palaso.font.graphite as gr
 import palaso.font.hbng as hb
+import palaso.font.icule as icule
 import freetype as ft
+from icu import LayoutEngine as le
+from icu import ScriptCode, LanguageCode
 
 class Font(object) :
     def __init__(self, fname, size, rtl) :
@@ -71,7 +74,23 @@ class HbFont(Font) :
             y += g.advance[1]
         return res
 
-        
+class IcuFont(Font) :
+    def __init__(self, fname, size, rtl, feats={}, script=0, lang=0) :
+        super(IcuFont, self).__init__(fname, size, rtl)
+        self.font = icule.TTXLEFont(fname)
+        self.layout = le.layoutEngineFactory(self.font, getattr(ScriptCode, script, ScriptCode.zyyy) if script else ScriptCode.zyyy, getattr(LanguageCode, lang, LanguageCode.nul) if lang else LanguageCode.nul)
+
+    def glyphs(self, text) :
+        if not len(text) : return []
+        self.layout.layoutChars(unicode(text))
+        gids = self.layout.getGlyphs()
+        poss = self.layout.getGlyphPositions()
+        res = []
+        for i in range(len(gids)) :
+            res.append((gids[i], poss[i]))
+        return res
+ 
+
 class StringCutter(object) :
     def __init__(self, tfont, wfont, rfont, befores, afters, width, refspace = None) :
         self.befores = befores
