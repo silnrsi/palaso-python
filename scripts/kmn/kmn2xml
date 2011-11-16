@@ -37,7 +37,7 @@ outformats = {
     <key id=\"{0}\" unshift='{1}' shift='{2}'/>
 '''.format,
         'footer' : u'''</keyboard>''',
-        'prep' : lambda x : x,
+        'prep' : lambda x : " ".join(map(quote, x)),
         'bytes' : lambda x : x},
 
     'utr22' : {
@@ -85,7 +85,7 @@ def quote(cs):
 
 
 def output_chars(keypresses):
-    return [quote(kb.run_items([it])) for it in kmn.keysyms_items(keypresses)]
+    return [kb.run_items([it]) for it in kmn.keysyms_items(keypresses)]
 
 def output_modified_chars(keytops, mod) :
     keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops)
@@ -93,7 +93,7 @@ def output_modified_chars(keytops, mod) :
     for it in keys :
         k = kmn.keysym_item(it)
         r = kb.run_items([k])
-        res.append(quote(r))
+        res.append(r)
     return res
 #    return [quote(kb.run_items([kmn.keysym_item(it)])) for it in keys]
 
