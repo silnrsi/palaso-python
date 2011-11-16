@@ -36,7 +36,8 @@ if not opts.rtl : opts.rtl = 0
 if opts.output :
     outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
 else :
-    outfile = codecs.EncodedFile(sys.stdout, "utf_8")
+#    outfile = codecs.EncodedFile(sys.stdout, "unicode_internal", file_encoding="utf_8")
+    outfile = codecs.getwriter("utf_8")(sys.stdout)
 
 feats = {}
 if opts.feat :
