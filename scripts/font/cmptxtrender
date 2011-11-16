@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import codecs
-from palaso.font.stringcut import GrFont, HbFont
+from palaso.font.stringcut import GrFont, HbFont, IcuFont
 from optparse import OptionParser
 from fontTools.ttLib import TTFont
 import sys
@@ -26,7 +26,8 @@ parser.add_option("-k","--keep",action="store_true",help="keep going, don't retu
 
 shapers = {
     'gr' : GrFont,
-    'ot' : HbFont
+    'ot' : HbFont,
+    'icu' : IcuFont
 }
 
 if opts.engine not in shapers : opts.engine = "gr"
