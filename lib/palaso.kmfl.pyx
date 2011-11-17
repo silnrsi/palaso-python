@@ -136,7 +136,7 @@ _storemap = {
 cdef class kmfl :
 
     cdef KMSI *kmsi
-    cdef UINT kbd
+    cdef int kbd
 
     def __init__(self, fname) :
         self.kmsi = kmfl_make_keyboard_instance(self)
