@@ -19,13 +19,13 @@ nonword_cat = set(['Nd','Nl','No','Pc','Ps','Pe','Pi','Pf','Po','Sm','Sc','Sk','
          Separator
          Other,{Control,Format}'''
 
-def word_char(char, words, nonwords, category=word_cat):
+def word_char(char, words, nonwords, category=word_cat, __ucd_category=unicodedata.category):
     '''Test character for membership in word_cat set where characters in 
        opts.word are considered to be Letter,Other and characters in 
        opts.nonword are considered to be Punctuation,Other.'''
     cat = (char in words and 'Lo' 
         or char in nonwords and 'Po' 
-        or unicodedata.category(char))
+        or __ucd_category(char))
     return cat in category
 
 
