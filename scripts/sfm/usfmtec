@@ -13,10 +13,9 @@ Tim Eves provided the concordance program on which this is based.
 
 from palaso.sfm import usfm, style, pprint, element, text
 from palaso.teckit.engine import Converter, Mapping
+from itertools import groupby, chain, imap
 import palaso.unicsv as csv
-import codecs, optparse, os.path, re, warnings, sys
-import unicodedata
-from itertools import groupby
+import codecs, glob, optparse, os.path, re, warnings, sys, unicodedata
 
 class scrparser(usfm.parser) :
     def _canonicalise_footnote(self, content) :
@@ -232,13 +231,13 @@ if __name__ == '__main__':
     parser.add_option("--sentencepunc",action="store",help="list of sentence final punctuation with \u escaping [default: %default]")
     parser.add_option("--capitalopenquotes",action="store",help="list of chars that force a new sentence [default value of --openquotes]")
     parser.add_option("--letters",action="store",help="more word forming characters, with \u escaping")
-    parser.add_option("-d","--dict",action="store",help="CSV dictionary of input output replacements")
+    parser.add_option("-d","--dict", action="store", metavar='PATH', help="CSV dictionary of input output replacements")
     parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column of CSV dictionary [%default]")
     parser.add_option("--dict-output",action="store",type="int",default=1,dest="dictoutput",help="Output column of CSV dictionary [%default]")
     parser.add_option("--dict-context",action="store",type="int",dest="dicttag",help="Marker context column of CSV dictionary")
     parser.add_option("-n","--lines",action="store_true",help="Don't parse as USFM, just as plain text")
-    parser.add_option("-o","--output",action="store",help="Specify output file or directory")
-    parser.add_option("-t","--tec",action="store",help="TECKit .tec file to use for conversion")
+    parser.add_option("-o","--output",action="store",metavar='PATH',help="Specify output file or directory")
+    parser.add_option("-t","--tec",action="store",metavar='PATH',help="TECKit .tec file to use for conversion")
     parser.add_option("-r","--reverse",action="store_true",help="Run .tec file in reverse")
     parser.add_option("--normalize",action="store",help="Unicode normalize converted text [c,d,kc,kd]")
     parser.add_option("-v","--verbose",action='store_true',default=False,
@@ -267,8 +266,13 @@ if __name__ == '__main__':
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     
+    sfms        = list(chain.from_iterable(imap(glob.iglob, sfms)))
+    opts.dict   = os.path.expanduser(opts.dict)
+    opts.output = os.path.expanduser(opts.output)
+    opts.tec    = os.path.expanduser(opts.tec)
+
     if opts.stylesheet:
-        stylesheet_path = opts.stylesheet
+        stylesheet_path = os.path.expanduser(opts.stylesheet)
         opts.stylesheet = usfm.default_stylesheet.copy()
         opts.stylesheet.update(style.parse(open(stylesheet_path,'r')))
     else:

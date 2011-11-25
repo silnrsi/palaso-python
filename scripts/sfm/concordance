@@ -60,13 +60,13 @@ nonword_cat = set(['Nd','Nl','No','Pc','Ps','Pe','Pi','Pf','Po','Sm','Sc','Sk','
          Other,{Control,Format}'''
 
 
-def word_char(char):
+def word_char(char, __ucd_category=unicodedata.category):
     '''Test character for membership in word_cat set where characters in 
        opts.word are considered to be Letter,Other and characters in 
        opts.nonword are considered to be Punctuation,Other.'''
     cat = (char in opts.word and 'Lo' 
         or char in opts.nonword and 'Po' 
-        or unicodedata.category(char))
+        or __ucd_category(char))
     return cat in word_cat
 
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
         sys.exit(1)
     if opts.stylesheet:
-        stylesheet_path = opts.stylesheet
+        stylesheet_path = os.path.expanduser(opts.stylesheet)
         opts.stylesheet = usfm.default_stylesheet.copy()
         opts.stylesheet.update(style.parse(open(stylesheet_path,'r')))
     else:
