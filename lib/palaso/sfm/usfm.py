@@ -101,7 +101,7 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None, '
 class parser(sfm.parser):
     default_meta = _default_meta
     numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)',re.UNICODE)
-    caller_re = re.compile(r'\s*([-+\w])',re.UNICODE)
+    caller_re = re.compile(r'\s*([^\s\\])',re.UNICODE)
     sep_re = re.compile(r'\s|$',re.UNICODE)
     
     @classmethod
