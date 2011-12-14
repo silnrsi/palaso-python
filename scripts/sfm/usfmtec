@@ -266,10 +266,10 @@ if __name__ == '__main__':
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     
-    sfms        = list(chain.from_iterable(imap(glob.iglob, sfms)))
-    opts.dict   = os.path.expanduser(opts.dict)
+    sfms = list(chain.from_iterable(imap(glob.iglob, sfms)))
+    if opts.dict : opts.dict = os.path.expanduser(opts.dict)
     opts.output = os.path.expanduser(opts.output)
-    opts.tec    = os.path.expanduser(opts.tec)
+    if opts.tec : opts.tec = os.path.expanduser(opts.tec)
 
     if opts.stylesheet:
         stylesheet_path = os.path.expanduser(opts.stylesheet)

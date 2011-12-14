@@ -385,6 +385,7 @@ for m in mods :
         if ekn :
             extkeynames[sc] = ekn
         res = km.interpret_items([kmn.keysym_item(ksym)])
+        if not len(res) : continue
         if (res[0] >> 24) == 5 :
             keys[vkc][mod] = unichr(0xF001)
             deads.append(ksym)

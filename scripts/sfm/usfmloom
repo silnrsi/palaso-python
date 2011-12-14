@@ -74,11 +74,11 @@ if __name__ == '__main__':
                      metavar='PATH', default=None,
                      help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
     parser.add_option("-c","--seperator",action='store',type='string',
-                     metavar='SEPERATOR', default='_',
+                     metavar='SEPERATOR', default='',
                      help='Seperator between marker and source document tag default: \'%default\'')
     parser.add_option("-t","--tags",action='store',type='string',
                      metavar='TAG1,TAG2[,...,TAGN]', default=None,
-                     help='Comma separated list of postfix document tags for marker renaming: \'l,[m],r\'')
+                     help='Comma separated list of postfix document tags for marker renaming: \'L,[M],R\'')
     
     opts,sfms = parser.parse_args()
     if len(sfms) < 3:
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     else:
         opts.stylesheet = usfm.default_stylesheet    
     if not opts.tags:
-        if   len(sfms) == 3: opts.tags = ['l','r']
-        elif len(sfms) == 4: opts.tags = ['l','m','r']
+        if   len(sfms) == 3: opts.tags = ['L','R']
+        elif len(sfms) == 4: opts.tags = ['L','M','R']
         else:                opts.tags = range(1,len(sfms))
     else:
         opts.tags = map(operator.methodcaller('strip'), opts.tags.split(','))
