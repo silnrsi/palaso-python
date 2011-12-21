@@ -463,7 +463,7 @@ resdeadname = "ROSDATA LPWSTR aDeadKeyName[] = {\n"
 for d in dkeys :
     for m in d :
         if m : resdeadname += "    \"%s\",\n" % (unicodedata.name(m))
-resdeadname += '    ""\n};'
+resdeadname += '    NULL\n};'
 
 ligres = ""
 if maxliglength :
