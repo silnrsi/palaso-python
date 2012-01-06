@@ -103,6 +103,8 @@ typedef struct _LIGATURE ## i { \
     BYTE nLgMaxd;
     BYTE cbLgEntry;
     PLIGATURE1 pLigature;
+    DWORD dwType;
+    DWORD dwSubType;
   } KBDTABLES, *PKBDTABLES;
 
   /* Constants that help table decoding */
@@ -512,10 +514,11 @@ ROSDATA KBDTABLES aKbdTables = {
     sizeof(scancode_to_vk) / sizeof(scancode_to_vk[0]),
     extcode0_to_vk,    
     extcode1_to_vk,
-    0,
+    0x00010001,
     MAXLIGLENGTH,
     LIGSIZE,
-    aLigature
+    aLigature,
+    4, 0
 };
 
 PKBDTABLES KbdLayerDescriptor(void) {
