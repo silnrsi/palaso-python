@@ -42,10 +42,10 @@ class writer:
         self.__writer = csv.writer(_utf8_recoder(f,encoding), dialect, *args, **kwds)
     
     def writerow(self,row):
-        self.__writer.writerow(unicode(cell).encode('utf-8') for cell in row)
+        self.__writer.writerow([unicode(cell).encode('utf-8') for cell in row])
     
     def writerows(self,rows):
-        self.__writer.writerows([unicode(cell).encode('utf-8') for cell in row] for row in rows)
+        self.__writer.writerows([[unicode(cell).encode('utf-8') for cell in row] for row in rows])
     
     @property
     def dialect(self): return self.__writer.dialect
