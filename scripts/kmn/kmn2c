@@ -300,6 +300,7 @@ overrides = {
 km = kmfl(kb)
 for k, v in overrides.items() :
     opts.ensure_value(k, km.store(v))
+if not opts.language : opts.language = "und"
 
 if opts.output :
     outfile = file(opts.output, "w")
