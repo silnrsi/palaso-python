@@ -480,7 +480,7 @@ if maxliglength :
             for c in l :
                 char = ord(kmn.item_to_char(c))
                 if char > 0xFFFF :
-                    t.extend([0xD800 + char / 1024, 0xDC00 + (char & 1023)])
+                    t.extend([0xD7C0 + char / 1024, 0xDC00 + (char & 1023)])
                 else :
                     t.append(char)
             t.extend([0xF000] * (maxliglength - len(t)))
