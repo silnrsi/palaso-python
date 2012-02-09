@@ -270,7 +270,7 @@ ROSDATA VSC_VK extcode1_to_vk[] = {
 
 key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
-unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
+unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./ '''
 
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n')
 parser.add_option("-n","--name", action='store', help='MSKLC Project name')
@@ -435,24 +435,24 @@ for d in deads :
 donekeys = [0] * 256
 keyres = ""
 listres = "ROSDATA VK_TO_WCHAR_TABLE aVkToWcharTable[] = {\n"
-for l in range(len(modids) - 1, 0, -1) :
+for l in range(len(modids), 0, -1) :
     res = []
     for v in range(len(keys)) :
         if donekeys[v] : continue
-        if keys[v][modids[l]] :
+        if keys[v][modids[l-1]] :
             donekeys[v] = True
             res.append([v, 0])
-            res[-1].extend([keys[v][modids[i]] for i in range(l + 1)])
+            res[-1].extend([keys[v][modids[i]] for i in range(l)])
     if len(res) :
-        keyres += "ROSDATA VK_TO_WCHARS%d aVkToWch%d[] = {\n" % (l + 1, l + 1)
+        keyres += "ROSDATA VK_TO_WCHARS%d aVkToWch%d[] = {\n" % (l, l)
         for r in res :
             keyres += "    { 0x%02x,    %d,  " % (r[0], r[1])
             keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(x)), r[2:])) + "},\n"
             if unichr(0xF001) in r[2:] :
                 keyres += "    { -1,    0,  "
                 keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(dkeys[r[0]][i]) if r[2+i] == unichr(0xF001) else 0xF000), range(0, len(r) - 2))) + "},\n"
-        keyres += "{ " + ", ".join ("0" * (l + 3)) + "}};\n\n"
-        listres += "    { (PVK_TO_WCHARS1)aVkToWch%d, %d, sizeof(aVkToWch%d[0]) },\n" % (l + 1, l + 1, l + 1)
+        keyres += "{ " + ", ".join ("0" * (l + 2)) + "}};\n\n"
+        listres += "    { (PVK_TO_WCHARS1)aVkToWch%d, %d, sizeof(aVkToWch%d[0]) },\n" % (l, l, l)
 listres += "    { NULL, 0, 0 }\n};\n"
 
 deadres = ""
