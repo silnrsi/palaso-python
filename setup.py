@@ -7,6 +7,7 @@ import platform, sys
 if platform.system() == "Windows" or '--nokmn' in sys.argv:
     ext = []
     cmd = {}
+    sys.argv.remove('--nokmn')
 else :
     from Pyrex.Distutils.extension import Extension
     from Pyrex.Distutils import build_ext
