@@ -4,10 +4,13 @@ from distutils.core import setup
 from glob import glob
 import platform, sys
 
-if platform.system() == "Windows" or '--nokmn' in sys.argv:
+if '--nokmn' in sys.argv:
     ext = []
     cmd = {}
     sys.argv.remove('--nokmn')
+elif platform.system() == "Windows":
+    ext = []
+    cmd = {}
 else :
     from Pyrex.Distutils.extension import Extension
     from Pyrex.Distutils import build_ext
