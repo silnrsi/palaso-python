@@ -288,7 +288,7 @@ if __name__ == '__main__':
         work.append((sfms[0],opts.output))
         first_def = 1
     else :
-        work.extend(zip(sfms, map(lambda x: os.path.join(opts.stdout, os.path.split(x)[1]), sfms)))
+        work.extend(zip(sfms, map(lambda x: os.path.join(opts.output, os.path.split(x)[1]), sfms)))
     if first_def > -1 :
         work.extend(zip(sfms[first_def:], map(lambda x: x+"_u", sfms[first_def:])))
 
