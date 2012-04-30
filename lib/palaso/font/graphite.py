@@ -155,12 +155,12 @@ class Face(object) :
 
     def get_featureval(self, lang) :
         if isinstance(lang, basestring) :
-            lang = gr_str_to_tag(lang)
+            lang = gr2.gr_str_to_tag(lang)
         return FeatureVal(gr2.gr_face_featureval_for_lang(self.face, lang))
 
     def get_featureref(self, featid) :
         if isinstance(featid, basestring) :
-            featid = gr_str_to_tag(featid)
+            featid = gr2.gr_str_to_tag(featid)
         return FeatureRef(gr2.gr_face_find_fref(self.face, featid))
 
     @property

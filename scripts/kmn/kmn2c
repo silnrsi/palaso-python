@@ -397,7 +397,7 @@ for m in mods :
             ligs[vkc][mod] = res
             liglen = 0
             for r in res :
-                if kmn.item_to_char(r) > 0xFFFF :
+                if ord(kmn.item_to_char(r)) > 0xFFFF :
                     liglen += 2
                 else :
                     liglen += 1
@@ -432,6 +432,9 @@ for d in deads :
             else :
                 deadkeys[vkc][modgroups[mod]][keys[vkc2][mod2]] = kmn.item_to_char(res[-1])
 
+# U+F000 - ignore
+# U+F001 - deadkey
+# U+F002 - ligature
 donekeys = [0] * 256
 keyres = ""
 listres = "ROSDATA VK_TO_WCHAR_TABLE aVkToWcharTable[] = {\n"
@@ -447,7 +450,7 @@ for l in range(len(modids), 0, -1) :
         keyres += "ROSDATA VK_TO_WCHARS%d aVkToWch%d[] = {\n" % (l, l)
         for r in res :
             keyres += "    { 0x%02x,    %d,  " % (r[0], r[1])
-            keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(x)), r[2:])) + "},\n"
+            keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(x) if x else 0xF000), r[2:])) + "},\n"
             if unichr(0xF001) in r[2:] :
                 keyres += "    { -1,    0,  "
                 keyres += ",\t".join(map(lambda x: "0x%04X" % (ord(dkeys[r[0]][i]) if r[2+i] == unichr(0xF001) else 0xF000), range(0, len(r) - 2))) + "},\n"
@@ -518,7 +521,7 @@ ROSDATA KBDTABLES aKbdTables = {
     0x00010001,
     MAXLIGLENGTH,
     LIGSIZE,
-    aLigature,
+    (PLIGATURE1)aLigature,
     4, 0
 };
 
