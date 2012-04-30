@@ -271,6 +271,7 @@ _vkextras = {
 }
 
 _keynames = dict((v[0], k) for k, v in _rawkeys.items())
+_keyshiftnames = dict((v[1], k) for k, v in _rawkeys.items())
 
 _keysyms = {
     ' ' : "K_SPACE",
@@ -360,7 +361,8 @@ def item_to_key(item) :
                 modstr += m + " "
                 mods &= ~modifier
                 # lowercase uppercase keys (0x11 any shift)
-                if modifier & 0x11 : key += 0x20
+                if modifier & 0x11 and _keyshiftnames.has_key(key) :
+                    key = _rawkeys[_keyshiftnames[key]][0]
         if not modstr and key < 0x100:
             return char_keysym(unichr(key))
 
