@@ -73,6 +73,10 @@ class usfm_transducer(object) :
             self.ctags = set(opts.capitaltags.split())
         else :
             self.ctags = set()
+        if opts.capitalalltags :
+            self.calltags = set(opts.capitalalltags.split())
+        else :
+            self.calltags = set()
         if opts.normalize :
             self.normal = 'NF' + opts.normalize.upper()
         else :
@@ -189,7 +193,7 @@ class usfm_transducer(object) :
 
         res = re.sub(ur'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
 
-        if self.tnode.parent.meta['TextType'] == 'Title' and self.capquotes:
+        if (self.tnode.parent.meta['TextType'] == 'Title' or self.tnode.parent.name in self.calltags) and self.capquotes:
             res = re.sub(ur'(^\s*|\s)([' + self.capquotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
         elif self.capquotes :
             res = re.sub('(?<=[' + self.capquotes + ur'])([' + self.oquotes + ']*)(.)', lambda m: m.group(1) + m.group(2).upper() if isword(m.group(2)[0]) else m.group(1) + m.group(2), res)
@@ -226,6 +230,7 @@ if __name__ == '__main__':
     parser.add_option("-b","--binary",action="store_true",help="Input is legacy encoded, not Unicode")
     parser.add_option("-c","--capitalise",action="store",help="regular expression match which is capitalised")
     parser.add_option("--capitaltags",action="store",help="list of tags to capitalise their contents")
+    parser.add_option("--capitalalltags",action="store",help="list of tags to capitalise each word in their contents")
     parser.add_option("--openquotes",action="store",help="list of opening quote chars as a string with \u escaping [default: %default]")
     parser.add_option("--closequotes",action="store",help="list of closing quote chars as a string with \u escaping [default: %default]")
     parser.add_option("--sentencepunc",action="store",help="list of sentence final punctuation with \u escaping [default: %default]")
