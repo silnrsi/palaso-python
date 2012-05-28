@@ -23,7 +23,7 @@ from htmlentitydefs import codepoint2name
 
 key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
-unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
+unshifted = r'''`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./'''
 
 xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" : '&apos;' }
 
@@ -88,7 +88,7 @@ def output_chars(keypresses):
     return [kb.run_items([it]) for it in kmn.keysyms_items(keypresses)]
 
 def output_modified_chars(keytops, mod) :
-    keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops)
+    keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops.replace(r'\\', '\\'))
     res = []
     for it in keys :
         k = kmn.keysym_item(it)

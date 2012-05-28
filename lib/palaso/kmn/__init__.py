@@ -325,7 +325,7 @@ sc_E0vks = (
 sc_E1vks = ((0x1D, 0x0013))
 
 def keysyms_items(syms) :
-    return [keysym_item(s) for s in re.split(ur'(\\.|\[[^\]]*\]|.)', syms)[1::2]]
+    return [keysym_item(s) for s in re.split(ur'(\\.|(?:\[[^\]]+\])|.)', syms)[1::2]]
 
 def keysym_item(sym) :
     if re.match(r'^\[[^\]]+\]$', sym) :
