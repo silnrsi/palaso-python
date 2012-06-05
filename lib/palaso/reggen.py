@@ -149,7 +149,7 @@ def _proc(pattern, data, match) :
             for s in _iterate(pattern, d, match) :
                 yield s
     else :
-        raise SyntaxError("Unprocessable regular expression operator: %" % (op.str()))
+        raise SyntaxError("Unprocessable regular expression operator: %s" % op)
 
 def _chars(rdata) :
     op = rdata[0]
@@ -160,6 +160,46 @@ def _chars(rdata) :
         yield rdata[1]
     else :
         raise SyntaxError, "Unrecognised character group operator: " + op
+
+def _len_proc(data) :
+    res = 1
+    for d in data :
+        res *= _len(d)
+    return res
+
+def _len(data) :
+    op = data[0]
+    if op == 'literal' :
+        return 1
+    elif op == 'max_repeat' :
+        minc = data[1][0]
+        maxc = data[1][1]
+        mult = maxc - minc
+        res = _len_proc(data[1][2]) * mult
+        if minc == 0 :
+            return res + 1
+        else :
+            return res
+    elif op == 'subpattern' :
+        return _len_proc(data[1][1])
+    elif op == 'in' :
+        res = 0
+        for r in data[1] :
+            inop = r[0]
+            if inop == 'range' :
+                res += r[1][1] - r[1][0] + 1
+            elif inop == 'literal' :
+                res += 1
+            else :
+                raise SyntaxError, "Unrecognised character group operator: " + op
+        return res
+    elif op == 'branch' :
+        res = 0
+        for r in data[1][1] :
+            res += _len_proc(r)
+        return res
+    else :
+        raise SyntaxError("Unprocessable regular expression operator: %s" % str(op))
 
 def expand_sub(string, template, debug=0, mode='all') :
     """ Given a regular expression and a replacement string, generate expansions of
@@ -200,6 +240,12 @@ def invert(string, mode='all') :
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         yield s.string
 
+def inversionlength(string) :
+    """ Given a regular expression, returns the number of strings that regular expression
+        would generate if pass to invert(string, 'all')"""
+    pattern = sre_parse.parse(string)
+    return _len_proc(pattern.data)
+    
 if __name__ == "__main__" :
     tests=[
         ('([ab])([cd])', r'\2\1'),
