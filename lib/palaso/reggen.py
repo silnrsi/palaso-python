@@ -161,25 +161,32 @@ def _chars(rdata) :
     else :
         raise SyntaxError, "Unrecognised character group operator: " + op
 
+def geom(a, x) :
+    if a == 1 : return x
+    return a * (1 - a ** x) / (1 - a)
+
 def _len_proc(data) :
     res = 1
+    depth = 0
     for d in data :
-        res *= _len(d)
-    return res
+        (r, dp) = _len(d)
+        res *= r
+        depth += dp
+    return (res, depth)
 
 def _len(data) :
     op = data[0]
     if op == 'literal' :
-        return 1
+        return (1, 1)
     elif op == 'max_repeat' :
         minc = data[1][0]
         maxc = data[1][1]
         mult = maxc - minc
-        res = _len_proc(data[1][2]) * mult
+        (res, depth) = _len_proc(data[1][2])
         if minc == 0 :
-            return res + 1
+            return (geom(res, maxc) + 1, depth * maxc)
         else :
-            return res
+            return (geom(res, maxc) - geom(res, minc), depth * maxc)
     elif op == 'subpattern' :
         return _len_proc(data[1][1])
     elif op == 'in' :
@@ -192,12 +199,15 @@ def _len(data) :
                 res += 1
             else :
                 raise SyntaxError, "Unrecognised character group operator: " + op
-        return res
+        return (res, 1)
     elif op == 'branch' :
         res = 0
+        depth = 0
         for r in data[1][1] :
-            res += _len_proc(r)
-        return res
+            (l, d) = _len_proc(r)
+            res += l
+            if d > depth : depth = d
+        return (res, depth)
     else :
         raise SyntaxError("Unprocessable regular expression operator: %s" % str(op))
 
@@ -214,7 +224,7 @@ def expand_sub(string, template, debug=0, mode='all') :
             first : return the first string that all would return
             random : return one random string that the regular expression would match
     """
-    pattern = sre_parse.parse(string)
+    pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
     pattern.mode = mode
     template = sre_parse.parse_template(template, pattern)
     if debug :
@@ -235,15 +245,15 @@ def invert(string, mode='all') :
             first : return the first string that all would return
             random : return one random string that the regular expression would match
     """
-    pattern = sre_parse.parse(string)
+    pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
     pattern.mode = mode
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         yield s.string
 
 def inversionlength(string) :
-    """ Given a regular expression, returns the number of strings that regular expression
-        would generate if pass to invert(string, 'all')"""
-    pattern = sre_parse.parse(string)
+    """ Given a regular expression, returns the number of strings and maximum string length
+        that the regular expression would generate if pass to invert(string, 'all')"""
+    pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
     return _len_proc(pattern.data)
     
 if __name__ == "__main__" :
