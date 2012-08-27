@@ -9,7 +9,7 @@ anchortypes = {
     'mark' : (1, None),
     'base' : (0, 'base'),
     'ligature' : (0, None),
-    'basemark' : (1, 'mark'),
+    'basemark' : (0, None),
     'entry' : (1, None),
     'exit' : (0, 'cursive')
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import re, urllib, os, time, smtplib, csv
+import re, urllib, os, time, smtplib, csv, sys, gzip, cStringIO
 from optparse import OptionParser
 from palaso.debian.sources import source_collection, package_collection, arch_expects_bin, getdistro, getarch, getbasever
 from email.mime.text import MIMEText
@@ -75,6 +75,7 @@ p.add_option('-b', '--binary', action = 'store_true', help = 'only do binary bui
 p.add_option('-c', '--conf', help = 'pdebuilder configfile')
 p.add_option('-d', '--distro', help = 'distribution')
 p.add_option('-f', '--failures', help = 'csv package,version of failed builds')
+p.add_option('-l', '--list', action = 'store_true', help = 'Output list of packages and what needs to be done, but don\'t build anything')
 p.add_option('-p', '--put' , help = 'dput target')
 p.add_option('-s', '--section', help = 'distribution section to process')
 p.add_option('-u', '--update', action = 'store_true', help = 'start by updating the pbuilder environment')
@@ -87,9 +88,8 @@ p.add_option('--mail-pwd', dest = 'password', help = "password to login to mail 
 (opts, args) = p.parse_args()
 host = args[0]
 
-f = urllib.urlopen(host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources")
-x = source_collection(f)
-f.close()
+baseurl = host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources"
+x = source_collection(baseurl)
 
 times = {}
 (y, ptime) = load_packages(times, opts, host)
@@ -106,6 +106,8 @@ res = x.all()
 todo = []
 buildindep = set()
 for s in res :
+    if opts.list :
+        print "Testing " + s
     for b in re.split(r"\s*,\s*", x.sources[s]['binary']) :
         if not b in y.sources and arch_expects_bin(opts.arch, b) :
             if len(todo) == 0 or todo[-1] != s : todo.append(s)
@@ -114,6 +116,7 @@ for s in res :
 
 for s in todo :
     print "Need to build " + s
+    if opts.list : continue
     src = x.sources[s]
     if s in failures and failures[s] == src['version'] : continue
     update_required = False
