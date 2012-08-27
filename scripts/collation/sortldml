@@ -10,6 +10,7 @@ with defaultapp() :
     usage = "%prog -l ldml_file [infile [outfile]]"
     parser = OptionParser(usage)
     parser.add_option("-l", "--ldml", help = "LDML file containing collation")
+    parser.add_option("-i", "--icu", help = "ICU file containing collation")
     parser.add_option("-a", "--alt", help = "Optional alternate collation to use")
     parser.add_option("-d", "--depth", default = 15, help = "sort level")
     parser.add_option("-p", "--preprocess", action="store_true", help = "Preprocess strings rather than flatten")
@@ -46,6 +47,10 @@ with defaultapp() :
             for e in errors :
                 sys.stderr.write("Reset with primary: " + e.encode('utf-8') + " has multiple elements\n")
         tailor = collation.asICU()
+    elif options.icu :
+        f = codecs.open(options.icu, encoding="utf8")
+        tailor = "".join(f.readlines())
+        f.close()
     else :
         tailor = ""
     results = palaso.collation.icu.sorted(tailor, infile.readlines(), level=options.depth, preproc = collation.reorders if options.preprocess else ())

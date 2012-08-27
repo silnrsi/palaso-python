@@ -4,11 +4,13 @@ import urllib, ConfigParser, os, re
 from optparse import OptionParser
 from palaso.debian.sources import source_collection, getdistro, getbasever
 
-p = OptionParser(usage = "%prog [options] repo_url")
+p = OptionParser(usage = "%prog [options] repo_url [package [package ...]]")
 p.set_defaults(distro = getdistro(), section = "main")
 p.add_option('-a', '--arch', help = 'Architecture to build for')
+p.add_option('-b', '--backport', action='store_true', help='add ~backport to version')
 p.add_option('-d', '--distro', help = 'distribution')
 p.add_option('-e', '--edits', help = 'config file giving control values per package')
+p.add_option('-l', '--list', action = 'store_true', help = 'Don\'t do anything, just list would be done')
 p.add_option('-n', '--newdistro', help = 'new distribution')
 p.add_option('-p', '--put' , help = 'dput target')
 p.add_option('-s', '--section', help = 'distribution section to process')
@@ -16,18 +18,10 @@ p.add_option('-s', '--section', help = 'distribution section to process')
 host = args[0]
 
 url = host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources"
-f = urllib.urlopen(url)
-x = source_collection(f)
-f.close()
+x = source_collection(url)
 print "Found %d packages in the original repository" % len(x.sources)
 
-try :
-    f = urllib.urlopen(host + "/dists/" + opts.newdistro + "/" + opts.section + "/source/Sources")
-except IOError :
-    f = file("/dev/null")
-
-y = source_collection(f)
-f.close()
+y = source_collection(host + "/dists/" + opts.newdistro + "/" + opts.section + "/source/Sources")
 print "Found %d packages in the target repository" % len(y.sources)
 
 edits = ConfigParser.ConfigParser()
@@ -35,6 +29,7 @@ if opts.edits :
     edits.read(opts.edits)
     
 for s in x.sources :
+    if len(args) > 1 and s not in args[1:] : continue
     if s in y.sources : continue
     if edits.has_option(s, 'Remove') : continue
     src = x.sources[s]
@@ -43,9 +38,14 @@ for s in x.sources :
         v = edits.get(s, 'Version') 
     newv = v.replace(opts.distro, opts.newdistro)
     if newv == v :
-        newv = v + "+" + opts.newdistro + "1"
+        if opts.backport :
+            newv = v + "~backport"
+        else :
+            newv = v
+        newv = newv + "+" + opts.newdistro + "1"
     basever = getbasever(v)
     print "%s: %s(%s) -> %s" % (s, v, basever, newv)
+    if opts.list : continue
     dir = "%s-%s" % (s, basever)
     x.download(s, dir, host)
     os.chdir(dir)

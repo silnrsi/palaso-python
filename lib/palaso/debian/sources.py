@@ -1,13 +1,39 @@
 
 from debian_bundle.deb822 import Sources, Packages
 from subprocess import Popen, PIPE
-import re, itertools, os, urllib, subprocess
+import re, itertools, os, urllib, subprocess, gzip, cStringIO, sys, urllib
+
+class unzipurlfile(gzip.GzipFile) :
+
+    def __init__(self, f) :
+        self.resf = cStringIO.StringIO()
+        self.resf.write(f.read())
+        self.resf.seek(0)
+        super(unzipurlfile, self).__init__(fileobj = self.resf)
+
+    def close(self) :
+        super(unzipurlfile, self).close()
+        self.resf.close()
+
 
 class source_collection(object) :
     """Manages a Sources file of multiple source packages"""
     def __init__(self, seq) :
         self.sources = {}
         self.binaries = {}
+        if isinstance(seq, basestring) :
+            url = seq
+            f = urllib.urlopen(url)
+            if f.getcode() >= 300 :
+                f.close()
+                fz = urllib.urlopen(url + ".gz")
+                if fz.getcode() >= 300 :
+                    fz.close()
+                    print "Unable to open Sources file: " + url
+                    sys.exit(1)
+                f = unzipurlfile(fz)
+                fz.close()
+            seq = f
         x = Sources(seq)
         while len(x) > 0 :
             if not self.sources.has_key(x['package']) or not subprocess.call(["dpkg", "--compare-versions", self.sources[x['package']]['version'], "lt", x['version']]):
@@ -15,6 +41,8 @@ class source_collection(object) :
                 for b in re.split(r"\s*,\s*", x['binary']) :
                     self.binaries[b] = x['package']
             x = Sources(seq)
+        if isinstance(seq, basestring) :
+            f.close()
 
     def all(self) :
         """returns a list of source packages in dependency order. That is
