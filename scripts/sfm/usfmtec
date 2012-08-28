@@ -86,8 +86,9 @@ class usfm_transducer(object) :
         morph_keys = []
         fh = open(fname, 'rb')
         entries = csv.reader(fh, skipinitialspace=True)
+        maxcol = max(incol, outcol, tagcol)
         for e in entries :
-            if not len(e) or e[0][0] == "#" : continue
+            if len(e) <= maxcol or (len(e[0]) and e[0][0] == "#") : continue
             k = self.enc.convert(e[incol], finished=True).strip()
             if k.find(self.morphid) != -1 :     # has stem marker
                 if k[0] != self.morphid :
