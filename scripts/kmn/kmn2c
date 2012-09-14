@@ -272,6 +272,8 @@ key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./ '''
 
+extkeys = ('[K_TAB]', '[K_ENTER]')
+
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n')
 parser.add_option("-n","--name", action='store', help='MSKLC Project name')
 parser.add_option("-o","--output", action="store", help='File to output .c to defaults to stdout')
@@ -333,8 +335,9 @@ for i in range(km.num_rules()) :
     if not sym : continue
     (sc, vkey, mod, kn, ekn, vkc) = kmn.keysym_klcinfo(sym)
     mods[mod].append(sym)
-for k in shifted + unshifted :
-    ksym = kmn.char_keysym(k)
+allkeys = map(kmn.char_keysym, shifted + unshifted)
+allkeys.extend(extkeys)
+for ksym in allkeys :
     sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(ksym)
     mods[mod].append(ksym)
     
@@ -387,8 +390,9 @@ for m in mods :
             keynames[sc] = kn
         if ekn :
             extkeynames[sc] = ekn
-        res = km.interpret_items([kmn.keysym_item(ksym)])
-        if not len(res) : continue
+        item = kmn.keysym_item(ksym)
+        res = km.interpret_items([item])
+        if not len(res) : res = [item]
         if (res[0] >> 24) == 5 :
             keys[vkc][mod] = unichr(0xF001)
             deads.append(ksym)
@@ -429,7 +433,7 @@ for d in deads :
             elif len(res) > 1 :
                 if res[0] >> 24 < 2 : 
                     dkeys[vkc][modgroups[mod]] = kmn.item_to_char(res[0])
-            else :
+            elif len(res) :
                 deadkeys[vkc][modgroups[mod]][keys[vkc2][mod2]] = kmn.item_to_char(res[-1])
 
 # U+F000 - ignore
@@ -461,8 +465,8 @@ listres += "    { NULL, 0, 0 }\n};\n"
 deadres = ""
 for i in range(len(deadkeys)) :
     for m in range(len(deadkeys[i])) :
-        for k in deadkeys[i][m] :
-            deadres += "{ MAKELONG(0x%04X, 0x%04X), 1, 0x%04X },\n" % (ord(k), ord(dkeys[i][m]), ord(deadkeys[i][m][k]))
+        for k, v in deadkeys[i][m].items() :
+            if v : deadres += "{ MAKELONG(0x%04X, 0x%04X), 0x%04X, 1 },\n" % (ord(k), i, ord(v))
 
 deadres = "ROSDATA DEADKEY aDeadKey[] = {\n" + deadres + "{ MAKELONG(0, 0), 0, 0}\n};\n"
 resdeadname = "ROSDATA LPWSTR aDeadKeyName[] = {\n"
