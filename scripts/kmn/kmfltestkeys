@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/python
 '''
 Given a sequence of key tops from a US 101 key keyboard or keyman symbol 
 notation on stdin print the key names followed by the output the keyman 

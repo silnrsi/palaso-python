@@ -375,6 +375,8 @@ def item_to_key(item) :
         return char_keysym(unichr(item))
 
 def item_to_char(item) :
+    if item < 0x110000 :
+        return unichr(item)
     sym = item_to_key(item)
     if len(sym) > 2 and sym[0] == '[' and sym[-1] == ']' :
         words = re.split(r'\s+', sym[1:-1].strip())
@@ -447,7 +449,7 @@ def keysym_klcinfo(sym) :
         else :
             vkey = vkey.replace("K_", "")
     else :
-        if sym == sym.upper() : mod = modifiers['Shift'][2]
+        if sym == sym.upper() : mod = _modifiers['Shift'][2]
         item, cap, sc, vkc, kn, ekn = _rawkeys["K_" + sym.upper()]
     return (sc, vkey, mod, kn, ekn, vkc)
 
