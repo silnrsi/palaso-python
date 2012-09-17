@@ -272,7 +272,7 @@ key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./ '''
 
-extkeys = ('[K_TAB]', '[K_ENTER]')
+extkeys = ('[K_TAB]', '[K_ENTER]', '[K_BKSP]')
 
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n')
 parser.add_option("-n","--name", action='store', help='MSKLC Project name')
