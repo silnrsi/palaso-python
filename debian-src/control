@@ -10,12 +10,10 @@ Standards-Version: 3.8.0
 Homepage: http://projects.palaso.org/projects/show/palaso-python
 
 Package: python-palaso
-Architecture: any
-XB-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, 
+Architecture: all
+Depends: ${misc:Depends}, 
         python-palaso-kbd, python-palaso-font, python-palaso-teckit, python-palaso-sfm,
         python-palaso-unicode
-Provides: ${python:Provides}
 Description: Payap Language Software python package and scripts
  Python scripts, modules and packages created by the Computing Unit at the 
  Payap Linguistic Institute, a partnership between SIL and Payap University. 
@@ -25,46 +23,57 @@ Description: Payap Language Software python package and scripts
 
 Package: python-palaso-kbd
 Architecture: any
-XB-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, libkmfl0, libkmflcomp0, palaso-python-core
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends},
+        libkmfl0, libkmflcomp0, palaso-python-core, python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: Payap Language Software python keyboard support
  Python scripts and modules for interacting with keyboard descriptions,
  particularly kmfl.
 
 Package: python-palaso-core
 Architecture: all
-XB-Python-Version: ${python:Versions}
-Depends: ${Python:Depends}
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: Payap Language Software general python modules
  Various general purpose python modules
 
 Package: python-palaso-font
 Architecture: all
-XB-Python-Version: ${python:Versions}
-Depends: ${Python:Depends}, python-ctypes, python-pyicu (>= 1.3),
-        libgraphite2-3 | ligraphite2-2.0.0, python-fontforge, palaso-python-core
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-ctypes, python-pyicu (>= 1.3),
+        libgraphite2-3 | ligraphite2-2.0.0, python-fontforge, palaso-python-core,
+        python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: Payap Language Software python font support
  Python scripts and modules for interacting with fonts, including graphite,
  icu and harfbuzz wrappers. Also provides support for testml.
 
 Package: python-palaso-teckit
 Architecture: all
-XB-Python-Version: ${python:Versions}
-Depends: ${Python:Depends}, python-ctypes (>= 1.0.2), palaso-python-core
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-ctypes (>= 1.0.2), palaso-python-core,
+        python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: TECKit text mapping wrapper
  Python module and scripts to interact with TECKit mappings.
 
 Package: python-palaso-sfm
 Architecture: all
-XB-Python-Version: ${python:Versions}
-Depends: ${Python:Depends}, python-palaso-teckit, python-palaso-core
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-palaso-teckit, python-palaso-core,
+        python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: Standard Format Markup python support
  Python modules and scripts for interacting with SFM and USFM files.
 
 Package: python-palaso-unicode
 Architecture: all
-XB-Python-Version: ${python:Versions}
-Depends: ${Python:Depends}, python-pyicu, python-gtk2 (>=2.14), palaso-python-core
+XS-Python-Version: ${python:Versions}
+Depends: ${python:Depends}, ${misc:Depends}, python-pyicu, python-gtk2 (>=2.14), palaso-python-core,
+        python-support (>= 0.5.3)
+Provides: ${python:Provides}
 Description: Payap Language Software unicode text processing
  Python modules and scripts to support Unicode text processing. Including:
    * LDML collation

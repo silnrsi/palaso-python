@@ -1,2 +1,2 @@
-usr/share/pyshared/palaso/teckit/*
+usr/lib/python2.7/dist-packages/palaso/teckit/*
 usr/bin/csvtec
