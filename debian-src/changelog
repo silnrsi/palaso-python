@@ -1,3 +1,9 @@
+python-palaso (0.7-1~precise1) precise; urgency=low
+
+  * Separate out into separate packages 
+
+ -- Martin Hosken <martin_hosken@sil.org>  Mon, 17 Sep 2012 16:06:41 +0700
+
 python-palaso (0.6.0) jaunty; urgency=low
 
   * Re-implemented palaso.sfm as stylesheet guided parser
