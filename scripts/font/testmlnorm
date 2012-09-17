@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from palaso.xml.testml import TestFile
+from palaso.font.testml import TestFile
 from argparse import ArgumentParser
 import re
 

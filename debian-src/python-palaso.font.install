@@ -1,0 +1,8 @@
+usr/share/pyshared/palaso/font/*
+usr/bin/addsfdmerge
+usr/bin/ap2sfd
+usr/bin/cmptxtrender
+usr/bin/ffbuilder
+usr/bin/ffpointreplace
+usr/bin/testmlnorm
+usr/bin/ufo2sfd

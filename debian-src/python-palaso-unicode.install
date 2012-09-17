@@ -1,0 +1,10 @@
+usr/share/pyshared/palaso/collation/*
+usr/share/pyshared/palaso/reggen.py
+usr/share/pyshared/palaso/text/*
+usr/bin/brktest
+usr/bin/flattenldml
+usr/bin/getclip
+usr/bin/ldml2icu
+usr/bin/sortldml
+usr/bin/sort_trainer
+usr/bin/testldml

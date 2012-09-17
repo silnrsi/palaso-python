@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+export DH_OPTIONS=-v
+
+% :
+	dh $@
+
+override_dh_install :
+	dh_pysupport
+	dh install
