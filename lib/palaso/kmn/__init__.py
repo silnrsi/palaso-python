@@ -308,7 +308,8 @@ _keysyms = {
     '|' : "Shift K_BKSLASH",
     '\\' : "K_BKSLASH",
     ';' : "K_COLON",
-    ':' : "Shift K_COLON"
+    ':' : "Shift K_COLON",
+    "\010" : "K_BKSP"
 }
 
 _symkeys = dict((v,k) for k,v in _keysyms.items())
