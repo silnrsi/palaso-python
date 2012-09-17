@@ -1,4 +1,4 @@
-usr/share/pyshared/palaso/font/*
+usr/lib/python2.7/dist-packages/palaso/font/*
 usr/bin/addsfdmerge
 usr/bin/ap2sfd
 usr/bin/cmptxtrender

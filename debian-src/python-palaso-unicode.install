@@ -1,6 +1,6 @@
-usr/share/pyshared/palaso/collation/*
-usr/share/pyshared/palaso/reggen.py
-usr/share/pyshared/palaso/text/*
+usr/lib/python2.7/dist-packages/palaso/collation/*
+usr/lib/python2.7/dist-packages/palaso/reggen.py
+usr/lib/python2.7/dist-packages/palaso/text/*
 usr/bin/brktest
 usr/bin/flattenldml
 usr/bin/getclip
