@@ -280,6 +280,7 @@ parser.add_option("-n","--name", action='store', help='MSKLC Project name')
 parser.add_option("-o","--output", action="store", help='File to output .c to defaults to stdout')
 #parser.add_option("-d","--deffile", action="store", help=".def file to output")
 parser.add_option("-r","--resource", action="store", help='File to output .rc to defaults to stdout')
+parser.add_option("-c","--capslockkeys", action="store", help="Enable capslock for keys in the given string")
 parser.add_option("--copyright", action="store", help="Set copyright message overriding the COPYRIGHT store")
 parser.add_option("--author", action="store", help="Set author overriding the AUTHOR store")
 parser.add_option("--language", action="store", help="Override &ethnologuecode store")
@@ -329,6 +330,7 @@ else :
 # big to make keys[255][n]
 mods = [[] for i in range(8)]
 modids = []
+keytops = [''] * 256
 for i in range(km.num_rules()) :
     (lhs, rhs, gpnum, flags) = km.rule(i)
     if not flags & 1 : continue
@@ -341,6 +343,9 @@ allkeys.extend(extkeys)
 for ksym in allkeys :
     sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(ksym)
     mods[mod].append(ksym)
+for k in unshifted :
+    sc, vkey, mod, kn, ekn, vkc = kmn.keysym_klcinfo(kmn.char_keysym(k))
+    keytops[vkc] = k
     
 logmod = 1
 modgroups = [15] * len(mods)
@@ -450,7 +455,10 @@ for l in range(len(modids), 0, -1) :
         if donekeys[v] : continue
         if keys[v][modids[l-1]] :
             donekeys[v] = True
-            res.append([v, 0])
+            attribs = 0
+            if opts.capslockkeys and keytops[v] and keytops[v] in opts.capslockkeys :
+                attribs = 1
+            res.append([v, attribs])
             res[-1].extend([keys[v][modids[i]] for i in range(l)])
     if len(res) :
         keyres += "ROSDATA VK_TO_WCHARS%d aVkToWch%d[] = {\n" % (l, l)
