@@ -336,7 +336,7 @@ def keysym_item(sym) :
             mod = mod | _modifiers[w][0]
         key = _rawkeys[words[-1]][1 if mod & _modifiers['Shift'][0] != 0 else 0]
         return 0x1000000 | (mod << 16) | key
-    elif sym[0] == '\\' :
+    elif sym[0] == '\\' and len(sym) > 1 :
         char = sym[1]
     else :
         char = sym[0]
