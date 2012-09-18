@@ -185,9 +185,9 @@ ROSDATA USHORT scancode_to_vk[] = {
   VK_SCROLL  | KMULTI,
   /* - 47 - */
   /* Number-Pad */
-  VK_HOME   | KNUMS,      VK_UP     | KNUMS,      VK_PRIOR | KNUMS, VK_SUBTRACT,
+  VK_HOME   | KNUMS,      VK_UP     | KNUMS,      VK_PGUP | KNUMS, VK_SUBTRACT,
   VK_LEFT   | KNUMS,      VK_CLEAR  | KNUMS,      VK_RIGHT | KNUMS, VK_ADD,
-  VK_END    | KNUMS,      VK_DOWN   | KNUMS,      VK_NEXT  | KNUMS,
+  VK_END    | KNUMS,      VK_DOWN   | KNUMS,      VK_PGDN  | KNUMS,
   VK_INSERT | KNUMS,      VK_DELETE | KNUMS,
   /* - 54 - */
   /* Presumably PrtSc */
@@ -196,7 +196,7 @@ ROSDATA USHORT scancode_to_vk[] = {
   /* Oddities, and the remaining standard F-Keys */
   VK_EMPTY,     VK_OEM_102,     VK_F11,       VK_F12,
   /* - 59 - */
-  VK_CLEAR,	  VK_OEM_WSCTRL, VK_OEM_FINISH, VK_OEM_JUMP, VK_EREOF, /* EREOF */
+  VK_PAUSE,	  VK_OEM_WSCTRL, VK_OEM_FINISH, VK_OEM_JUMP, VK_EREOF, /* EREOF */
   VK_OEM_BACKTAB, VK_OEM_AUTO,   VK_EMPTY,      VK_ZOOM,               /* ZOOM */
   VK_HELP,
   /* - 64 - */
@@ -213,7 +213,7 @@ ROSDATA USHORT scancode_to_vk[] = {
   VK_F24,
   /* - 77 - */
   VK_EMPTY, VK_EMPTY, VK_EMPTY, VK_EMPTY,
-  VK_OEM_PA1, VK_TAB, 0xc2, 0, /* PA1 */
+  VK_OEM_PA1, VK_TAB, VK_EMPTY, 0xc2,  /* PA1 */
   0,
   /* - 80 - */
   0
@@ -272,7 +272,7 @@ key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./ '''
 
-extkeys = ('[K_TAB]', '[K_ENTER]', '[K_BKSP]')
+extkeys = ('[K_TAB]', '[K_ENTER]', '[K_BKSP]', '[K_ESC]')
 
 parser = optparse.OptionParser(usage='%prog [options] <KEYMAN FILE>\n')
 parser.add_option("-n","--name", action='store', help='MSKLC Project name')
@@ -408,6 +408,7 @@ for m in mods :
             if liglen > maxliglength : maxliglength = liglen
         else :
             keys[vkc][mod] = kmn.item_to_char(res[0])
+            if keys[vkc][mod] == "\x0A" : keys[vkc][mod] = "\x0D"
 
 for k, v in keynames.items() :
     reskeynames += "{ 0x%02X, L\"%s\" },\n" % (k, v)
