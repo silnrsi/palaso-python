@@ -85,20 +85,25 @@ def quote(cs):
 
 
 def output_chars(keypresses):
-    return [kb.run_items([it]) for it in kmn.keysyms_items(keypresses)]
+    #return [kb.run_items([it]) or ' ' for it in kmn.keysyms_items(keypresses)]
+    res = []
+    for it in keypresses :
+        r = kb.run_items([kmn.keysym_item(kmn.char_keysym(it))])
+        res.append(r)
+    return res
 
 def output_modified_chars(keytops, mod) :
     res = []
     if mod.upper().endswith("ALT") or mod.upper().endswith("CTRL") :
         keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops.replace(r'\\', '\\'))
         for it in keys :
-            k = kmn.keysym_item(it)
+            k = kmn.keysym_item(kmn.char_keysm(it))
             r = kb.run_items([k])
             res.append(r)
     else :
         modsym = kmn.keysym_item(mod)
         for it in keytops :
-            r = kb.run_items([modsym, kmn.keysym_item(it)])
+            r = kb.run_items([modsym, kmn.keysym_item(kmn.char_keysym(it))])
             res.append(r)
     return res
 #    return [quote(kb.run_items([kmn.keysym_item(it)])) for it in keys]
