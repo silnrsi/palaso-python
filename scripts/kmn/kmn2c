@@ -269,7 +269,7 @@ ROSDATA VSC_VK extcode1_to_vk[] = {
 
 """
 
-key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
+key_tops  = r'''`1234567890-=QWERTYUIOP[]\\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./ '''
 
