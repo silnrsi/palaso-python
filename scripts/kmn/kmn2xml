@@ -21,9 +21,9 @@ from palaso import kmn
 from htmlentitydefs import codepoint2name
 
 
-key_tops  = r'''`1234567890-=QWERTYUIOP[]\\ASDFGHJKL;'ZXCVBNM,./'''
+key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
-unshifted = r'''`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./'''
+unshifted = r'''`1234567890-=qwertyuiop[]\asdfghjkl;'zxcvbnm,./'''
 
 xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" : '&apos;' }
 
