@@ -68,7 +68,7 @@ def _cached_stylesheet(path):
     import pickletools
     with contextlib.closing(bz2.BZ2File(cached_path, 'wb')) as zf:
         zf.write(pickletools.optimize(
-            pickle.dumps(style.parse(open(source_path,'r')))))
+            pickle.dumps(style.parse(open(source_path,'r'), error_level=sfm.level.Marker))))
     return cached_path
 
 
@@ -99,6 +99,29 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None, '
 
 
 class parser(sfm.parser):
+    '''
+    >>> import warnings
+    >>> list(parser([r'\\id TEST\\mt text\\f*']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,17: orphan end marker \\f*: no matching opening marker \\f
+
+    >>> list(parser([r'\\id TEST     \\p 1 text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,14: orphan marker \\p: may only occur under \\c
+
+    >>> list(parser([r'\\id TEST\\mt \\f + text\\fe*']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,22: orphan end marker \\fe*: no matching opening marker \\fe
+    
+    >>> list(parser([r'\\id TEST\\mt \\f + text'], ))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,1: invalid end marker end-of-file: \\f (line 1,13) can only be closed with \\f*
+    '''
+    
     default_meta = _default_meta
     numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)',re.UNICODE)
     caller_re = re.compile(r'\s*([^\s\\])',re.UNICODE)
@@ -114,6 +137,16 @@ class parser(sfm.parser):
                                default_meta=_default_meta, *args, **kwds):
         super(parser, self).__init__(source, stylesheet, default_meta,
                                      private_prefix='z',*args, **kwds)
+    
+    
+    def _force_close(self, parent, tok):
+        if tok is not sfm.parser._eos and 'NoteText' in parent.meta.get('TextType',[]):
+            self._error(level.Note, 
+                'implicit end marker before {token}: \\{0.name} '
+                '(line {0.pos.line},{0.pos.col}) '
+                'should be closed with \\{1}', tok, parent,
+                parent.meta['Endmarker'])
+        else: super(parser, self)._force_close(parent, tok)                          
     
     
     def _ChapterNumber_(self, chapter_marker):

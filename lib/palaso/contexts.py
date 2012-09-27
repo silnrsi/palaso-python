@@ -5,14 +5,14 @@ import sre_parse
 
 def defaultapp() :
     """Sets up common default contexts used at the application level. Includes:
-* console
-* relaxedsubs
-"""
+        * console
+        * relaxedsubs"""
     return nested(utf8out(), console(), relaxedsubs())
 
 @contextmanager
 def console(ctrlc=sys.exit) :
-    """This context sets up to not complain on broken pipes on stdout, but supports ctrl-C"""
+    """This context sets up to not complain on broken pipes on stdout, 
+       but supports ctrl-C"""
     try :
         yield
     except IOError as e :
@@ -37,7 +37,10 @@ def _expand_template(template, match):
 
 @contextmanager
 def relaxedsubs() :
-    """ This context replaces the default substitution template expander with one that doesn't throw exceptions on unmatched or empty groups. Since this is a global replacement, this context has global impact across all threads, and not just within this context. """
+    """This context replaces the default substitution template expander with 
+       one that doesn't throw exceptions on unmatched or empty groups. Since 
+       this is a global replacement, this context has global impact across 
+       all threads, and not just within this context. """
     temp = sre_parse.expand_template
     sre_parse.expand_template = _expand_template
     try :

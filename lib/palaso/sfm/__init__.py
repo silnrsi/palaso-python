@@ -32,9 +32,10 @@ from functools import partial
 
 
 
-__all__ = ('event','usfm',                          # Sub modules
-           'position','element','text', 'parser',   # data types
-           'reduce','map_tree','pprint')            # functions
+__all__ = ('usfm',                                           # Sub modules
+           'position','element','text', 'level', 'parser',   # data types
+           'sreduce','smap','sfilter','mpath',
+           'text_properties','pprint', 'copy')               # functions
 
 
 
@@ -114,7 +115,7 @@ class element(list):
         endmarker = self.meta.get('Endmarker',u'')
         body = ''.join(imap(unicode, self))
         sep = ''
-        if self:
+        if len(self) > 0:
             if isinstance(self[0], element) \
                and self.meta.get('StyleType') == 'Paragraph':
                 sep = os.linesep
@@ -293,10 +294,11 @@ class _put_back_iter(collections.Iterator):
 _default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None, 'StyleType':None}
 
 class level:
-    Marker          = 0
-    Content         = 1
-    Structure       = 2
-    Unrecoverable   = 100
+    Note            = -1
+    Marker          =  0
+    Content         =  1
+    Structure       =  2
+    Unrecoverable   =  100
 
 class parser(collections.Iterable):
     '''
@@ -330,16 +332,35 @@ class parser(collections.Iterable):
 
     >>> tss = parser.extend_stylesheet({},'id','ide','rem','h','toc1','mt1','mt2')
     >>> pprint(tss)
-    {'h': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
-     'id': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
-     'ide': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
-     'mt1': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
-     'mt2': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
-     'rem': {'Endmarker': None, 'OccursUnder': set([None]), 'TextType': 'default'},
+    {'h': {'Endmarker': None,
+           'OccursUnder': set([None]),
+           'StyleType': None,
+           'TextType': 'default'},
+     'id': {'Endmarker': None,
+            'OccursUnder': set([None]),
+            'StyleType': None,
+            'TextType': 'default'},
+     'ide': {'Endmarker': None,
+             'OccursUnder': set([None]),
+             'StyleType': None,
+             'TextType': 'default'},
+     'mt1': {'Endmarker': None,
+             'OccursUnder': set([None]),
+             'StyleType': None,
+             'TextType': 'default'},
+     'mt2': {'Endmarker': None,
+             'OccursUnder': set([None]),
+             'StyleType': None,
+             'TextType': 'default'},
+     'rem': {'Endmarker': None,
+             'OccursUnder': set([None]),
+             'StyleType': None,
+             'TextType': 'default'},
      'toc1': {'Endmarker': None,
               'OccursUnder': set([None]),
+              'StyleType': None,
               'TextType': 'default'}}
-    
+
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
@@ -373,6 +394,7 @@ class parser(collections.Iterable):
     '''
     
     default_meta = _default_meta
+    _eos = text("end-of-file")
     __tokeniser = re.compile(r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',re.DOTALL | re.UNICODE)
     
     @classmethod
@@ -385,6 +407,7 @@ class parser(collections.Iterable):
                                private_prefix=None, error_level=level.Content):
         # Pick the marker lookup failure mode.
         assert default_meta or not private_prefix, 'default_meta must be provided when using private_prefix'
+        assert error_level <= level.Marker or default_meta, 'default meta must be provided when error_level > level.Marker'
         
         # Set simple attributes
         self.source  = source.name if hasattr(source,'name') else '<string>'
@@ -403,11 +426,11 @@ class parser(collections.Iterable):
     
     
     def _error(self, severity, msg, ev, *args, **kwds):
-        if severity >= self._error_level:
+        if severity >= 0  and severity >= self._error_level:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
                                                                *args,**kwds).encode('utf_8')
             raise SyntaxError, msg
-        else:
+        elif severity < 0 and severity >= self._error_level or severity > 0:
             msg = unicode(msg).format(token=ev,*args,**kwds).encode('utf_8')
             warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
@@ -415,8 +438,8 @@ class parser(collections.Iterable):
     def __get_style(self, tag):
         meta = self.__sty.get(tag)
         if not meta:
-            if tag.startswith(self.__pua_prefix):
-                self._error(-1, 
+            if self.__pua_prefix and tag.startswith(self.__pua_prefix):
+                self._error(level.Note, 
                             'unknown private marker \\{token}: '
                             'not it stylesheet using default marker definition', 
                             tag)
@@ -495,15 +518,11 @@ class parser(collections.Iterable):
                                       self._pp_marker_list(meta['OccursUnder']))
                 else:
                     # Do implicit closure only for non-inline markers or 
-                    # 'character' style markers'.
-                    if parent.meta['Endmarker'] and 'Character' not in parent.meta.get('StyleType',[]):
-                        self._error(level.Structure, 
-                            'invalid end marker {token}: \\{0.name} '
-                            '(line {0.pos.line},{0.pos.col}) '
-                            'can only be closed with \\{1}', tok, parent,
-                            parent.meta['Endmarker'])
+                    # markers inside NoteText type markers'.
+                    if parent.meta['Endmarker']:
+                        self._force_close(parent, tok)
+                        parent.annotations['implicit-closed'] = True
                     self._tokens.put_back(tok)
-                    parent.annotations['implicit-closed'] = True
                     return
             else:   # Pass non marker data through with a litte fix-up
                 if parent is not None \
@@ -514,14 +533,10 @@ class parser(collections.Iterable):
                     tok.parent = parent
                     yield tok
         if parent is not None:
-            if parent.meta['Endmarker'] and 'Character' not in parent.meta.get('StyleType',[]):
-                self._error(level.Structure, 
-                    'unexpected end-of-file: \\{token.name} '
-                    '(line {token.pos.line},{token.pos.col}) '
-                    'has not been closed with \\{0}', parent,
-                    parent.meta['Endmarker'])
-            parent.annotations['implicit-closed'] = True
-    
+            if parent.meta['Endmarker']:
+                self._force_close(parent, self._eos)
+                parent.annotations['implicit-closed'] = True
+
     def _Milestone_(self, parent):
         return tuple()
     _milestone_ = _Milestone_
@@ -529,6 +544,13 @@ class parser(collections.Iterable):
     _Other_ = _default_
     _other_ = _Other_
 
+    def _force_close(self, parent, tok):
+        self._error(level.Structure, 
+            'invalid end marker {token}: \\{0.name} '
+            '(line {0.pos.line},{0.pos.col}) '
+            'can only be closed with \\{1}', tok, parent,
+            parent.meta['Endmarker'])
+         
 
 def sreduce(elementf, textf, trees, initial=None):
     def _g(a, e):
