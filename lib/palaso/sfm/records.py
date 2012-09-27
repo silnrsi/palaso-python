@@ -20,11 +20,10 @@ __history__ = '''
 		boolean false descriptions 'off','no' etc.
 		Make the field value parser accept empty field values.
 '''
-import collections, operator, sys
+import collections
 import palaso.sfm as sfm
-from itertools import groupby, ifilter, imap, chain
-from functools import partial
-
+from itertools import ifilter, imap, chain
+from palaso.sfm import level
 
 
 class schema(collections.namedtuple('schema','start fields')): pass
@@ -64,12 +63,15 @@ def unique(p):
 class parser(sfm.parser):
     '''
     >>> from pprint import pprint
+    >>> import warnings
     >>> doc = """\\Marker toc1
     ...          \\Name toc1 - File - Long Table of Contents Text
     ...          \\OccursUnder h h1 h2 h3
     ...          \\FontSize 12
     ...          \\Bold"""
-    >>> pprint(list(parser(doc.splitlines(True), schema('Marker',{}))))
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("ignore")
+    ...     pprint(list(parser(doc.splitlines(True), schema('Marker',{}))))
     [{},
      {u'Bold': '',
       u'FontSize': text(u'12'),
@@ -83,7 +85,9 @@ class parser(sfm.parser):
     ...      'OccursUnder'    : (unique(sequence(str)), [None]),
     ...      'FontSize'       : (int,                   None),
     ...      'Bold'           : (flag,                  False)})
-    >>> pprint(list(parser(doc.splitlines(True), demo_schema)))
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser(doc.splitlines(True), demo_schema)))
     [{},
      {'Bold': True,
       'Description': '',
@@ -91,7 +95,9 @@ class parser(sfm.parser):
       'Marker': 'toc1',
       'Name': 'toc1 - File - Long Table of Contents Text',
       'OccursUnder': set(['h', 'h1', 'h2', 'h3'])}]
-    >>> pprint(list(parser("""
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser("""
     ... \\Description this goes in the header since it's before the 
     ... key marker Marker as does the following marker.
     ... \\FontSize 15
@@ -106,22 +112,22 @@ class parser(sfm.parser):
       'Marker': 'toc1',
       'Name': 'toc1 - File - Long Table of Contents Text',
       'OccursUnder': [None]}]
-    >>> pprint(list(parser("""\Marker toc1
-    ...                       \FontSize 12""".splitlines(True), demo_schema)))
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     pprint(list(parser("""\Marker toc1
+    ...                           \FontSize 12""".splitlines(True), demo_schema)))
     Traceback (most recent call last):
     ...
     SyntaxError: <string>: line 1,1: Marker toc1 defintion missing: Name
     '''
     
     
-    def __init__(self, source, schema):
+    def __init__(self, source, schema, error_level=level.Content):
         if not isinstance(schema, _schema): 
             raise TypeError('arg 2 must a \'schema\' not {0!r}'.format(schema))
         metas = dict((k,super(parser,self).default_meta) for k in schema.fields)
         super(parser,self).__init__(source, 
-                    metas, 
-                    default_meta=None if metas else super(parser,self).default_meta,
-                    private_prefix=False)
+                    metas, error_level=error_level)
         self.__schema = schema
     
     

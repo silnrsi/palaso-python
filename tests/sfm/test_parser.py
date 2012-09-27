@@ -30,8 +30,8 @@ def flatten(doc):
     return itertools.chain.from_iterable(itertools.imap(_g, doc))
 
 def _test_round_trip_parse(self, source, parser, *args, **kwds):
-    src_name = getattr(source,'name',None)
-    src_encoding = getattr(source, 'encoding', None)
+#    src_name = getattr(source,'name',None)
+#    src_encoding = getattr(source, 'encoding', None)
     source = list(source)
     doc = list(parser(source, *args, **kwds))
     rt_doc = list(parser(sfm.pprint(doc).splitlines(True),*args,**kwds))
@@ -237,10 +237,10 @@ class USFMTestCase(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.resetwarnings()
             warnings.simplefilter("error", SyntaxWarning)
-            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\whoops'], private=False))
-            self.assertRaises(SyntaxError,  list,usfm.parser(['\\id TEST\\mt \\whoops'], private=True))
-            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\zwhoops'], private=False))
-            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\zwhoops'], private=True))
+            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\whoops']))
+            self.assertRaises(SyntaxError,  list,usfm.parser(['\\id TEST\\mt \\whoops'], error_level=sfm.level.Marker))
+            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\zwhoops']))
+            self.assertRaises(SyntaxWarning,list,usfm.parser(['\\id TEST\\mt \\zwhoops'], error_level=sfm.level.Marker))
 
     def test_parameters(self):
         tests = [(r'\id TEST'       r'\c 1',                        [elem('id', text('TEST'), elem(('c','1')))]),
@@ -275,10 +275,10 @@ class USFMTestCase(unittest.TestCase):
 #                            
 
     def test_round_trip_parse(self):
-        _test_round_trip_parse(self, codecs.open('data/mat.1.usfm','r',encoding='utf_8_sig'), usfm.parser, private=False)
+        _test_round_trip_parse(self, codecs.open('data/mat.1.usfm','r',encoding='utf_8_sig'), usfm.parser)
 
     def test_round_trip_src(self):
-        _test_round_trip_source(self, codecs.open('data/mat.1.usfm','r',encoding='utf_8_sig'), usfm.parser, private=False, leave_file=True)
+        _test_round_trip_source(self, codecs.open('data/mat.1.usfm','r',encoding='utf_8_sig'), usfm.parser, leave_file=True)
 
 if __name__ == "__main__":
     import doctest

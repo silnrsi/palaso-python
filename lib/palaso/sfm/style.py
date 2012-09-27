@@ -13,7 +13,7 @@ __history__ = '''
 '''
 import re
 import palaso.sfm.records as records
-from palaso.sfm.records import sequence,flag,unique
+from palaso.sfm.records import sequence,flag,unique,level
 from itertools import imap
 from functools import partial
 
@@ -58,7 +58,7 @@ def _munge_record(r):
     return (tag, r)
 
 
-def parse(source):
+def parse(source, error_level=level.Content):
     '''
     >>> from pprint import pprint
     >>> pprint(parse("""
