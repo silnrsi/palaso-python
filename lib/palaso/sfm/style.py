@@ -14,13 +14,13 @@ __history__ = '''
 import re
 import palaso.sfm.records as records
 from palaso.sfm.records import sequence,flag,unique,level
-from records import Note, StructureError, UnrecoverableError 
+from records import StructureError, UnrecoverableError 
 from itertools import imap
 from functools import partial
 
 
 
-_fields = {'Marker'         : (str,             UnrecoverableError('missing Marker marker missing')),
+_fields = {'Marker'         : (str,             UnrecoverableError('Start of record marker: {0} missing')),
            'Endmarker'      : (str,             None),
            'Name'           : (str,             StructureError('Marker {0} defintion missing: {1}')),
            'Description'    : (str,             StructureError('Marker {0} defintion missing: {1}')),
