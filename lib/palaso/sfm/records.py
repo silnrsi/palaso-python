@@ -155,15 +155,22 @@ class parser(sfm.parser):
             rec_ = proto.copy()
             rec_.update(rec)
             fn,err = next(ifilter(lambda i: isinstance(i[1], ErrorLevel),rec_.iteritems()),('',None))
-            if err: self._error(err, err.msg, rec, rec.name, fn)
+            if err: 
+                self._error(err, err.msg, rec, rec.name, fn)
+                rec_[fn] = None
             return rec_
         
         def accum(db, m):
+            valuator = fields.get(m.name, default_field)
             try:
-                field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip() if m else ''))
+                field = (m.name, valuator[0](m[0].rstrip() if m else ''))
             except Exception, err:
                 self._error(level.Content, err.msg if hasattr(err,'msg') else unicode(err), m)
+                field = (m.name, valuator[1])
             if m.name == start:
+                if isinstance(field[1], ErrorLevel): 
+                    self._error(err, err.msg, m, m.name)
+                    field = (m.name, '')
                 db.append(sfm.element(field[1], m.pos, content=[field]))
             else:
                 db[-1].append(field)
