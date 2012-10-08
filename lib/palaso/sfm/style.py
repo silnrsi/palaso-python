@@ -14,19 +14,20 @@ __history__ = '''
 import re
 import palaso.sfm.records as records
 from palaso.sfm.records import sequence,flag,unique,level
+from records import Note, StructureError, UnrecoverableError 
 from itertools import imap
 from functools import partial
 
 
 
-_fields = {'Marker'         : (str,             SyntaxError('missing Marker marker missing')),
+_fields = {'Marker'         : (str,             UnrecoverableError('missing Marker marker missing')),
            'Endmarker'      : (str,             None),
-           'Name'           : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
-           'Description'    : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
+           'Name'           : (str,             StructureError('Marker {0} defintion missing: {1}')),
+           'Description'    : (str,             StructureError('Marker {0} defintion missing: {1}')),
            'OccursUnder'    : (unique(sequence(str)),   [None]),
            'Rank'           : (int,             None),
            'TextProperties' : (unique(sequence(str)),   []),
-           'TextType'       : (str,             SyntaxError('Marker {0} defintion missing: {1}')),
+           'TextType'       : (str,             StructureError('Marker {0} defintion missing: {1}')),
            'StyleType'      : (str,             None),
            'FontSize'       : (int,             None),
            'Regular'        : (flag,            False),
@@ -135,7 +136,7 @@ def parse(source, error_level=level.Content):
     SyntaxError: <string>: line 2,1: Marker error defintion missing: TextType
     '''
     no_comments = imap(partial(_comment.sub,''), source)
-    rec_parser = records.parser(no_comments, records.schema('Marker', _fields))
+    rec_parser = records.parser(no_comments, records.schema('Marker', _fields), error_level=error_level)
     rec_parser.source = getattr(source, 'name', '<string>')
     recs = iter(rec_parser)
     next(recs,None)
