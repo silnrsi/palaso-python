@@ -22,6 +22,7 @@ __history__ = '''
 '''
 import collections
 import palaso.sfm as sfm
+from functools import partial
 from itertools import ifilter, imap, chain
 from palaso.sfm import level
 
@@ -58,6 +59,21 @@ def unique(p):
     set([1, 2, 3, 4, 5])
     '''
     return lambda v: set(p(v))
+
+
+class ErrorLevel(int):
+    __slots__ = ('msg',)
+    def __new__(cls, level, msg):
+        el = super(ErrorLevel, cls).__new__(cls,level)
+        el.msg = msg
+        return el
+
+NoteError = partial(ErrorLevel, level.Note)
+MarkerError = partial(ErrorLevel, level.Marker)
+ContentError = partial(ErrorLevel, level.Content)
+StructureError = partial(ErrorLevel, level.Structure)
+UnrecoverableError = partial(ErrorLevel, level.Unrecoverable)
+
 
 
 class parser(sfm.parser):
@@ -138,15 +154,15 @@ class parser(sfm.parser):
         def record(rec):
             rec_ = proto.copy()
             rec_.update(rec)
-            fn,err = next(ifilter(lambda i: isinstance(i[1],Exception),rec_.iteritems()),('',None))
-            if err: self._error(type(err), err.msg, rec, rec.name, fn)
+            fn,err = next(ifilter(lambda i: isinstance(i[1], ErrorLevel),rec_.iteritems()),('',None))
+            if err: self._error(err, err.msg, rec, rec.name, fn)
             return rec_
         
         def accum(db, m):
             try:
                 field = (m.name, fields.get(m.name, default_field)[0](m[0].rstrip() if m else ''))
             except Exception, err:
-                self._error(type(err), err.msg if hasattr(err,'msg') else unicode(err), m)
+                self._error(level.Content, err.msg if hasattr(err,'msg') else unicode(err), m)
             if m.name == start:
                 db.append(sfm.element(field[1], m.pos, content=[field]))
             else:
