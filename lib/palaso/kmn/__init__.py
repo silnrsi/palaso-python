@@ -444,14 +444,14 @@ def keysym_klcinfo(sym) :
         for w in words[:-1] :
             mod = mod | _modifiers[w][2]
         vkey = words[-1]
-        item, cap, sc, vkc, kn, ekn = _rawkeys[words[-1]]
+        _, _, sc, vkc, kn, ekn = _rawkeys[words[-1]]
         if _msrawmap.has_key(vkey) :
             vkey = _msrawmap[vkey]
         else :
             vkey = vkey.replace("K_", "")
     else :
         if sym == sym.upper() : mod = _modifiers['Shift'][2]
-        item, cap, sc, vkc, kn, ekn = _rawkeys["K_" + sym.upper()]
+        _, _, sc, vkc, kn, ekn = _rawkeys["K_" + sym.upper()]
     return (sc, vkey, mod, kn, ekn, vkc)
 
 def escape(keyname) :
