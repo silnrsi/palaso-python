@@ -1,0 +1,196 @@
+#!/usr/bin/env python
+
+import pdb
+
+import sys
+import os, site
+import PyICU, palaso.collation.icu
+from re import sub, escape
+import struct
+
+try:
+ 	import pygtk
+  	pygtk.require("2.0")
+except:
+  	pass
+try:
+	import gtk
+  	import gtk.glade
+except:
+	sys.exit(1)
+
+class Trainer:
+
+    def __init__(self):
+        self.gladefile = os.path.join(os.path.dirname(palaso.collation.icu.__file__), 'sort_trainer.glade')
+        self.wTree = gtk.glade.XML(self.gladefile, "window1")
+
+        dic = {
+            "on_window1_destroy" : gtk.main_quit,
+            "on_bt_sort_clicked" : self.on_sort,
+            "on_open_order1_activate" : self.on_open_sort,
+            "on_open_sort_list1_activate" : self.on_open_src,
+            "on_save_order1_activate" : self.on_save_sort,
+            "on_save_sort_list1_activate" : self.on_save_src,
+            "on_bt_source_clicked" : self.on_set_src,
+            "on_bt_keys_clicked" : self.on_sort_keys
+            }
+        self.wTree.signal_autoconnect(dic)
+        self.tdia = TextDialog(self.gladefile)
+
+    def on_sort(self, widget):
+        lb_error = self.wTree.get_widget("lb_status")
+        lb_error.set_text('')
+        buf_order = self.wTree.get_widget("txt_order").get_buffer()
+        try:
+            sort = PyICU.RuleBasedCollator(buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter()))
+        except PyICU.ICUError, val:
+            lb_error.set_text(str(val))
+            return
+        buf_src = self.wTree.get_widget("txt_src").get_buffer()
+        list = buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()).splitlines()
+        list.sort(sort.compare)
+        buf_srt = self.wTree.get_widget("txt_srt").get_buffer()
+        buf_srt.set_text("\n".join(list))
+
+    def on_sort_keys(self, widget):
+#        pdb.set_trace()
+        lb_error = self.wTree.get_widget("lb_status")
+        lb_error.set_text('')
+        buf_order = self.wTree.get_widget("txt_order").get_buffer()
+        txt_order = buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter())
+        try:
+            sort = PyICU.RuleBasedCollator(txt_order)
+        except PyICU.ICUError, val:
+            lb_error.set_text(str(val))
+            return
+        text = sub(r'(?m)#.*$', u'\ufdd0', txt_order)
+        text = sub(r'\\[uU]([0-9a-fA-F]{4,6})', lambda(x) : unichr(int(x.group(1), 16)), text)
+        text = sub(r'(?<!\\)\[.*?\]', u'\ufdd0', text)
+        text = sub(r'(?<!\\)[\s&<=;,|/]', u'\ufdd0', text)
+        text = sub(r'\\(.)', lambda(x) : x.group(1), text)
+        text = sub('\ufddo{2,}', u'\ufdd0', text)
+        char_list = text.split(u'\ufdd0')
+        buf_src = self.wTree.get_widget("txt_src").get_buffer()
+        char_list += buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()).splitlines()
+        chars_dict = dict.fromkeys(char_list, 1)
+        chars = chars_dict.keys()
+        chars.sort(sort.compare)
+        textout = ''
+#        pdb.set_trace()
+        for char in chars:
+            if char == '': continue
+            keyinfo = list()
+            keyinfo_size = 0
+            st = sort.getCollationKey(char).getByteArray()
+            for b in st.rstrip('\000').split('\001'):
+                if len(b) % 2: b += "\000"
+                keyinfo.append([struct.unpack('>H', x+(y or "\000")) for (x, y) in zip(b[::2], b[1::2])])
+                if len(keyinfo[-1]) > keyinfo_size: keyinfo_size = len(keyinfo[-1])
+            line = char + "\t"
+            for k in range(keyinfo_size):
+                line += '['
+                s = list()
+                for e in keyinfo:
+                    if (len(e) <= k):
+                        s.append("0000")
+                    else:
+                        s.append("%04X" % e[k])
+                line += ".".join(s) + "]"
+            textout = textout + line + "\n"
+        self.tdia.set_text(textout)
+
+    def get_file_open(self):
+        dialog = gtk.FileChooserDialog("Open..", None, gtk.FILE_CHOOSER_ACTION_OPEN,
+                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        response = dialog.run()
+        if response == gtk.RESPONSE_OK:
+            res = dialog.get_filename()
+        else:
+            res = ''
+        dialog.destroy()
+        return res
+
+    def get_file_save(self):
+        dialog = gtk.FileChooserDialog("Open..", None, gtk.FILE_CHOOSER_ACTION_SAVE,
+                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        response = dialog.run()
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        if response == gtk.RESPONSE_OK:
+            res = dialog.get_filename()
+        else:
+            res = ''
+        dialog.destroy()
+        return res
+
+    def on_save_src(self, widget):
+        buf_src = self.wTree.get_widget("txt_src").get_buffer()
+        fname = self.get_file_save()
+        if fname:
+            fileo = file(fname, "w")
+            fileo.write(buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()))
+            fileo.close()
+
+    def on_save_sort(self, widget):
+#        pdb.set_trace()
+        buf_srt = self.wTree.get_widget("txt_order").get_buffer()
+        fname = self.get_file_save()
+        if fname:
+            fileo = file(fname, "w")
+            fileo.write(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter()))
+            fileo.close()
+
+    def on_open_src(self, widget):
+        fname = self.get_file_open()
+        if fname:
+            fileo = file(fname, "rU")
+            buf_src = self.wTree.get_widget("txt_src").get_buffer()
+            buf_src.set_text("".join(fileo.readlines()))
+            fileo.close()
+        
+    def on_open_sort(self, widget):
+        fname = self.get_file_open()
+        if fname:
+            fileo = file(fname, "rU")
+            buf_srt = self.wTree.get_widget("txt_order").get_buffer()
+            buf_srt.set_text("".join(fileo.readlines()))
+            fileo.close()
+
+    def on_set_src(self, widget):
+        buf_srt = self.wTree.get_widget("txt_srt").get_buffer()
+        buf_src = self.wTree.get_widget("txt_src").get_buffer()
+        buf_src.set_text(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter()))
+
+    def on_src_new(self, widget):
+        self.wTree.get_widget("txt_src").get_buffer().set_text('')
+        self.wTree.get_widget("txt_srt").get_buffer().set_text('')
+
+    def on_srt_new(self, widget):
+        self.wTree.get_widget("txt_order").get_buffer().set_text('')
+
+
+class TextDialog:
+    def __init__(self, gladefile):
+        self.wTree = gtk.glade.XML(gladefile, "sort_keys")
+        dic = {
+            "on_bt_ok_clicked" : self.quit,
+            "on_sort_keys_delete_event" : lambda(x) : self.quit(x)
+        }
+        self.wTree.signal_autoconnect(dic)
+        self.root = self.wTree.get_widget("sort_keys")
+        self.root.hide()
+
+    def set_text(self, text):
+        tx_box = self.wTree.get_widget("txt_keys")
+        tx_box.get_buffer().set_text(text)
+        self.root.show()
+
+    def quit(self, widget):
+        self.root.hide()
+        return 1
+
+if __name__ == "__main__":
+    trainer = Trainer()
+    gtk.main()
+

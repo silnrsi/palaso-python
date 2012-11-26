@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ldml>
+	<identity>
+		<version number="$Revision: 1.2 $"/>
+		<generation date="$Date: 2009/05/05 23:28:47 $"/>
+		<language type="kht"/> 
+	</identity>
+	<collations>
+		<collation type="standard">
+            <special xmlns:palaso="www.palaso.org/ldml/0.1">
+                <palaso:reorder palaso:match="((?:[&#x108A;&#x1062;&#x1083;&#x102D;&#x102E;&#x1085;&#x1032;&#x102F;&#x1030;&#x1031;&#x1084;&#x1036;]|&#x1082;&#x103A;)?)([&#x1000;&#x1004;&#xAA65;&#x1010;&#xAA6B;&#x1015;&#x1019;&#x101D;])(&#x103A;)" palaso:reorder="\3\2\1"/>
+            </special>
+			<rules>
+                <reset>&#x1000;</reset><pc>&#x1075;&#xAA60;&#x1002;&#x1004;&#xAA61;&#xAA62;&#xAA63;&#xAA64;&#xAA65;&#xAA66;&#xAA67;&#xAA68;&#xAA69;&#x107C;&#x1010;&#x1011;&#x107B;&#xAA6A;&#xAA6B;&#x1015;&#x1078;&#x107F;&#x1019;&#x101A;&#x101B;&#x101C;&#x101C;&#x101D;&#xAA6C;&#xAA6D;&#xAA6E;&#x1022;&#xAA6F;&#x1080;&#xAA74;&#xAA75;&#xAA76;</pc>
+				<reset>&#x108A;</reset><pc>&#x1062;&#x1083;&#x102D;&#x102E;&#x1085;&#x1032;&#x102F;&#x1030;&#x1031;&#x1084;</pc><p>&#x103A;&#x1082;</p><p>&#x1036;</p><p>&#x103A;</p><p>&#x103B;</p><p>&#x103C;</p><p>&#x103D;</p>
+                <reset>&#x109A;</reset><sc>&#x1089;&#x109B;&#x1087;&#x1088;&#x1038;</sc>
+			</rules>
+		</collation>
+	</collations>
+</ldml>

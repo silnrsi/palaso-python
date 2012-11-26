@@ -1,0 +1,84 @@
+#!/usr/bin/python
+
+import codecs
+from palaso.font.stringcut import GrFont, HbFont, IcuFont, HbOTFont
+from optparse import OptionParser
+from fontTools.ttLib import TTFont
+import sys
+
+def roundpt(pt, res) :
+    try :
+        return(int(pt[0] / res) * res, int(pt[1] / res) * res)
+    except ValueError :
+        pass
+    return (0, 0)
+
+def name(tt, gl) :
+    return (tt.getGlyphName(gl[0]), roundpt(gl[1], 0.1))
+
+
+parser = OptionParser(usage = '%prog [options] infont1 infont2')
+parser.add_option("-t","--text",help="text file to test each line from")
+parser.add_option("-o","--output",help="file to log results to")
+parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
+parser.add_option("-e","--engine",help="renderer to use [gr]")
+parser.add_option("-l","--lang",help="language to tag text with")
+parser.add_option("-s","--script",help="script of text")
+parser.add_option("-r","--rtl",action="store_true",help="right to left")
+parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
+parser.add_option("-p","--split",action="store_true",help="Split on spaces")
+(opts, args) = parser.parse_args()
+
+shapers = {
+    'gr' : GrFont,
+    'ot' : HbOTFont,
+    'hb' : HbFont,
+    'icu' : IcuFont
+}
+
+if opts.engine not in shapers : opts.engine = "gr"
+if not opts.lang : opts.lang = 0
+if not opts.script : opts.script = 0
+if not opts.rtl : opts.rtl = 0
+if opts.output :
+    outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
+else :
+#    outfile = codecs.EncodedFile(sys.stdout, "unicode_internal", file_encoding="utf_8")
+    outfile = codecs.getwriter("utf_8")(sys.stdout)
+
+feats = {}
+if opts.feat :
+    for f in opts.feat :
+        k, v = f.split('=')
+        feats[k.strip()] = int(v.strip())
+
+font1 = shapers[opts.engine](args[0], 12, opts.rtl, feats, opts.script, opts.lang)
+tt1 = TTFont(args[0])
+if len(args) > 1 :
+    font2 = shapers[opts.engine](args[1], 12, opts.rtl, feats, opts.script, opts.lang)
+    tt2 = TTFont(args[1])
+f = codecs.open(opts.text, encoding="utf_8")
+
+count = 0
+errors = 0
+for l in f.readlines() :
+    count += 1
+    l = l.strip()
+    if opts.split :
+        words = l.split()
+    else :
+        words = (l, )
+    wcount = 0
+    for s in words :
+        wcount += 1
+        gl1 = map(lambda x: name(tt1, x), font1.glyphs(s))
+        if len(args) > 1 :
+            gl2 = map(lambda x: name(tt2, x), font2.glyphs(s))
+        else :
+            gl2 = []
+        if gl1 != gl2 :
+            outfile.write(u"{0:3d}.{1:d}: {2} - {3} {4}\n".format(count, wcount, s, gl1, gl2))
+            errors += 1
+outfile.close()
+sys.exit(0 if opts.keep else errors)
+

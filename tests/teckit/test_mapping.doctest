@@ -1,0 +1,70 @@
+These are tests of the engine.Mapping object
+
+>>> from palaso.teckit.engine import Mapping
+
+Test access to the meta data and flags for silipa93.tec
+>>> m = Mapping('data/silipa93.tec')
+
+Check left and right sides encoding info
+>>> m.lhsName; m.lhsDescription
+'SIL-IPA93-2001'
+'SIL IPA93 Font encoding'
+>>> m.rhsName; m.rhsDescription
+'Unicode'
+'Unicode'
+
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/silipa93.tec')"
+'SIL-IPA93-2001 <-> Unicode'
+
+Check extended info from UTR-22 these are optional and may return None if not 
+included in the mapping
+>>> m.version; m.contact; m.regAuthority; m.regName
+'8'
+'mailto:martin_hosken@sil.org'
+'SIL International'
+'IPA93'
+
+This attribute is absent for silipa93.tec and so returns None
+>>> m.copyright
+
+Check the flags come out as expected:
+>>> print m.lhsFlags; print m.rhsFlags
+()
+(expectsNFD + generatesNFD + unicode)
+
+-----------
+
+Test access to the meta data and flags for academy.tec
+>>> m = Mapping('data/academy.tec')
+
+Check left and right sides encoding info
+>>> m.lhsName; m.lhsDescription
+'SIL-Academy-2001'
+'Geocomp Burmese encoding'
+>>> m.rhsName; m.rhsDescription
+'Unicode'
+'Unicode'
+
+Check the representation and str conversion methods
+>>> repr(m); str(m)
+"Mapping('data/academy.tec')"
+'SIL-Academy-2001 <-> Unicode'
+
+Check extended info from UTR-22 these are optional and may None if not included 
+in the mapping, in this case regName and copyright were never included in the 
+tec mapping.
+>>> m.version; m.contact; m.regAuthority
+'7'
+'mailto:martin_hosken@sil.org'
+'none'
+
+These attributes are absent from the academy encoding so return None.
+>>> m.regName
+>>> m.copyright
+
+Check the flags come out as expected:
+>>> print m.lhsFlags; print m.rhsFlags
+()
+(expectsNFD + generatesNFD + unicode)

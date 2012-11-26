@@ -1,0 +1,8 @@
+usr/lib/python2.7/dist-packages/palaso/font/*
+usr/bin/addsfdmerge
+usr/bin/ap2sfd
+usr/bin/cmptxtrender
+usr/bin/ffbuilder
+usr/bin/ffpointreplace
+usr/bin/testmlnorm
+usr/bin/ufo2sfd
