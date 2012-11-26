@@ -53,7 +53,6 @@ fn('hb_buffer_reset', None, c_void_p)
 fn('hb_buffer_allocation_successful', c_int, c_void_p)
 fn('hb_buffer_reverse', None, c_void_p)
 fn('hb_buffer_reverse_clusters', None, c_void_p)
-fn('hb_buffer_guess_properties', None, c_void_p)
 fn('hb_buffer_add', None, c_void_p, c_uint32, c_uint32, c_uint)
 fn('hb_buffer_add_utf8', None, c_void_p, c_char_p, c_int, c_uint, c_int)
 fn('hb_buffer_add_utf16', None, c_void_p, POINTER(c_uint16), c_int, c_uint, c_int)
@@ -175,7 +174,7 @@ class Feature(Structure) :
                 ('start', c_uint),
                 ('end', c_uint)]
 fn('hb_shape', None, c_void_p, c_void_p, POINTER(Feature), c_uint)
-fn('hb_shape_full', c_int, c_void_p, c_void_p, POINTER(Feature), c_uint, POINTER(c_char_p), POINTER(c_char_p))
+fn('hb_shape_full', c_int, c_void_p, c_void_p, POINTER(Feature), c_uint, POINTER(c_char_p))
 
 # hb-unicode.h
 
@@ -277,7 +276,7 @@ class Buffer(object) :
             shapersinfo = shaperstype(*parms)
         else :
             shapersinfo = None
-        hbng.hb_shape_full(font.font, self.buffer, featinfo, lenfeats, None, shapersinfo)
+        hbng.hb_shape_full(font.font, self.buffer, featinfo, lenfeats, shapersinfo)
 
     @property
     def glyphs(self) :

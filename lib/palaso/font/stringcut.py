@@ -58,13 +58,13 @@ class HbFont(Font) :
         self.ftface.set_char_size(size * 64)
         self.face = hb.FTFace(self.ftface)
         self.font = hb.FTFont(self.ftface)
-        self.shapers = ["ot"]
+        self.shapers = None
         self.script = script
         self.lang = lang
 
     def glyphs(self, text) :
         buf = hb.Buffer(text, script = self.script, lang = self.lang)
-        buf.shape(self.font)
+        buf.shape(self.font, shapers = self.shapers)
         res = []
         x = 0
         y = 0
@@ -73,6 +73,11 @@ class HbFont(Font) :
             x += g.advance[0]
             y += g.advance[1]
         return res
+
+class HbOTFont(HbFont) :
+    def __init__(self, fname, size, rtl, feats = {}, script = 0, lang = 0) :
+        super(HbOTFont, self).__init__(fname, size, rtl, feats, script, lang)
+        self.shapers = ["ot"]
 
 class IcuFont(Font) :
     def __init__(self, fname, size, rtl, feats={}, script=0, lang=0) :
