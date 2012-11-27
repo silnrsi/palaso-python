@@ -1,3 +1,15 @@
+python-palaso (0.7.1-2ubuntu1~palaso1~precise1) precise; urgency=low
+
+  * Adjust dependencies 
+
+ -- Nicolas Spalinger <nicolas_spalinger@sil.org>  Thu, 18 Oct 2012 15:53:02 +0100
+
+python-palaso (0.7.1-1~palaso1) precise; urgency=low
+
+  * Bug fixes 
+
+ -- Martin Hosken <martin_hosken@sil.org>  Tue, 02 Oct 2012 15:29:11 +0700
+
 python-palaso (0.7-1~precise1) precise; urgency=low
 
   * Separate out into separate packages 

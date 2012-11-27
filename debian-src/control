@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 7),
                python (>=2.6), python-pyrex (>= 0.9), python-dev (>= 2.6),
                libkmfl-dev, libkmflcomp-dev
 Build-Depends-Indep: python-support (>= 0.5.3)
-Standards-Version: 3.8.0
+Standards-Version: 3.9.3
 Homepage: http://projects.palaso.org/projects/show/palaso-python
 
 Package: python-palaso
@@ -25,7 +25,7 @@ Package: python-palaso-kbd
 Architecture: any
 XS-Python-Version: ${python:Versions}
 Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends},
-        libkmfl0, libkmflcomp0, palaso-python-core, python-support (>= 0.5.3)
+        libkmfl0, libkmflcomp0, python-palaso-core, python-support (>= 0.5.3)
 Provides: ${python:Provides}
 Description: Payap Language Software python keyboard support
  Python scripts and modules for interacting with keyboard descriptions,
@@ -43,7 +43,7 @@ Package: python-palaso-font
 Architecture: all
 XS-Python-Version: ${python:Versions}
 Depends: ${python:Depends}, ${misc:Depends}, python-ctypes, python-pyicu (>= 1.3),
-        libgraphite2-3 | ligraphite2-2.0.0, python-fontforge, palaso-python-core,
+        libgraphite2-3 | libgraphite2-2.0.0, python-fontforge, python-palaso-core,
         python-support (>= 0.5.3)
 Provides: ${python:Provides}
 Description: Payap Language Software python font support
@@ -53,7 +53,7 @@ Description: Payap Language Software python font support
 Package: python-palaso-teckit
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-ctypes (>= 1.0.2), palaso-python-core,
+Depends: ${python:Depends}, ${misc:Depends}, python-ctypes (>= 1.0.2), python-palaso-core,
         python-support (>= 0.5.3)
 Provides: ${python:Provides}
 Description: TECKit text mapping wrapper
@@ -71,7 +71,7 @@ Description: Standard Format Markup python support
 Package: python-palaso-unicode
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-pyicu, python-gtk2 (>=2.14), palaso-python-core,
+Depends: ${python:Depends}, ${misc:Depends}, python-pyicu, python-gtk2 (>=2.14), python-palaso-core,
         python-support (>= 0.5.3)
 Provides: ${python:Provides}
 Description: Payap Language Software unicode text processing
