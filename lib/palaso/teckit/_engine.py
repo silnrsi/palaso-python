@@ -96,7 +96,7 @@ if platform.system() == "Windows" :
     libname = find_library('TECkit_' + arch)
     if libname is None :
         raise OSError("Unable to open TECkit_" + arch + ".dll")
-    libteckit = windll.LoadLibrary(find_library('TECkit_' + platform.machine()))
+    libteckit = windll.LoadLibrary(libname)
     LOCALFUNCTYPE = WINFUNCTYPE
 else :
     libteckit = cdll.LoadLibrary(find_library('TECkit'))
