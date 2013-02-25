@@ -92,7 +92,7 @@ def _dispatch_warnings(w):
 # Load the library we use windll instead of cdll on Windows.
 if platform.system() == "Windows" :
     arches = {'32bit' : 'x86', '64bit' : 'amd64'}
-    arch = arches[platform.architecture[0]]
+    arch = arches[platform.architecture()[0]]
     libname = find_library('TECkit_' + arch)
     if libname is None :
         raise OSError("Unable to open TECkit_" + arch + ".dll")
