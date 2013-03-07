@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import codecs
-from palaso.font.stringcut import GrFont, HbFont, IcuFont, HbOTFont
+from palaso.font.shape import make_shaper
 from optparse import OptionParser
 from fontTools.ttLib import TTFont
 import sys
@@ -29,13 +29,6 @@ parser.add_option("-k","--keep",action="store_true",help="keep going, don't retu
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
 (opts, args) = parser.parse_args()
 
-shapers = {
-    'gr' : GrFont,
-    'ot' : HbOTFont,
-    'hb' : HbFont,
-    'icu' : IcuFont
-}
-
 if opts.engine not in shapers : opts.engine = "gr"
 if not opts.lang : opts.lang = 0
 if not opts.script : opts.script = 0
@@ -52,10 +45,10 @@ if opts.feat :
         k, v = f.split('=')
         feats[k.strip()] = int(v.strip())
 
-font1 = shapers[opts.engine](args[0], 12, opts.rtl, feats, opts.script, opts.lang)
+font1 = maker_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
 tt1 = TTFont(args[0])
 if len(args) > 1 :
-    font2 = shapers[opts.engine](args[1], 12, opts.rtl, feats, opts.script, opts.lang)
+    font2 = make_shaper(opts.engine, args[1], 12, opts.rtl, feats, opts.script, opts.lang)
     tt2 = TTFont(args[1])
 f = codecs.open(opts.text, encoding="utf_8")
 
