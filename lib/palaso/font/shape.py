@@ -94,37 +94,15 @@ class IcuFont(Font) :
         for i in range(len(gids)) :
             res.append((gids[i], poss[i]))
         return res
+
+_shapers = {
+    'gr' : GrFont,
+    'ot' : HbOTFont,
+    'hb' : HbFont,
+    'icu' : IcuFont
+}
  
-
-class StringCutter(object) :
-    def __init__(self, tfont, wfont, rfont, befores, afters, width, refspace = None) :
-        self.befores = befores
-        self.afters = afters
-        self.tfont = tfont
-        self.wfont = wfont
-        self.rfont = rfont
-        self.width = width * 96 / 72.
-        self.refspace = refspace * 96 / 72.
-        if rfont :
-            if not self.refspace :
-                self.refspace = rfont.width(' ')
-            else :
-                self.refspace = refspace * 96 / 72.
-
-    def cut(self, ref, before, word, after) :
-        """Takes stripped strings and returns character cut positions for before and after"""
-        width = self.width
-        if self.rfont :
-            width -= self.rfont.width(ref) + self.refspace
-        # split befores on self.befores to get indices
-        # split afters on self.afters to get indices
-        # get widths for all those indices
-        # choose before and after indices
-        # if no choice
-            # get word break indices for before and after up to first split
-            # get widths and choose
-            # if still no choice
-                # get cluster break indices for before and after up to first word
-                # get widths and choose
-        
+def make_shaper(engine, fname, size, rtl, feats = {}, script = 0, lang = 0) :
+    res = _shapers[engine](fname, size, rtl, feats, script, lang)
+    return res
 

@@ -1,0 +1,97 @@
+#!/usr/bin/python
+
+import argparse
+import numpy as np
+import freetype as ft
+
+def monobits(x, depth = 1) :
+    if depth == 8 : return [x]
+    data = []
+    mask = 2 * depth - 1
+    for i in range(8 / depth) :
+        data.insert(0, x & mask)
+        x = x >> depth
+    return data
+
+def bitmap_array(b, depth = 8) :
+    """Converts a ft bitmap into a 2D array with y=0 being the top row of the bitmap"""
+    if b.depth == 8 and b.pitch == width : return np.array(b.buffer).resize(b.rows, b.width)
+    for i in range(b.rows) :
+        row = []
+        for j in range(b.pitch) :
+            row.extend(monobits(b.buffer[i * b.pitch + j]))
+        data.extend(row[:b.width])
+    return np.array(data).resize(b.rows, b.width)
+
+class Glyph(object) :
+
+    def __init__(self, gid, origin, name = "") :
+        self.gid = gid
+        self.org = origin
+        self.name = name
+
+    def addBitmap(self, ftGlyph, depth = 8) :
+        b = ftGlyph.bitmap
+        self.left = ftGlyph.bitmap_left
+        self.top = ftGlyph.bitmap_top
+        self.width = b.width
+        self.height = b.rows
+        self.data = bitmap_array(b)
+
+    def clashTest(s, o) :
+        x = max(o.org[0] + o.left, s.org[0] + s.left)
+        r = min(o.org[0] + o.left + o.width, s.org[0] + s.left + s.width)
+        if r < x : return False
+
+        y = min(o.org[1] + o.top, s.org[1] + s.top)
+        b = max(o.org[1] + o.top - o.height, s.org[1] + s.top - s.height)
+        if y < b : return False
+
+        for i in range(r - x) :
+            for j in range(y - b) :
+                if s.data[j + x - s.org[0] - s.left][i + y - s.org[1] - s.top] > 0 and \
+                        o.data[j + x - o.org[0] - o.left][i + y - o.org[1] - o.top] > 0 :
+                    return True
+        return False
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('font', help='Font file')
+parser.add_argument('text', help='Text to render')
+parser.add_argument('--size', type=int, default=40, help='Pixels per em to work at [40]')
+parser.add_argument('--depth', type=int, default=1, choices=(1,8), help='Bit depth to work at [1]')
+parser.add_argument('--shaper', '-s', choices=('ot', 'gr', 'hb', 'icu'), default='ot', help='shaper to use [ot]')
+parser.add_argument('--script', help='Script to pass to shaper')
+parser.add_argument('--lang', help='Language to pass to shaper')
+parser.add_argument('--rlt', action='store_true', default=False, help='Render right to left')
+parser.add_argument('--feat', '-f', action='append', help='id=value pairs, may be repeated')
+args = parser.parse_args()
+
+feats={}
+if args.feat :
+    for f in args.feat :
+        k,v = f.split('=')
+        feats[k.strip()] = int(v.strip())
+
+styleflags = { 1 : FT_LOAD_TARGET_MONO, 8 : 0 }
+freestyle = FT_LOAD_RENDER | styleflags[args.depth]
+
+text = args.text.decode('raw_unicode_escape')
+font = shape.make_shaper(args.shaper, args.font, args.size, args.rtl, feats, args.script, args.lang)
+face = ft.Face(args.font)
+face.set_char_size(args.size * 64)
+
+glyphs = []
+for g in font.glyphs(text) :
+    n = ctypes.create_string_buffer(64)
+    freetype.FT_Get_Glyph_Name(face._FT_Face, g[0], n, ctypes.sizeof(n))
+    glyph = Glyph(g[0], g[1], n.value)
+    freetype.FT_Load_Glyph(face._FT_Face, g[0], freestyle)
+    glyph.addBitmap(face.glyph.bitmap, args.depth)
+    glyphs.append(glyph)
+
+for i in range(len(glyphs) - 1) :
+    for j in range(i + 1, len(glyphs)) :
+        if glyphs[i].clashTest(glyphs[j]) :
+            print "Glyphs {0} and {1} collide".format(glyphs[i].name, glyphs[j].name)
+
