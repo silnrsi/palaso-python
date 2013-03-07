@@ -2,9 +2,10 @@
 
 import argparse
 import numpy as np
-import freetype as ft
+import freetype
 
 def monobits(x, depth = 1) :
+    """Convert from bits to numbers"""
     if depth == 8 : return [x]
     data = []
     mask = 2 * depth - 1
@@ -24,6 +25,7 @@ def bitmap_array(b, depth = 8) :
     return np.array(data).resize(b.rows, b.width)
 
 class Glyph(object) :
+    """Holds a glyph, its position and bitmap"""
 
     def __init__(self, gid, origin, name = "") :
         self.gid = gid
@@ -39,16 +41,20 @@ class Glyph(object) :
         self.data = bitmap_array(b)
 
     def clashTest(s, o) :
+        # calculate left and right of overlap
         x = max(o.org[0] + o.left, s.org[0] + s.left)
         r = min(o.org[0] + o.left + o.width, s.org[0] + s.left + s.width)
         if r < x : return False
 
+        # calculate top and bottom of overlap
         y = min(o.org[1] + o.top, s.org[1] + s.top)
         b = max(o.org[1] + o.top - o.height, s.org[1] + s.top - s.height)
         if y < b : return False
 
+        # iterate over the overlap rectangle
         for i in range(r - x) :
             for j in range(y - b) :
+                # if both bitmap cells are non-white, then collision has occurred.
                 if s.data[j + x - s.org[0] - s.left][i + y - s.org[1] - s.top] > 0 and \
                         o.data[j + x - o.org[0] - o.left][i + y - o.org[1] - o.top] > 0 :
                     return True
@@ -69,29 +75,43 @@ args = parser.parse_args()
 
 feats={}
 if args.feat :
+    # iterate over all --feat parameters and parse into x=y and store in a dict
     for f in args.feat :
         k,v = f.split('=')
         feats[k.strip()] = int(v.strip())
 
+# options to pass to Load_Glyph for each bit depth. Don't know for 2 or 4.
 styleflags = { 1 : FT_LOAD_TARGET_MONO, 8 : 0 }
+# flags to pass to Load_Glyph to render at specified bit depth
 freestyle = FT_LOAD_RENDER | styleflags[args.depth]
 
+# parse utf8 with \u type stuff in it
 text = args.text.decode('raw_unicode_escape')
+# Get a smart font engine according to what's been asked for
 font = shape.make_shaper(args.shaper, args.font, args.size, args.rtl, feats, args.script, args.lang)
+
+# get a ft face
 face = ft.Face(args.font)
 face.set_char_size(args.size * 64)
 
 glyphs = []
+# render the string using the engine and iterate over the glyphs it makes
 for g in font.glyphs(text) :
+    # get the glyph name
     n = ctypes.create_string_buffer(64)
     freetype.FT_Get_Glyph_Name(face._FT_Face, g[0], n, ctypes.sizeof(n))
+    # make a glyph object with info from shaper
     glyph = Glyph(g[0], g[1], n.value)
+    # render glyph to bitmap
     freetype.FT_Load_Glyph(face._FT_Face, g[0], freestyle)
+    # store bitmap in glyph object
     glyph.addBitmap(face.glyph.bitmap, args.depth)
     glyphs.append(glyph)
 
+# iterate over every unordered pair of glyphs in the string
 for i in range(len(glyphs) - 1) :
     for j in range(i + 1, len(glyphs)) :
+        # if two glyphs collide, report it
         if glyphs[i].clashTest(glyphs[j]) :
             print "Glyphs {0} and {1} collide".format(glyphs[i].name, glyphs[j].name)
 
