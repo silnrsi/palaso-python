@@ -239,13 +239,14 @@ class Buffer(object) :
         length = len(self.text)
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
-        if not script :
-            script = hbng.hb_buffer_get_script(self.buffer)
-        else :
-            script = hbng.hb_script_from_string(script)
+        script = hbng.hb_script_from_string(script) or -1
         lang = hbng.hb_language_from_string(lang or 'dflt')
         if not unicodefuncs :
             unicodefuncs = hbng.hb_glib_get_unicode_funcs()
+        if 'rtl' in kwds :
+            hbng.hb_buffer_set_direction(self.buffer, 5)
+        else :
+            hbng.hb_buffer_set_direction(self.buffer, 4)
         hbng.hb_buffer_set_script(self.buffer, script)
         hbng.hb_buffer_set_language(self.buffer, lang)
         hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
