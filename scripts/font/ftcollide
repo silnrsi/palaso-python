@@ -1,10 +1,9 @@
 #!/usr/bin/python
 
-import argparse
+import argparse, ctypes
 import numpy as np
 import freetype as ft
 from palaso.font import shape
-import ctypes
 
 def monobits(x, depth = 1) :
     """Convert from bits to numbers"""
@@ -25,7 +24,7 @@ def bitmap_array(b, depth = 8) :
         for j in range(b.pitch) :
             row.extend(monobits(b.buffer[i * b.pitch + j]))
         data.extend(row[:b.width])
-    res = np.array(data)
+    res = np.array(data, dtype=np.int8)
     res.resize(b.rows, b.width)
     return res
 
@@ -45,24 +44,37 @@ class Glyph(object) :
         self.height = b.rows
         self.data = bitmap_array(b, depth)
 
-    def clashTest(s, o) :
+    def thicken(self, t) :
+        self.thick = np.zeros((self.height + 2*t, self.width + 2 * t), dtype = np.int8)
+        for i in range(-t, t+1) :
+            for j in range(-t, t+1) :
+                self.thick[i+t:i+t+self.height, j+t:j+t+self.width] |= self.data
+
+    def clashTest(s, o, t = 0) :
         # calculate left and right of overlap
-        x = max(o.org[0] + o.left, s.org[0] + s.left)
-        r = min(o.org[0] + o.left + o.width, s.org[0] + s.left + s.width)
+        x = max(o.org[0] + o.left - t, s.org[0] + s.left)
+        r = min(o.org[0] + o.left + o.width + t, s.org[0] + s.left + s.width)
         if r < x : return False
 
         # calculate top and bottom of overlap
-        y = min(o.org[1] + o.top, s.org[1] + s.top)
-        b = max(o.org[1] + o.top - o.height, s.org[1] + s.top - s.height)
+        y = min(o.org[1] + o.top + t, s.org[1] + s.top)
+        b = max(o.org[1] + o.top - o.height - t, s.org[1] + s.top - s.height)
         if y < b : return False
 
         # iterate over the overlap rectangle
-        for i in range(r - x) :
-            for j in range(y - b) :
-                # if both bitmap cells are non-white, then collision has occurred.
-                if s.data[s.top - 1 - (j + b - s.org[1])][i + x - s.org[0] - s.left] > 0 and \
-                        o.data[o.top - 1 - (j + b - o.org[1])][i + x - o.org[0] - o.left] > 0 :
-                    return True
+        if t :
+            for i in range(r - x) :
+                for j in range(y - b) :
+                    if s.data[s.top - 1 - (j + b - s.org[1])][i + x - s.org[0] - s.left] > 0 and \
+                            o.thick[o.top - 1 - (j + b - o.org[1]) + t][i + x + t - o.org[0] - o.left] > 0 :
+                        return True
+        else :
+            for i in range(r - x) :
+                for j in range(y - b) :
+                    # if both bitmap cells are non-white, then collision has occurred.
+                    if s.data[s.top - 1 - (j + b - s.org[1])][i + x - s.org[0] - s.left] > 0 and \
+                            o.data[o.top - 1 - (j + b - o.org[1])][i + x - o.org[0] - o.left] > 0 :
+                        return True
         return False
 
 
@@ -76,6 +88,7 @@ parser.add_argument('--script', help='Script to pass to shaper')
 parser.add_argument('--lang', help='Language to pass to shaper')
 parser.add_argument('--rtl', action='store_true', default=False, help='Render right to left')
 parser.add_argument('--feat', '-f', action='append', help='id=value pairs, may be repeated')
+parser.add_argument('--thicken', '-t', type=int, help="Consider collisions with error of thicken")
 args = parser.parse_args()
 
 feats={}
@@ -93,15 +106,17 @@ freestyle = ft.FT_LOAD_RENDER | styleflags[args.depth]
 # parse utf8 with \u type stuff in it
 text = args.text.decode('raw_unicode_escape')
 # Get a smart font engine according to what's been asked for
-font = shape.make_shaper(args.shaper, args.font, args.size, args.rtl, feats, args.script, args.lang)
+shaper = shape.make_shaper(args.shaper, args.font, args.size, args.rtl, feats, args.script, args.lang)
 
 # get a ft face
 face = ft.Face(args.font)
+# shift left 6 bits to account for fractional point sizes
 face.set_char_size(args.size * 64)
 
 glyphs = []
 # render the string using the engine and iterate over the glyphs it makes
-for g in font.glyphs(text) :
+for g in shaper.glyphs(text) :
+    # g is (gid, pos) pos is (x, y). so g is (gid, (x, y))
     # get the glyph name
     n = ctypes.create_string_buffer(64)
     ft.FT_Get_Glyph_Name(face._FT_Face, g[0], n, ctypes.sizeof(n))
@@ -112,11 +127,12 @@ for g in font.glyphs(text) :
     # store bitmap in glyph object
     glyph.addBitmap(face.glyph, args.depth)
     glyphs.append(glyph)
+    if args.thicken : glyph.thicken(args.thicken)
 
 # iterate over every unordered pair of glyphs in the string
 for i in range(len(glyphs) - 1) :
     for j in range(i + 1, len(glyphs)) :
         # if two glyphs collide, report it
-        if glyphs[i].clashTest(glyphs[j]) :
+        if i != j and glyphs[i].clashTest(glyphs[j], args.thicken) :
             print "Glyphs {0} and {1} collide".format(glyphs[i].name, glyphs[j].name)
 
