@@ -21,7 +21,7 @@ parser = OptionParser(usage = '%prog [options] infont1 infont2')
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
-parser.add_option("-e","--engine",help="renderer to use [gr]")
+parser.add_option("-e","--engine",default='gr',help="renderer to use [gr]")
 parser.add_option("-l","--lang",help="language to tag text with")
 parser.add_option("-s","--script",help="script of text")
 parser.add_option("-r","--rtl",action="store_true",help="right to left")
@@ -29,7 +29,6 @@ parser.add_option("-k","--keep",action="store_true",help="keep going, don't retu
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
 (opts, args) = parser.parse_args()
 
-if opts.engine not in shapers : opts.engine = "gr"
 if not opts.lang : opts.lang = 0
 if not opts.script : opts.script = 0
 if not opts.rtl : opts.rtl = 0
@@ -45,7 +44,7 @@ if opts.feat :
         k, v = f.split('=')
         feats[k.strip()] = int(v.strip())
 
-font1 = maker_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
+font1 = make_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
 tt1 = TTFont(args[0])
 if len(args) > 1 :
     font2 = make_shaper(opts.engine, args[1], 12, opts.rtl, feats, opts.script, opts.lang)
