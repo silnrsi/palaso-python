@@ -267,12 +267,12 @@ if __name__ == '__main__':
         sys.stdout.write(__version__+"\n")
         sys.exit(0)
 
+    sfms = list(chain.from_iterable(imap(glob.iglob, sfms)))
     if len(sfms) < 1:
         sys.stderr.write(parser.expand_prog_name('%prog: missing SFM FILE\n'))
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     
-    sfms = list(chain.from_iterable(imap(glob.iglob, sfms)))
     if opts.dict : opts.dict = os.path.expanduser(opts.dict)
     opts.output = os.path.expanduser(opts.output)
     if opts.tec : opts.tec = os.path.expanduser(opts.tec)
