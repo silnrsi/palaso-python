@@ -75,6 +75,11 @@ fn('hb_script_from_iso15924_tag', c_int, c_uint32)
 fn('hb_script_from_string', c_int, c_char_p)
 fn('hb_script_to_iso15924_tag', c_uint32, c_int)
 fn('hb_script_get_horizontal_direction', c_int, c_int)
+try :
+    fn('hb_version_string', c_char_p)
+    version_string = hbng.hb_version_string()
+except :
+    version_string = ""    
 
 # hb-font.h
 fnhbreftable = CFUNCTYPE(c_void_p, c_void_p, c_uint32, c_void_p)
@@ -222,9 +227,9 @@ fn('hb_ft_font_set_funcs', None, c_void_p)
 fn('hb_ft_font_get_face', c_void_p, c_void_p)
 
 # hb-glib.h
-fn('hb_glib_script_to_script', c_int, c_int)
-fn('hb_glib_script_from_script', c_int, c_int)
-fn('hb_glib_get_unicode_funcs', c_void_p)
+#fn('hb_glib_script_to_script', c_int, c_int)
+#fn('hb_glib_script_from_script', c_int, c_int)
+#fn('hb_glib_get_unicode_funcs', c_void_p)
 
 class Glyph(object) :
     def __init__(self, ginfo, position) :
@@ -243,15 +248,18 @@ class Buffer(object) :
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
         script = hbng.hb_script_from_string(script) or -1
         lang = hbng.hb_language_from_string(lang or 'dflt')
-        if not unicodefuncs :
-            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
         if 'rtl' in kwds :
             hbng.hb_buffer_set_direction(self.buffer, 5)
         else :
             hbng.hb_buffer_set_direction(self.buffer, 4)
         hbng.hb_buffer_set_script(self.buffer, script)
         hbng.hb_buffer_set_language(self.buffer, lang)
-        hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
+        (major, minor, macro) = map(int, version_string.split('.')) if version_string else (0, 0, 0)
+        if unicodefuncs :
+            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
+        elif (major < 1 and minor <= 9 and macro <= 20) :
+            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
+            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
 
     def __del__(self) :
         hbng.hb_buffer_destroy(self.buffer)

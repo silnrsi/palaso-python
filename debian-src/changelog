@@ -1,8 +1,12 @@
 python-palaso (0.7.1-2ubuntu1~palaso1~precise1) precise; urgency=low
 
+  [ Nicolas Spalinger ]
   * Adjust dependencies 
 
- -- Nicolas Spalinger <nicolas_spalinger@sil.org>  Thu, 18 Oct 2012 15:53:02 +0100
+  [ Martin Hosken ]
+  * Package for PPA
+
+ -- Martin Hosken <martin_hosken@sil.org>  Mon, 04 Nov 2013 15:51:14 +0700
 
 python-palaso (0.7.1-1~palaso1) precise; urgency=low
 
