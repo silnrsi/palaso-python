@@ -344,14 +344,23 @@ for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
         'verticalBaseline', 'weight') :
     setattr(f, a, getattr(fonts[0], a, None))
 
+for n in fonts[0].layers :
+    if n not in f.layers :
+        f.layers.add(n, fonts[0].layers[n].is_quadratic)
+    else :
+        f.layers[n].is_quadratic = fonts[0].layers[n].is_quadratic
+
 for a, av in point_relations.items() :
     addAnchorClass(f, a, "mark" if av[0] == "basemark" else av[0])
 for i in ('.notdef', 'nonmarkingreturn', '.null') :
-    copyglyph(fonts[0][i], f.createChar(-1, i))
+    g = f.createChar(-1, i)
+    if i in fonts[0] :
+        copyglyph(fonts[0][i], g)
     
 for g in glyphs :
     if g.glyph :
         g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name)
+        print g.name
         copyglyph(g.glyph, g1)
         g1.transform(g.scale, ("round",))
         c = ""
@@ -359,6 +368,7 @@ for g in glyphs :
             c += "{0}: {1}\n".format(k, v)
         g1.comment = c
         g.outglyph = g1
+
 for g in glyphs :
     if not g.glyph :
         g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name)

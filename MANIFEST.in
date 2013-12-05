@@ -1,6 +1,5 @@
-include MANIFEST.in debian/*
-recursive-exclude debian stamp-* *.debhelper* *.substvars
+include MANIFEST.in debian-src/*
+recursive-exclude debian-src stamp-* *.debhelper* *.substvars
 graft scripts
 graft tests
 global-exclude *.pyc *~
-

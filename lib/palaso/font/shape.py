@@ -2,7 +2,7 @@
 import palaso.font.graphite as gr
 import palaso.font.hbng as hb
 import palaso.font.icule as icule
-import freetype as ft
+import palaso.contrib.freetype as ft
 from icu import LayoutEngine as le
 from icu import ScriptCode, LanguageCode
 
