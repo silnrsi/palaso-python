@@ -282,6 +282,7 @@ def readprops(f) :
 
 parser = OptionParser(usage='%prog [options] infont outfont')
 parser.add_option("-c","--config",help="Configuration file to process")
+parser.add_option("-a","--append",action="store_true",help="append glyphs to output font")
 parser.add_option("-f","--font",action="append",help="Extra font to reference")
 (opts, args) = parser.parse_args()
 
@@ -325,37 +326,41 @@ for f in fonts :
 # do attachment, concrete glyph resolution and absolute positioning
 for g in glyphs : g.resolveReferences(point_relations)
 
-# generate output font
-f = fontforge.font()
-f.encoding = "Original"
+if opts.append and os.path.exists(args[0]) :
+    f = fontforge.open(os.path.abspath(args[0]))
+else :
+    # generate output font
+    f = fontforge.font()
+    f.encoding = "Original"
 
-for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
-        'hhea_ascent', 'hhea_ascent_add', 'hhea_descent', 'hhea_descent_add',
-        'hhea_linegap', 'horizontalBaseline', 'italicangle', 'macstyle',
-        'os2_codepages', 'os2_family_class', 'os2_fstype', 'os2_panose',
-        'os2_strikeypos', 'os2_strikeysize', 'os2_subxoff', 'os2_subxsize',
-        'os2_subyoff', 'os2_subysize', 'os2_supxoff', 'os2_supxsize',
-        'os2_supyoff', 'os2_supysize', 'os2_typoascent', 'os2_typoascent_add',
-        'os2_typodescent', 'os2_typodescent_add', 'os2_typolinegap',
-        'os2_use_typo_metrics', 'os2_vendor', # 'os2_unicoderanges', 
-        'os2_version', 'os2_weight', 'os2_weight_width_slope_only',
-        'os2_width', 'os2_winascent', 'os2_winascent_add', 'os2_windescent',
-        'os2_windescent_add', 'sfnt_names', 'upos', 'uwidth', 'version',
-        'verticalBaseline', 'weight') :
-    setattr(f, a, getattr(fonts[0], a, None))
+    for a in ('ascent', 'copyright', 'descent', 'em', 'gasp', 'hasvmetrics',
+            'hhea_ascent', 'hhea_ascent_add', 'hhea_descent', 'hhea_descent_add',
+            'hhea_linegap', 'horizontalBaseline', 'italicangle', 'macstyle',
+            'os2_codepages', 'os2_family_class', 'os2_fstype', 'os2_panose',
+            'os2_strikeypos', 'os2_strikeysize', 'os2_subxoff', 'os2_subxsize',
+            'os2_subyoff', 'os2_subysize', 'os2_supxoff', 'os2_supxsize',
+            'os2_supyoff', 'os2_supysize', 'os2_typoascent', 'os2_typoascent_add',
+            'os2_typodescent', 'os2_typodescent_add', 'os2_typolinegap',
+            'os2_use_typo_metrics', 'os2_vendor', # 'os2_unicoderanges', 
+            'os2_version', 'os2_weight', 'os2_weight_width_slope_only',
+            'os2_width', 'os2_winascent', 'os2_winascent_add', 'os2_windescent',
+            'os2_windescent_add', 'sfnt_names', 'upos', 'uwidth', 'version',
+            'verticalBaseline', 'weight') :
+        setattr(f, a, getattr(fonts[0], a, None))
 
-for n in fonts[0].layers :
-    if n not in f.layers :
-        f.layers.add(n, fonts[0].layers[n].is_quadratic)
-    else :
-        f.layers[n].is_quadratic = fonts[0].layers[n].is_quadratic
+    for n in fonts[0].layers :
+        if n not in f.layers :
+            f.layers.add(n, fonts[0].layers[n].is_quadratic)
+        else :
+            f.layers[n].is_quadratic = fonts[0].layers[n].is_quadratic
+
+    for i in ('.notdef', 'nonmarkingreturn', '.null') :
+        g = f.createChar(-1, i)
+        if i in fonts[0] :
+            copyglyph(fonts[0][i], g)
 
 for a, av in point_relations.items() :
     addAnchorClass(f, a, "mark" if av[0] == "basemark" else av[0])
-for i in ('.notdef', 'nonmarkingreturn', '.null') :
-    g = f.createChar(-1, i)
-    if i in fonts[0] :
-        copyglyph(fonts[0][i], g)
     
 for g in glyphs :
     if g.glyph :
