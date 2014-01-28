@@ -97,7 +97,7 @@ def output_modified_chars(keytops, mod) :
     if mod.upper().endswith("ALT") or mod.upper().endswith("CTRL") :
         keys = map(lambda x : "[{0} {1}]".format(mod, kmn.char_keysym(x)[1:-1]), keytops.replace(r'\\', '\\'))
         for it in keys :
-            k = kmn.keysym_item(kmn.char_keysm(it))
+            k = kmn.keysym_item(kmn.char_keysym(it))
             r = kb.run_items([k])
             res.append(r)
     else :
