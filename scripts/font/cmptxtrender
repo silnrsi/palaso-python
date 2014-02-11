@@ -4,7 +4,7 @@ import codecs
 from palaso.font.shape import make_shaper
 from optparse import OptionParser
 from fontTools.ttLib import TTFont
-import sys
+import sys, os
 
 def roundpt(pt, res) :
     try :
@@ -17,6 +17,33 @@ def name(tt, gl) :
     return (tt.getGlyphName(gl[0]), roundpt(gl[1], 0.1))
 
 
+def logstart(f, fpath, args) :
+    f.write("""<html><head>
+<meta charset="UTF8"/>
+<style>
+    @font-face {
+        family: testfont;
+        source: url(%s);
+    }
+    .text {
+        font-family: testfont;
+    }
+    .info {
+        font-family: monospace;
+        vertical-align: text-top;
+    }
+</style></head><body><table>
+""")
+    if args.label is not None and len(args.label) :
+        f.write("<tr><th></th><th></th><th>%s</th></tr>\n" % ("</th><th>".join(args.label)))
+
+def logentry(f, line, word, string, lglyphs, rglyphs) :
+    f.write("<tr><td>%d.%d</td><td class='text'>%s</td><td class='info'>%s</td><td class='info'>%s</td></tr>\n" %
+                (line, word, string, "<br/>".join(map(repr, lglyphs)), "<br/>".join(map(repr, rglyphs))))
+
+def logend(f) :
+    f.write("</body></html>\n");
+
 parser = OptionParser(usage = '%prog [options] infont1 infont2')
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
@@ -27,6 +54,7 @@ parser.add_option("-s","--script",help="script of text")
 parser.add_option("-r","--rtl",action="store_true",help="right to left")
 parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
+parser.add_option("-L","--label",action="append",help="report font labels")
 (opts, args) = parser.parse_args()
 
 if not opts.lang : opts.lang = 0
@@ -45,6 +73,7 @@ if opts.feat :
         feats[k.strip()] = int(v.strip())
 
 font1 = make_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
+fpath1 = os.path.relpath(args[0], start=(os.path.dirname(opts.output) if opts.output else '.'))
 tt1 = TTFont(args[0])
 if len(args) > 1 :
     font2 = make_shaper(opts.engine, args[1], 12, opts.rtl, feats, opts.script, opts.lang)
@@ -53,6 +82,7 @@ f = codecs.open(opts.text, encoding="utf_8")
 
 count = 0
 errors = 0
+logstarted = False
 for l in f.readlines() :
     count += 1
     l = l.strip()
@@ -69,8 +99,12 @@ for l in f.readlines() :
         else :
             gl2 = []
         if gl1 != gl2 :
-            outfile.write(u"{0:3d}.{1:d}: {2} - {3} {4}\n".format(count, wcount, s, gl1, gl2))
+            if not logstarted :
+                logstart(outfile, fpath1, opts)
+                logstarted = True
+            logentry(outfile, count, wcount, s, gl1, gl2)
             errors += 1
+if logstarted : logend(outfile)
 outfile.close()
 sys.exit(0 if opts.keep else errors)
 
