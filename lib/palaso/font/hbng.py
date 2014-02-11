@@ -257,9 +257,9 @@ class Buffer(object) :
         (major, minor, macro) = map(int, version_string.split('.')) if version_string else (0, 0, 0)
         if unicodefuncs :
             hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
-        elif (major < 1 and minor <= 9 and macro <= 20) :
-            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
-            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
+#        elif (major < 1 and minor <= 9 and macro <= 20) :
+#            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
+#            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
 
     def __del__(self) :
         hbng.hb_buffer_destroy(self.buffer)
