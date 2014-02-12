@@ -5,7 +5,7 @@ from palaso.font.shape import make_shaper
 from optparse import OptionParser
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
-import sys, os
+import sys, os, shutil
 
 def roundpt(pt, res) :
     try :
@@ -84,7 +84,6 @@ def logentry(f, line, word, string, lglyphs, rglyphs) :
                 info.append(('', style(rglyphs[i])))
         else :
             for i in range(o[1], o[2]) :
-#                info.append((style(lglyphs[i], 'eq'), style(rglyphs[i-o[1]+o[3]], 'eq')))
                 info.append(diffpos(lglyphs[i], rglyphs[i-o[1]+o[3]]))
     for inf in zip(*info) :
         f.write("    <td class='eq'>%s</td>\n" % ("<br/>".join(inf)))
@@ -98,7 +97,7 @@ parser = OptionParser(usage = '''%prog [options] infont1 infont2
 If the first font is above the output file in the filesystem hierarchy, it may not load.
 On firefox, ensure that the configuration option security.fileuri.strict_origin_policy
 is set to false to allow locally loaded html files to access fonts anywhere on the
-local filesystem.''')
+local filesystem. Alternatively use --copy to copy the font and reference that.''')
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
@@ -109,6 +108,7 @@ parser.add_option("-r","--rtl",action="store_true",help="right to left")
 parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
 parser.add_option("-L","--label",action="append",help="report font labels")
+parser.add_option("--copy",action="store_true",help="Make a conditional copy of infont1 to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font")
 (opts, args) = parser.parse_args()
 
 if not opts.lang : opts.lang = 0
@@ -125,6 +125,20 @@ if opts.feat :
     for f in opts.feat :
         k, v = f.split('=')
         feats[k.strip()] = int(v.strip())
+
+if opts.copy and opts.output :
+    fname = os.path.join(os.path.dirname(opts.output), os.path.basename(args[0]))
+    doit = False
+    if not os.path.exists(fname) :
+        doit = True
+    else :
+        bstat = os.stat(args[0])
+        nstat = os.stat(fname)
+        if bstat.st_ctime > nstat.st_ctime :
+            doit = True
+    if doit :
+        shutil.copy2(args[0], fname)
+    args[0] = fname
 
 font1 = make_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
 fpath1 = os.path.relpath(args[0], start=(os.path.dirname(opts.output) if opts.output else '.'))
