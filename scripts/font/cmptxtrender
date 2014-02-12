@@ -3,6 +3,7 @@
 import codecs
 from palaso.font.shape import make_shaper
 from optparse import OptionParser
+from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
 import sys, os
 
@@ -22,29 +23,82 @@ def logstart(f, fpath, args) :
 <meta charset="UTF8"/>
 <style>
     @font-face {
-        family: testfont;
-        source: url(%s);
+        font-family: testfont;
+        src: url('%s');
     }
     .text {
         font-family: testfont;
     }
-    .info {
+    .eq {
         font-family: monospace;
+        color: black;
         vertical-align: text-top;
     }
+    .neq {
+        font-family: monospace;
+        color: red;
+        vertical-align: text-top;
+    }
+    table, th, td {
+        border-collapse: collapse;
+        border: 1px solid grey;
+        padding: 5px;
+    }
 </style></head><body><table>
-""")
+""" % (fpath))
     if args.label is not None and len(args.label) :
         f.write("<tr><th></th><th></th><th>%s</th></tr>\n" % ("</th><th>".join(args.label)))
 
+def style(g, c = 'neq') :
+    return "<span class='{}'>{}:\t{}</span>".format(c, g[0], g[1])
+
+def diffpos(l, r) :
+    res = [("<span class='eq'>{}:\t(</span>".format(l[0]), "<span class='eq'>{}:\t(</span>".format(r[0]))]
+    for i in range(0, 2) :
+        s = ',' if i == 0 else ')'
+        c = 'eq' if l[1][i] == r[1][i] else 'neq'
+        u = []
+        for t in (l[1][i], r[1][i]) :
+            u.append("<span class='{}'>{:.17g}</span>{}".format(c, t, s))
+        res.append(u)
+    return map(lambda x: "".join(x), zip(*res))
+
 def logentry(f, line, word, string, lglyphs, rglyphs) :
-    f.write("<tr><td>%d.%d</td><td class='text'>%s</td><td class='info'>%s</td><td class='info'>%s</td></tr>\n" %
-                (line, word, string, "<br/>".join(map(repr, lglyphs)), "<br/>".join(map(repr, rglyphs))))
+    f.write("  <tr><td>%d.%d</td><td class='text'>%s</td>\n" %
+                (line, word, string))
+    def getname(t) :
+        return str(t[0])
+    s = SequenceMatcher(None, map(getname, lglyphs), map(getname, rglyphs))
+    info = []
+    for o in s.get_opcodes() :
+        if o[0] == 'insert' :
+            for i in range(o[3], o[4]) :
+                info.append(('', style(rglyphs[i])))
+        elif o[0] == 'delete' :
+            for i in range(o[1], o[2]) :
+                info.append((style(lglyphs[i]), ''))
+        elif o[0] == 'replace' :
+            for i in range(o[1], o[2]) :
+                info.append((style(lglyphs[i]), style(rglyphs[i-o[1]+o[3]]) if i-o[1]+o[3] < o[4] else ''))
+            for i in range(o[3] + o[2] - o[1], o[4]) :
+                info.append(('', style(rglyphs[i])))
+        else :
+            for i in range(o[1], o[2]) :
+#                info.append((style(lglyphs[i], 'eq'), style(rglyphs[i-o[1]+o[3]], 'eq')))
+                info.append(diffpos(lglyphs[i], rglyphs[i-o[1]+o[3]]))
+    for inf in zip(*info) :
+        f.write("    <td class='eq'>%s</td>\n" % ("<br/>".join(inf)))
+    f.write("  </tr>\n")
 
 def logend(f) :
     f.write("</body></html>\n");
 
-parser = OptionParser(usage = '%prog [options] infont1 infont2')
+parser = OptionParser(usage = '''%prog [options] infont1 infont2
+
+If the first font is above the output file in the filesystem hierarchy, it may not load.
+On firefox, ensure that the configuration option security.fileuri.strict_origin_policy
+is set to false to allow locally loaded html files to access fonts anywhere on the
+local filesystem.''')
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
