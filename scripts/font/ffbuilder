@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import psMat, fontforge, os, re
+import psMat, fontforge, os, re, sys
 from optparse import OptionParser
 from xml.etree.ElementTree import parse
 from palaso.font.fontforge import addAnchorClass
@@ -21,7 +21,11 @@ def pointMult(point, mat) :
     return (x, y)
 
 def findGlyph(e) :
-    font = fonts[int(e.get("font", 0))]
+    try :
+        font = fonts[int(e.get("font", 0))]
+    except IndexError :
+        print "You need to specify at least {} extra fonts using -f".format(e.get("font"))
+        sys.exit(1)
     name = e.get("PSName")
     if not name and e.get("UID") :
         s = font.findEncodingSlot(int(e.get("UID"), 16))
@@ -286,6 +290,10 @@ parser.add_option("-a","--append",action="store_true",help="append glyphs to out
 parser.add_option("-f","--font",action="append",help="Extra font to reference")
 (opts, args) = parser.parse_args()
 
+if not opts.config :
+    print "-c option required"
+    sys.exit(1)
+
 # setup fonts[] to find fonts by numeric index
 fonts = []
 if not opts.font : opts.font = []
@@ -364,7 +372,7 @@ for a, av in point_relations.items() :
     
 for g in glyphs :
     if g.glyph :
-        g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name)
+        g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name if g.name is not None else "")
         print g.name
         copyglyph(g.glyph, g1)
         g1.transform(g.scale, ("round",))
