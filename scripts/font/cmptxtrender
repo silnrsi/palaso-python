@@ -5,7 +5,7 @@ from palaso.font.shape import make_shaper
 from optparse import OptionParser
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
-import sys, os, shutil
+import sys, os, shutil, re
 
 def roundpt(pt, res) :
     try :
@@ -18,79 +18,154 @@ def name(tt, gl) :
     return (tt.getGlyphName(gl[0]), roundpt(gl[1], 0.1))
 
 
-def logstart(f, fpath, args) :
+def logstart(f, fpaths, args, inputs) :
+    temps = ("""
+    @font-face {{
+        font-family: testfont{1};
+        src: url('{0}');
+    }}
+    .text{1} {{
+        font-family: testfont{1};
+    }}""",
+    """<tr><td>{2}:</td><td>{3}</td></tr>
+""")
+    _strs = []
+    for i in range(len(fpaths)) :
+        _strs.append(map(lambda x:x.format(fpaths[i], i+1, args.label[i], inputs[i]), temps))
+    strs = map(lambda x:"".join(x), zip(*_strs))
+    
     f.write("""<html><head>
 <meta charset="UTF8"/>
 <style>
-    @font-face {
-        font-family: testfont;
-        src: url('%s');
-    }
-    .text {
-        font-family: testfont;
-    }
-    .eq {
+    {0[0]}
+    .eq {{
         font-family: monospace;
         color: black;
         vertical-align: text-top;
-    }
-    .neq {
+    }}
+    .neq {{
         font-family: monospace;
         color: red;
         vertical-align: text-top;
-    }
-    table, th, td {
+    }}
+    table, th, td {{
         border-collapse: collapse;
         border: 1px solid grey;
         padding: 5px;
-    }
-</style></head><body><table>
-""" % (fpath))
+    }}
+</style></head><body>
+<table>
+    {0[1]}
+    <tr><td>Test document:</td><td>{1}</td></tr>
+    <tr><td>Engine:</td><td>{2}</td></tr>
+    <tr><td>Language:</td><td>{3}</td></tr>
+    <tr><td>Script:</td><td>{4}</td></tr>
+    <tr><td>Features:</td><td>{5}</td></tr>
+</table>
+<p/>
+<table>
+""".format( strs,
+            args.text,
+            args.engine, 
+            args.lang if args.lang != 0 else '', 
+            args.script if args.script != 0 else '', 
+            ", ".join(args.feat if args.feat is not None else [])))
     if args.label is not None and len(args.label) :
-        f.write("<tr><th></th><th></th><th>%s</th></tr>\n" % ("</th><th>".join(args.label)))
+        f.write("<tr><th></th><th>{}</th>".format(args.label[0]))
+        for i in range(1, len(args.label)) :
+            f.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
+        f.write("</tr>\n")
+
+def ftostr(x, dp=2) :
+    res = ("{:." + str(dp) + "f}").format(x)
+    if res.endswith("." + ("0" * dp)) :
+        res = res[:-dp-1]
+    else :
+        res = re.sub(r"0*$", "", res)
+    return res
+
+def strpoint(p) :
+    return "("+",".join(map(ftostr, p))+")"
 
 def style(g, c = 'neq') :
-    return "<span class='{}'>{}:\t{}</span>".format(c, g[0], g[1])
+    return "<span class='{}'>{}:\t{}</span>".format(c, g[0], strpoint(g[1]))
 
-def diffpos(l, r) :
+def diffpos(l, r, lprev, rprev) :
     res = [("<span class='eq'>{}:\t(</span>".format(l[0]), "<span class='eq'>{}:\t(</span>".format(r[0]))]
     for i in range(0, 2) :
         s = ',' if i == 0 else ')'
-        c = 'eq' if l[1][i] == r[1][i] else 'neq'
+        c = 'eq' if l[1][i] - lprev[1][i] == r[1][i] - rprev[1][i] else 'neq'
         u = []
         for t in (l[1][i], r[1][i]) :
-            u.append("<span class='{}'>{:.17g}</span>{}".format(c, t, s))
+            u.append("<span class='{}'>{}</span>{}".format(c, ftostr(t), s))
         res.append(u)
     return map(lambda x: "".join(x), zip(*res))
 
-def logentry(f, line, word, string, lglyphs, rglyphs) :
-    f.write("  <tr><td>%d.%d</td><td class='text'>%s</td>\n" %
-                (line, word, string))
+def logentry(f, line, word, string, gglyphs) :
+    f.write(u"  <tr><td>{0}.{1}</td><td class='text1'>{2}</td>\n".format(line, word, string))
     def getname(t) :
         return str(t[0])
-    s = SequenceMatcher(None, map(getname, lglyphs), map(getname, rglyphs))
-    info = []
-    for o in s.get_opcodes() :
-        if o[0] == 'insert' :
-            for i in range(o[3], o[4]) :
-                info.append(('', style(rglyphs[i])))
-        elif o[0] == 'delete' :
-            for i in range(o[1], o[2]) :
-                info.append((style(lglyphs[i]), ''))
-        elif o[0] == 'replace' :
-            for i in range(o[1], o[2]) :
-                info.append((style(lglyphs[i]), style(rglyphs[i-o[1]+o[3]]) if i-o[1]+o[3] < o[4] else ''))
-            for i in range(o[3] + o[2] - o[1], o[4]) :
-                info.append(('', style(rglyphs[i])))
-        else :
-            for i in range(o[1], o[2]) :
-                info.append(diffpos(lglyphs[i], rglyphs[i-o[1]+o[3]]))
-    for inf in zip(*info) :
-        f.write("    <td class='eq'>%s</td>\n" % ("<br/>".join(inf)))
+    for l in range(1, len(gglyphs)) :
+        s = SequenceMatcher(None, map(getname, gglyphs[0]), map(getname, gglyphs[l]))
+        info = []
+        lprev = (0, (0, 0))
+        rprev = (0, (0, 0))
+        for o in s.get_opcodes() :
+            if o[0] == 'insert' :
+                for i in range(o[3], o[4]) :
+                    info.append(('', style(gglyphs[l][i])))
+            elif o[0] == 'delete' :
+                for i in range(o[1], o[2]) :
+                    info.append((style(gglyphs[0][i]), ''))
+            elif o[0] == 'replace' :
+                for i in range(o[1], o[2]) :
+                    info.append((style(gglyphs[0][i]), style(gglyphs[l][i-o[1]+o[3]]) if i-o[1]+o[3] < o[4] else ''))
+                for i in range(o[3] + o[2] - o[1], o[4]) :
+                    info.append(('', style(gglyphs[l][i])))
+            else :
+                for i in range(o[1], o[2]) :
+                    info.append(diffpos(gglyphs[0][i], gglyphs[l][i-o[1]+o[3]], lprev, rprev))
+                    lprev = gglyphs[0][i]
+                    rprev = gglyphs[l][i-o[1]+o[3]]
+        for inf in zip(*info) :
+            f.write(u"        <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
+        f.write(u"            <td class='text{}'>{}</td>\n".format(l+1, string))
     f.write("  </tr>\n")
 
 def logend(f) :
     f.write("</body></html>\n");
+
+def dosafecopy(inf, outf) :
+    pid = os.getpid()
+    while os.path.exists(outf+str(pid)) :
+        pid += 1
+    outlocal = outf + str(pid)
+    shutil.copy2(inf, outlocal)
+    try :
+        os.rename(outlocal, outf)
+    except OSError :
+        pass    # don't care if it fails, assuming something else copied it first
+
+def docopy(f, opts, i) :
+    # this code is fraught with collision possibilities given there may be 8 runs going simultaneously
+    dname = os.path.join(os.path.dirname(opts.output), opts.copy + str(i))
+    fname = os.path.join(dname, os.path.basename(f))
+    doit = False
+    if not os.path.exists(fname) :
+        doit = True
+        if not os.path.exists(dname) :
+            try :
+                os.makedirs(dname)
+            except OSError, e:
+                if e.errno != 17 : raise e     # race condition, job done already
+    else :
+        bstat = os.stat(f)
+        nstat = os.stat(fname)
+        if bstat.st_ctime > nstat.st_ctime :
+            doit = True
+    if doit :
+        dosafecopy(f, fname)
+    return fname
 
 parser = OptionParser(usage = '''%prog [options] infont1 infont2
 
@@ -108,7 +183,7 @@ parser.add_option("-r","--rtl",action="store_true",help="right to left")
 parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
 parser.add_option("-L","--label",action="append",help="report font labels")
-parser.add_option("--copy",action="store_true",help="Make a conditional copy of infont1 to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font")
+parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 (opts, args) = parser.parse_args()
 
 if not opts.lang : opts.lang = 0
@@ -120,32 +195,28 @@ else :
 #    outfile = codecs.EncodedFile(sys.stdout, "unicode_internal", file_encoding="utf_8")
     outfile = codecs.getwriter("utf_8")(sys.stdout)
 
+if not opts.label : opts.label = map(lambda x: "Input font{}".format(x+1), range(len(args)))
+
 feats = {}
 if opts.feat :
     for f in opts.feat :
         k, v = f.split('=')
         feats[k.strip()] = int(v.strip())
 
+origargs = []
 if opts.copy and opts.output :
-    fname = os.path.join(os.path.dirname(opts.output), os.path.basename(args[0]))
-    doit = False
-    if not os.path.exists(fname) :
-        doit = True
-    else :
-        bstat = os.stat(args[0])
-        nstat = os.stat(fname)
-        if bstat.st_ctime > nstat.st_ctime :
-            doit = True
-    if doit :
-        shutil.copy2(args[0], fname)
-    args[0] = fname
+    for i in range(len(args)) :
+        origargs.append(args[i])
+        args[i] = docopy(args[i], opts, i)
+else :
+    origargs = args
+fpaths = map(lambda x:os.path.relpath(x, start=(os.path.dirname(opts.output) if opts.output else '.')), args)
 
-font1 = make_shaper(opts.engine, args[0], 12, opts.rtl, feats, opts.script, opts.lang)
-fpath1 = os.path.relpath(args[0], start=(os.path.dirname(opts.output) if opts.output else '.'))
-tt1 = TTFont(args[0])
-if len(args) > 1 :
-    font2 = make_shaper(opts.engine, args[1], 12, opts.rtl, feats, opts.script, opts.lang)
-    tt2 = TTFont(args[1])
+fonts = []
+tts = []
+for i in range(len(args)) :
+    fonts.append(make_shaper(opts.engine, args[i], 12, opts.rtl, feats, opts.script, opts.lang))
+    tts.append(TTFont(args[i]))
 f = codecs.open(opts.text, encoding="utf_8")
 
 count = 0
@@ -161,16 +232,16 @@ for l in f.readlines() :
     wcount = 0
     for s in words :
         wcount += 1
-        gl1 = map(lambda x: name(tt1, x), font1.glyphs(s))
-        if len(args) > 1 :
-            gl2 = map(lambda x: name(tt2, x), font2.glyphs(s))
-        else :
-            gl2 = []
-        if gl1 != gl2 :
+        gls = [map(lambda x: name(tts[0], x), fonts[0].glyphs(s))]
+        logme = False
+        for i in range(1, len(fonts)) :
+            gls.append(map(lambda x: name(tts[i], x), fonts[i].glyphs(s)))
+            if gls[-1] != gls[0] : logme = True
+        if logme :
             if not logstarted :
-                logstart(outfile, fpath1, opts)
+                logstart(outfile, fpaths, opts, args)
                 logstarted = True
-            logentry(outfile, count, wcount, s, gl1, gl2)
+            logentry(outfile, count, wcount, s, gls)
             errors += 1
 if logstarted : logend(outfile)
 outfile.close()
