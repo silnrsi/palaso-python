@@ -334,7 +334,7 @@ for f in fonts :
 # do attachment, concrete glyph resolution and absolute positioning
 for g in glyphs : g.resolveReferences(point_relations)
 
-if opts.append and os.path.exists(args[0]) :
+if opts.append and os.path.exists(fonts[0]) :
     f = fontforge.open(os.path.abspath(args[0]))
 else :
     # generate output font
