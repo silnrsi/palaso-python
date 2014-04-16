@@ -46,7 +46,10 @@ class suffix(object) :
         return res
 
 class WordBreak(object) :
+    """Does dictionary based word breaking using maximal match algorithm"""
+
     def __init__(self, words) :
+        """words is a set of strings"""
         self.words = words
         self.cache = {}
         self.lens = {}
@@ -54,6 +57,10 @@ class WordBreak(object) :
             self.lens[w[0]] = max(self.lens.get(w[0], 0), len(w))
 
     def breakwords(self, text, unknowns=None) :
+        """breaks a given text string into a list of words. If unknowns is
+           passed a list, it will be filled with 0 or 1 corresponding to each
+           word returned where 0 means the word is known and 1 if the word
+           consists of unrecognised text"""
         if len(text) < 2 : return [text]
         for i in range(1,len(text)) :
             self._makesuffix(text[-(i+1):])
@@ -64,11 +71,12 @@ class WordBreak(object) :
     def _makesuffix(self, t) :
         if t in self.cache : return self.cache[t]
         tries = []
-        if t[0] in self.lens :
-            top = min(len(t) - 1, self.lens[t[0]])
-        else :
-            top = 1
-        for i in range(top + 1) :
+        top = min(len(t) - 1, self.lens.get(t[0], 1))
+        if top == 0 :       # big speed up to short circuit here
+            self.cache[t] = suffix(t)
+            return self.cache[t]
+
+        for i in range(1, top + 1) :
             if t[i:] in self.cache :
                 s = self.cache[t[i:]].copy()
             else :
@@ -81,8 +89,8 @@ class WordBreak(object) :
                 s.addword(t[:i])
             else :
                 s.addprefix(t[:i])
-
             tries.append(s)
+
         res = sorted(tries, cmp=lambda a,b: a.cmp(b))
         self.cache[t] = res[0]
         return res
