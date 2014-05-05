@@ -21,7 +21,11 @@ class GrFont(Font) :
         for f,v in feats.items() :
             fref = self.grface.get_featureref(f)
             self.feats.set(fref, v)
-        self.font = gr.Font(self.grface, size * 96 / 72.)
+        if size > 0 :
+            size = size * 96 / 72.
+        else :
+            size = float(self.grface.get_upem())
+        self.font = gr.Font(self.grface, size)
 
     def measure(self, text, after) :
         """Returns a list of x positions for before/after the indexth character and
@@ -44,25 +48,30 @@ class GrFont(Font) :
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
         return seg.advance[0]
 
-    def glyphs(self, text) :
+    def glyphs(self, text, includewidth = False) :
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
         res = []
         for s in seg.slots :
             res.append((s.gid, s.origin))
+        if includewidth : res.append((None, seg.advance))
         return res
 
 class HbFont(Font) :
     def __init__(self, fname, size, rtl, feats = {}, script = 0, lang = 0) :
         super(HbFont, self).__init__(fname, size, rtl)
         self.ftface = ft.Face(fname)
-        self.ftface.set_char_size(size * 64)
+        if size <= 0 :
+            size = self.ftface.units_per_EM
+        else :
+            size *= 64
+        self.ftface.set_char_size(size)
         self.face = hb.FTFace(self.ftface)
         self.font = hb.FTFont(self.ftface)
         self.shapers = None
         self.script = script
         self.lang = lang
 
-    def glyphs(self, text) :
+    def glyphs(self, text, includewidth = False) :
         buf = hb.Buffer(text, script = self.script, lang = self.lang)
         buf.shape(self.font, shapers = self.shapers)
         res = []
@@ -72,6 +81,7 @@ class HbFont(Font) :
             res.append((g.gid, (x + g.offset[0], y + g.offset[1])))
             x += g.advance[0]
             y += g.advance[1]
+        if includewidth : res.append((None, (x, y)))
         return res
 
 class HbOTFont(HbFont) :
@@ -85,7 +95,7 @@ class IcuFont(Font) :
         self.font = icule.TTXLEFont(fname)
         self.layout = le.layoutEngineFactory(self.font, getattr(ScriptCode, script, ScriptCode.zyyy) if script else ScriptCode.zyyy, getattr(LanguageCode, lang, LanguageCode.nul) if lang else LanguageCode.nul)
 
-    def glyphs(self, text) :
+    def glyphs(self, text, includewidth = False) :
         if not len(text) : return []
         self.layout.layoutChars(unicode(text))
         gids = self.layout.getGlyphs()

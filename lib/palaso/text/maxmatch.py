@@ -46,7 +46,14 @@ class suffix(object) :
         return res
 
 class WordBreak(object) :
-    """Does dictionary based word breaking using maximal match algorithm"""
+    """Does dictionary based word breaking using maximal match algorithm,
+       which provides a word breaking that minimises the total number of words
+       in the string.
+
+       This differs from longest match which front loads the
+       long words at the expense of word length later in the string. A maximal
+       match algorithm will give the same results whether run from the front
+       or the back of the string unlike the longest match algorithm."""
 
     def __init__(self, words) :
         """words is a set of strings"""
@@ -66,7 +73,7 @@ class WordBreak(object) :
             self._makesuffix(text[-(i+1):])
         res = self.cache[text]
         if unknowns is not None : unknowns.extend(res.unknowns)
-        return list(res.words)
+        return res.words[:]
 
     def _makesuffix(self, t) :
         if t in self.cache : return self.cache[t]
@@ -90,7 +97,6 @@ class WordBreak(object) :
             else :
                 s.addprefix(t[:i])
             tries.append(s)
-
         res = sorted(tries, cmp=lambda a,b: a.cmp(b))
         self.cache[t] = res[0]
         return res
