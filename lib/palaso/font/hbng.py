@@ -68,7 +68,7 @@ fn('hb_buffer_get_glyph_positions', POINTER(GlyphPosition), c_void_p, POINTER(c_
 fn('hb_tag_from_string', c_uint32, c_char_p)
 fn('hb_direction_from_string', c_int, c_char_p)
 fn('hb_direction_to_string', c_char_p, c_int)
-fn('hb_language_from_string', c_void_p, c_char_p)
+fn('hb_language_from_string', c_void_p, c_char_p, c_int)
 fn('hb_language_to_string', c_char_p, c_void_p)
 fn('hb_language_get_default', c_void_p)
 fn('hb_script_from_iso15924_tag', c_int, c_uint32)
@@ -247,7 +247,8 @@ class Buffer(object) :
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
         script = hbng.hb_script_from_string(script) or -1
-        lang = hbng.hb_language_from_string(lang or 'dflt')
+        thislang = lang or 'dflt'
+        lang = hbng.hb_language_from_string(thislang, len(thislang))
         if 'rtl' in kwds :
             hbng.hb_buffer_set_direction(self.buffer, 5)
         else :
