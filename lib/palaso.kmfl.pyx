@@ -145,19 +145,23 @@ cdef class kmfl :
             kmfl_attach_keyboard(self.kmsi, self.kbd)
         else :
             raise SyntaxError("Can't load keyboard " + fname)
+        self.numrules = self._num_rules()
 
     def __del__(self) :
         kmfl_detach_keyboard(self.kmsi)
         kmfl_unload_keyboard(self.kbd)
         kmfl_delete_keyboard_instance(self.kmsi)
 
-    def num_rules(self) :
+    def _num_rules(self) :
         res = 0
         for 0 <= i < self.kmsi.keyboard.ngroups :
             res += self.kmsi.groups[i].nrules
         return res
 
     def rule(self, num) :
+        """ Returns a given rule as a tuple:
+            (left context, right output, group number, flags)
+        """
         cdef XRULE rule
         cdef UINT *base
         count = 0
@@ -179,6 +183,7 @@ cdef class kmfl :
         return (lhs, rhs, gpnum, flags)
 
     def run_items(self, items) :
+        """ Executes a sequence of items returning the output character string """
         clear_history(self.kmsi)
         for i in items :
             mod = (i >> 16) & 0xFF
@@ -191,6 +196,7 @@ cdef class kmfl :
         return "".join(res)
 
     def interpret_items(self, items) :
+        """ Executes a sequence of items returning the item history at the end of the sequence """
         clear_history(self.kmsi)
         for i in items :
             if item_type(i) > 1 :
@@ -249,6 +255,7 @@ cdef class kmfl :
         return (len(input) - linput - 1, itertools.imap(expand_rule_context,VectorIterator(indices, mode)))
 
     def test_match(self, UINT charitem, UINT ritem) :
+        """ Compares two items to see if the first is matched by the second in a rule context """
         simpleres = (None, ())
         ruleitem = item_type(ritem)
         if ruleitem == item_char or ruleitem == item_deadkey or ruleitem == item_keysym :
@@ -262,6 +269,8 @@ cdef class kmfl :
             return None
 
     def expand_context(self, UINT rulenum, vector, side = 'r') :
+        """ returns an expansion of a context string (either left or right - output)
+            based on the vector which specifies which element to take in a store, for example """
         cdef XSTORE s
         cdef UINT *items, *context, clen, ci
         if side == 'r' :
@@ -295,6 +304,14 @@ cdef class kmfl :
         return res
 
     def flatten_context(self, UINT rulenum, side = 'l', mode = 'all') :
+        """ Returns all/some the possible item strings for a given context in a rule
+                mode = all      - all strings
+                       first1   - just the first string
+                       random   - one string per element in the context
+                       random-all - all strings in a random order, top down
+                       random-all-depth - all strings in a random order, bottom up
+                       random1  - just one random string
+        """
         cdef UINT *context, clen, ci
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
@@ -314,6 +331,7 @@ cdef class kmfl :
         return itertools.imap(expand_rule_context, VectorIterator(indices, mode = mode))
 
     def match_store(self, UINT snum, UINT item) :
+        """ Returns whether an item is matched in a store, and if so, its index, else None """
         cdef UINT i
         cdef XSTORE s
         cdef UINT *items
@@ -346,3 +364,4 @@ cdef class kmfl :
         for 0 <= i < s.len :
             res = res + unichr(items[i])
         return res
+
