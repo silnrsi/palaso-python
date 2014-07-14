@@ -1,5 +1,6 @@
 import re, itertools
-import os
+import os, collections
+from palaso.kmfl import kmfl
 
 keyboard_template = os.path.join(os.path.dirname(__file__), 'keyboard.svg')
 
@@ -457,10 +458,90 @@ def keysym_klcinfo(sym) :
 def escape(keyname) :
     return "\\" + keyname if "\\[".find(keyname) >= 0 else keyname
         
+class Key(int) :
+    """ Wraps a kmn item as a class for easier handling """
+
+    @classmethod
+    def fromstr(cls, s) :
+        return cls(keysym_item(s))
+
+    def __str__(self) :
+        return item_to_char(self)
+
+    def keysym(self) :
+        return item_to_key(self)
+
+
+class Keyman(kmfl) :
+
+    def create_sequences(self, input, mode = 'all', cache = None, history=None) :
+        """ Given an input string of items, return all the strings of items that
+            would produce this input sequence if executed
+                mode - which sequences to include for any given rule
+        """
+        cache = cache or {}
+        history = history or collections.defaultdict(list)
+        for rule in xrange(0, self.numrules) :
+            res = self.reverse_match(input, rule, mode = mode)
+            if not res: continue
+            
+            for output in res[1] :
+                if output[-1] >= 0x100FF00 : continue   # ignore specials
+                newinput = input[0:len(input) - res[0]] + output[:-1]
+                newstr = u"".join(unichr(i) for i in newinput)
+                if newstr and newstr in cache :
+                    for x in cache[newstr] :
+                        yield x + [Key(output[-1])]
+                    continue
+                else :
+                    cache[newstr] = []
+                
+                rule_history = history[rule]
+                if newinput and (not rule_history or rule_history[-1] > len(newinput)):
+                    rule_history.append(len(newinput))
+                    for x in self.create_sequences(newinput, mode, cache, history) :
+                        cache[newstr].append(x)
+                        yield x + [Key(output[-1])]
+                    rule_history.pop()
+                else :
+                    yield [Key(output[0])]
+
+    def reverse(self, string, mode = 'shortest') :
+        """ Given a output string, return a list of input item strings that if run
+            would generate the given string"""
+        submode = mode
+        if mode == 'shortest' : submode = 'first1'
+        input = [ord(i) for i in string]
+        res = list(self.create_sequences(input, mode = submode))
+        if mode == 'shortest' :
+            res.sort(key=len)
+        return res
+
+    def coverage_test(self, mode = 'all') :
+        """ Analyse the rules to come up with test input strings that will
+            ensure that all rules are exercised"""
+        cache = {}
+        outputted = set()
+        for i in xrange(0, self.numrules) :
+            for c in self.flatten_context(i, side = 'l', mode = mode) :
+                last_context_item = c[-1]
+                if (last_context_item & 0xFFFF) > 0xFF00 : continue
+                if len(c) > 1 :
+                    for output in self.create_sequences(c[:-1], mode, cache) :
+                        res = output + [last_context_item]
+                        if res not in outputted :
+                            outputted.add(res)
+                            yield res
+                else :
+                    res = [last_context_item]
+                    if not res in outputted :
+                        outputted.add(res)
+                        yield res
+
+
+
 __all__=["keysyms_items","keysym_item",
          "items_to_keys","item_to_key", "item_to_char"
          "keysym_scancodes", "chars_scancodes",
-         "keysym_klcinfo",
-         "char_keysym",
-         "escape",
-         "coverage"]
+         "keysym_klcinfo", "char_keysym", "escape",
+         "Key", "Keyman"]
