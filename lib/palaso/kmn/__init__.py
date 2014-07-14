@@ -481,30 +481,39 @@ class Keyman(kmfl) :
         """
         cache = cache or {}
         history = history or collections.defaultdict(list)
+        found = False
         for rule in xrange(0, self.numrules) :
             res = self.reverse_match(input, rule, mode = mode)
             if not res: continue
-            
-            for output in res[1] :
-                if output[-1] >= 0x100FF00 : continue   # ignore specials
-                newinput = input[0:len(input) - res[0]] + output[:-1]
-                newstr = u"".join(unichr(i) for i in newinput)
-                if newstr and newstr in cache :
-                    for x in cache[newstr] :
-                        yield x + [Key(output[-1])]
-                    continue
-                else :
-                    cache[newstr] = []
-                
-                rule_history = history[rule]
-                if newinput and (not rule_history or rule_history[-1] > len(newinput)):
-                    rule_history.append(len(newinput))
-                    for x in self.create_sequences(newinput, mode, cache, history) :
-                        cache[newstr].append(x)
-                        yield x + [Key(output[-1])]
-                    rule_history.pop()
-                else :
-                    yield [Key(output[0])]
+            for y in self._sequence(input, rule, res, cache, history, mode) :
+                yield y
+            found = True
+        # No rule matched the last char of input, so pass it through
+        if not found and len(input) :
+            res = (1, [[input[-1]]])
+            for y in self._sequence(input, rule, res, cache, history, mode) :
+                yield y
+
+    def _sequence(self, input, rule, res, cache, history, mode) :
+        for output in res[1] :
+            if output[-1] >= 0x100FF00 : continue   # ignore specials
+            newinput = input[0:len(input) - res[0]] + output[:-1]
+            newstr = u"".join(unichr(i) for i in newinput)
+            if newstr and newstr in cache :
+                for x in cache[newstr] :
+                    yield x + [Key(output[-1])]
+                continue
+            else :
+                cache[newstr] = []
+            rule_history = history[rule]
+            if newinput and (not rule_history or rule_history[-1] > len(newinput)):
+                rule_history.append(len(newinput))
+                for x in self.create_sequences(newinput, mode, cache, history) :
+                    cache[newstr].append(x)
+                    yield x + [Key(output[-1])]
+                rule_history.pop()
+            else :
+                yield [Key(output[0])]
 
     def reverse(self, string, mode = 'shortest') :
         """ Given a output string, return a list of input item strings that if run
