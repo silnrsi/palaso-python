@@ -410,6 +410,7 @@ class parser(collections.Iterable):
         assert error_level <= level.Marker or default_meta, 'default meta must be provided when error_level > level.Marker'
         
         # Set simple attributes
+        # TODO: self.source = getattr(source, 'name', '<string>')
         self.source  = source.name if hasattr(source,'name') else '<string>'
         self.__default_meta = default_meta
         self.__pua_prefix   = private_prefix
@@ -462,6 +463,9 @@ class parser(collections.Iterable):
     
     @staticmethod
     def __lexer(lines):
+        """ Return an iterator that returns tokens in a sequence:
+            marker, text, marker, text, ...
+        """
         lmss = enumerate(imap(parser.__tokeniser.finditer, lines))
         fs = (text(m.group(), position(l+1,m.start()+1)) for l,ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith','\\'))
@@ -484,6 +488,7 @@ class parser(collections.Iterable):
                             # remainder with it into a single text node.
                             self._tokens.put_back(tag[cut:] + next(self._tokens,''))
                         return tok[:cut+1]
+                    # TODO: what happens if cut == len(tag), why doesn't it return here?
                 parent = parent.parent
         return tok
     
@@ -501,6 +506,7 @@ class parser(collections.Iterable):
                     
                     # Spawn a sub-node
                     e = element(tag, tok.pos, parent=parent, meta=meta)
+                    # and recurse
                     e.extend(getattr(self,'_'+meta['TextType']+'_',self._default_) (e))
                     yield e
                 elif parent is None:
