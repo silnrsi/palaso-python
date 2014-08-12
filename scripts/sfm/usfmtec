@@ -51,6 +51,19 @@ def aswords(txt) :
 class notec(object) :
     def convert(self, txt, **kw) : return txt
 
+class pyconverter(object) :
+    def __init__(self, fname, fnname = None) :
+        self.vars = {}
+        execfile(fname, self.vars)
+        if fnname is None :
+            fnname = self.vars.get('__converter__', None)
+        if fnname is None or fnname not in self.vars :
+            raise SyntaxError("Can't find %s in %s" % (fnname, fname))
+        self.fn = self.vars[fnname]
+
+    def convert(self, txt, **kw) :
+        return self.fn(txt)
+
 class usfm_transducer(object) :
 
     def __init__(self, case = '', tec = notec(), opts = {}) :
@@ -210,8 +223,12 @@ def transduce(fname, opts) :
     if opts.tec :
         tec = Converter(Mapping(opts.tec), forward = not opts.reverse)
         conv.enc = tec
+    elif opts.python :
+        conv.enc = pyconverter(opts.python, opts.pythonfunc)
+
     if opts.dict :
         conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
+
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
         doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
@@ -243,6 +260,8 @@ if __name__ == '__main__':
     parser.add_option("--dict-context",action="store",type="int",dest="dicttag",help="Marker context column number (from o) of CSV dictionary. Cells contain a space separated list of required markers.")
     parser.add_option("-n","--lines",action="store_true",help="Don't parse as USFM, just as plain text")
     parser.add_option("-o","--output",action="store",metavar='PATH',help="Specify output file or directory")
+    parser.add_option("-p","--python",action="store",metavar='PATH',help="Python file containing converter code")
+    parser.add_option("--pythonfunc",action="store",help="Function name within python file, to call to convert text")
     parser.add_option("-t","--tec",action="store",metavar='PATH',help="TECKit .tec file to use for conversion")
     parser.add_option("-r","--reverse",action="store_true",help="Run .tec file in reverse")
     parser.add_option("--normalize",action="store",help="Unicode normalize converted text [c,d,kc,kd]")
@@ -273,9 +292,9 @@ if __name__ == '__main__':
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     
-    if opts.dict : opts.dict = os.path.expanduser(opts.dict)
-    opts.output = os.path.expanduser(opts.output)
-    if opts.tec : opts.tec = os.path.expanduser(opts.tec)
+    for a in ('dict', 'output', 'python', 'tec') :
+        if getattr(opts, a, None) is not None :
+            setattr(opts, a, os.path.expanduser(getattr(opts, a)))
 
     if opts.stylesheet:
         stylesheet_path = os.path.expanduser(opts.stylesheet)
