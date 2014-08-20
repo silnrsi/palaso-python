@@ -331,7 +331,7 @@ else :
 mods = [[] for i in range(8)]
 modids = []
 keytops = [''] * 256
-for i in range(km.num_rules()) :
+for i in range(km._num_rules()) :
     (lhs, rhs, gpnum, flags) = km.rule(i)
     if not flags & 1 : continue
     sym = kmn.item_to_key(lhs[-1])

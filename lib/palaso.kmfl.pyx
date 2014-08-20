@@ -137,6 +137,7 @@ cdef class kmfl :
 
     cdef KMSI *kmsi
     cdef int kbd
+    cdef int numrules
 
     def __init__(self, fname) :
         self.kmsi = kmfl_make_keyboard_instance(self)
