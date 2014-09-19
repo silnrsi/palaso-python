@@ -207,10 +207,13 @@ parser.add_option("--copy",help="Make a conditional copy of infont1 to the given
 parser.add_option("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
 (opts, args) = parser.parse_args()
 
+if not len(args) :
+    parser.print_help()
+    sys.exit(1)
 if not opts.lang : opts.lang = 0
 if not opts.script : opts.script = 0
 if not opts.rtl : opts.rtl = 0
-if not len(opts.engine) : opts.engine = ['gr']
+if not opts.engine or not len(opts.engine) : opts.engine = ['gr']
 if opts.output :
     outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
 else :
