@@ -148,14 +148,14 @@ def logentry(f, line, word, string, gglyphs, opts) :
 def logend(f) :
     f.write("</body></html>\n");
 
-def dosafecopy(inf, outf, opts) :
+def dosafecopy(inf, outf, opts, i) :
     pid = os.getpid()
     while os.path.exists(outf+str(pid)) :
         pid += 1
     outlocal = outf + str(pid)
     if opts.strip :
         f = TTFont(inf)
-        for t in tables[opts.engine] :
+        for t in tables[opts.engine[i] if i < len(opts.engine) else opts.engine[-1]] :
             del f[t]
         f.save(outlocal)
         f.close()
@@ -184,7 +184,7 @@ def docopy(f, opts, i) :
         if bstat.st_ctime > nstat.st_ctime :
             doit = True
     if doit :
-        dosafecopy(f, fname, opts)
+        dosafecopy(f, fname, opts, i)
     return fname
 
 parser = OptionParser(usage = '''%prog [options] infont1 infont2
@@ -196,7 +196,7 @@ local filesystem. Alternatively use --copy to copy the font and reference that.'
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
-parser.add_option("-e","--engine",default='gr',help="renderer to use (ot,gr,hb,icu) [gr]")
+parser.add_option("-e","--engine",action="append",help="renderer(s) to use (ot,gr,hb,icu). Repeatable [gr]")
 parser.add_option("-l","--lang",help="language to tag text with")
 parser.add_option("-s","--script",help="script of text")
 parser.add_option("-r","--rtl",action="store_true",help="right to left")
@@ -210,6 +210,7 @@ parser.add_option("-S","--strip",action="store_true",help="Strips smart code oth
 if not opts.lang : opts.lang = 0
 if not opts.script : opts.script = 0
 if not opts.rtl : opts.rtl = 0
+if not len(opts.engine) : opts.engine = ['gr']
 if opts.output :
     outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
 else :
@@ -236,7 +237,9 @@ fpaths = map(lambda x:os.path.relpath(x, start=(os.path.dirname(opts.output) if 
 fonts = []
 tts = []
 for i in range(len(args)) :
-    fonts.append(make_shaper(opts.engine, args[i], 0, opts.rtl, feats, opts.script, opts.lang))
+    while len(opts.engine) < i :
+        opts.engine.append(opts.engine[-1])
+    fonts.append(make_shaper(opts.engine[i], args[i], 0, opts.rtl, feats, opts.script, opts.lang))
     tts.append(TTFont(args[i]))
 f = codecs.open(opts.text, encoding="utf_8")
 

@@ -102,7 +102,7 @@ cdef extern from "kmfl/libkmfl.h" :
 cdef public void output_string(connection, char *p) :
     pass
 
-cdef public void output_beep(connection) :
+cdef public void output_beep(connection) with gil :
     connection.beep = 1
 
 cdef public void forward_keyevent(connection, UINT key, UINT state) :
@@ -138,6 +138,7 @@ cdef class kmfl :
     cdef KMSI *kmsi
     cdef int kbd
     cdef int numrules
+    cdef int beep
 
     def __init__(self, fname) :
         self.kmsi = kmfl_make_keyboard_instance(self)
