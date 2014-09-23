@@ -285,13 +285,13 @@ def readprops(f) :
                     g.temporary['properties'][p[0].strip()] = p[1].strip()
 
 parser = OptionParser(usage='%prog [options] infont outfont')
-parser.add_option("-c","--config",help="Configuration file to process")
+parser.add_option("-c","--config",help="Configuration file to process. Required")
 parser.add_option("-a","--append",action="store_true",help="append glyphs to output font")
 parser.add_option("-f","--font",action="append",help="Extra font to reference")
 (opts, args) = parser.parse_args()
 
-if not opts.config :
-    print "-c option required"
+if len(args) != 2 or not opts.config :
+    parser.print_help()
     sys.exit(1)
 
 # setup fonts[] to find fonts by numeric index
@@ -299,7 +299,11 @@ fonts = []
 if not opts.font : opts.font = []
 opts.font.insert(0, args.pop(0))
 for f in opts.font :
-    font = fontforge.open(os.path.abspath(f))
+    fabs = os.path.abspath(f)
+    if not os.path.exists(fabs) :
+        print "font {} at {} is missing".format(f, fabs)
+        sys.exit(1)
+    font = fontforge.open(fabs)
     fonts.append(font)
     font.temporary = { 'names' : {}}
     readprops(font)
@@ -334,8 +338,8 @@ for f in fonts :
 # do attachment, concrete glyph resolution and absolute positioning
 for g in glyphs : g.resolveReferences(point_relations)
 
-if opts.append and os.path.exists(fonts[0]) :
-    f = fontforge.open(os.path.abspath(args[0]))
+if opts.append :
+    f = fonts[0]
 else :
     # generate output font
     f = fontforge.font()
