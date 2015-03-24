@@ -9,10 +9,10 @@ import sys, os, shutil, re
 
 tables = {
     'gr' : ('GDEF', 'GSUB', 'GPOS'),
-    'ot' : ('Gloc', 'Glat', 'Silf'),
+    'ot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'),
     'hb' : (),
-    'hbot' : ('Gloc', 'Glat', 'Silf'),
-    'icu' : ('Gloc', 'Glat', 'Silf')
+    'hbot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat')),
+    'icu' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'))
 }
 
 def roundpt(pt, res) :
