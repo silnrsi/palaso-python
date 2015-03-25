@@ -168,7 +168,7 @@ def dosafecopy(inf, outf, opts, i) :
 
 def docopy(f, opts, i) :
     # this code is fraught with collision possibilities given there may be 8 runs going simultaneously
-    dname = os.path.join(os.path.dirname(opts.output), opts.copy + str(i))
+    dname = os.path.join(os.path.dirname(opts.output), opts.copy + str(i) + opts.engine[i])
     fname = os.path.join(dname, os.path.basename(f))
     doit = False
     if not os.path.exists(fname) :
