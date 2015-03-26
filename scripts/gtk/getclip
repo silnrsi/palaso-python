@@ -1,0 +1,22 @@
+#!/usr/bin/python
+
+import gtk
+import pprint
+import sys
+from subprocess import Popen, PIPE
+
+clipboard = gtk.clipboard_get()
+text = unicode(clipboard.wait_for_text())
+if (len(sys.argv) > 1 and sys.argv[1] == "-p") :
+    pprint.pprint(text)
+elif (len(sys.argv) > 1 and sys.argv[1] == "-s") :
+    for s in text :
+        print "%04X" % (ord(s)),
+elif len(sys.argv) > 1 and sys.argv[1] == '-e' :
+    p = Popen(sys.argv[2:], stdout=PIPE, stdin=PIPE)
+    res = p.communicate(text)
+    clipboard.set_text(res[0])
+    clipboard.store()
+else :
+    print text
+

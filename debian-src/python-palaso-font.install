@@ -1,0 +1,11 @@
+usr/lib/python2.7/dist-packages/palaso/font/*
+usr/lib/python2.7/dist-packages/palaso/contrib/*
+usr/lib/python2.7/dist-packages/palaso/contrib/freetype/*
+usr/lib/python2.7/dist-packages/palaso/contrib/freetype/ft_enums/*
+usr/bin/addsfdmerge
+usr/bin/ap2sfd
+usr/bin/cmptxtrender
+usr/bin/ffbuilder
+usr/bin/ffpointreplace
+usr/bin/testmlnorm
+usr/bin/ufo2sfd

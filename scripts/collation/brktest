@@ -1,0 +1,49 @@
+#!/usr/bin/python2.6
+
+import PyICU
+from optparse import OptionParser
+from palaso.contexts import defaultapp
+
+with defaultapp() :
+    parser = OptionParser()
+    parser.add_option("-i","--input",help="Break specification .txt file")
+    parser.add_option("-c","--codes",action="store_true",help="final arguments are hex character codes")
+    parser.add_option("-f","--file",help="Read text from file")
+    parser.add_option("-s","--separator",default="|",help="Separator character")
+    parser.add_option("-x","--hex",action="store_true",help="output in hex codes")
+    (opts, args) = parser.parse_args()
+    if not len(args) :
+        parser.error("Insufficient arguments, try -h for help")
+
+    if opts.input :
+        spec = "".join(file(opts.input).readlines())
+        brk = PyICU.RuleBasedBreakIterator(spec)
+    else :
+        brk = PyICU.RuleBasedBreakIterator()
+
+    print brk.getRules()
+
+    if opts.codes :
+        text = u"".join(map(lambda x: unichr(int(x, 16)), args))
+    elif opts.file :
+        text = u"".join(file(args[0]).readlines())
+    else :
+        text = args[0]
+
+    res = []
+    brk.setText(PyICU.UnicodeString(text))
+    last = brk.first()
+    try :
+        while True :
+            next = brk.next()
+#            print next, " ", brk.getRuleStatus()
+            res.append(text[last:next])
+            last = next
+    except :
+        res.append(text[last:])
+
+    if opts.hex :
+        print((" " + opts.separator + " ").join(map(lambda y:" ".join(map(lambda x:hex(ord(x)), y)), res)))
+    else :
+        print(opts.separator.join(res))
+
