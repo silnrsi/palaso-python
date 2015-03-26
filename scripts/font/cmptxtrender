@@ -11,8 +11,8 @@ tables = {
     'gr' : ('GDEF', 'GSUB', 'GPOS'),
     'ot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'),
     'hb' : (),
-    'hbot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat')),
-    'icu' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'))
+    'hbot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'),
+    'icu' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat')
 }
 
 def roundpt(pt, res) :
@@ -25,6 +25,11 @@ def roundpt(pt, res) :
 def name(tt, gl) :
     return (tt.getGlyphName(gl[0]) if gl[0] else None, roundpt(gl[1], 0.1))
 
+def cmaplookup(tt, c) :
+    cmap = tt['cmap'].getcmap(3, 1) or tt['cmap'].getcmap(1, 0)
+    if cmap :
+        return cmap.cmap.get(ord(c), '.notdef')
+    return '.notdef'
 
 def logstart(f, fpaths, args, inputs) :
     temps = ("""
@@ -79,7 +84,7 @@ def logstart(f, fpaths, args, inputs) :
             args.script if args.script != 0 else '', 
             ", ".join(args.feat if args.feat is not None else [])))
     if args.label is not None and len(args.label) :
-        f.write("<tr><th></th><th>{}</th>".format(args.label[0]))
+        f.write("<tr><th></th><th>Original</th><th>{}</th>".format(args.label[0]))
         for i in range(1, len(args.label)) :
             f.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
         f.write("</tr>\n")
@@ -109,9 +114,9 @@ def diffpos(l, r, lprev, rprev) :
         res.append(u)
     return map(lambda x: "".join(x), zip(*res))
 
-def logentry(f, line, word, string, gglyphs, opts) :
+def logentry(f, line, word, string, gglyphs, opts, bases) :
     langstr = " lang='{}'".format(opts.lang) if opts.lang else ""
-    f.write(u"  <tr><td>{0}.{1}</td><td class='text1'{3}>{2}</td>\n".format(line, word, string, langstr))
+    f.write(u"  <tr><td>{0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(line, word, string, langstr, u"<br/>".join(map(lambda x:x[0], bases))))
     if len(gglyphs) < 2 :
         f.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t{}".format(x[0], strpoint(x[1])), gglyphs[0]))))
         f.write("    </tr>\n")
@@ -270,7 +275,8 @@ for l in f.readlines() :
             if not logstarted :
                 logstart(outfile, fpaths, opts, args)
                 logstarted = True
-            logentry(outfile, count, wcount, s, gls, opts)
+            bases = map(lambda x: (cmaplookup(tts[0], x), (0,0)), s)
+            logentry(outfile, count, wcount, s, gls, opts, bases)
             errors += 1
 if logstarted : logend(outfile)
 outfile.close()
