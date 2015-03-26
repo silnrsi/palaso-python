@@ -81,6 +81,11 @@ try :
 except :
     version_string = ""    
 
+# hb-ot-tag.h
+fn('hb_ot_tag_to_script', c_int, c_uint32)
+fn('hb_ot_tag_from_language', c_int32, c_void_p)
+fn('hb_ot_tag_to_language', c_void_p, c_uint32)
+
 # hb-font.h
 fnhbreftable = CFUNCTYPE(c_void_p, c_void_p, c_uint32, c_void_p)
 fn('hb_face_create', c_void_p, c_void_p, c_uint)
@@ -246,7 +251,11 @@ class Buffer(object) :
         length = len(self.text)
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
-        script = hbng.hb_script_from_string(script) or -1
+        if script and script[3]=='2' :
+            tag = hbng.hb_tag_from_string(script)
+            script = hbng.hb_ot_tag_to_script(tag) or -1
+        else :
+            script = hbng.hb_script_from_string(script) or -1
         thislang = lang or 'dflt'
         lang = hbng.hb_language_from_string(thislang, len(thislang))
         if 'rtl' in kwds :
