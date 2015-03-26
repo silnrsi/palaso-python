@@ -2,6 +2,7 @@
 """FontForge support module"""
 
 from collections import namedtuple
+from math import sin, cos, pi
 
 Box = namedtuple('Box','xmin ymin xmax ymax')
 Box.xmid = property(lambda self: self[0]/2 + self[2]/2)
@@ -114,4 +115,49 @@ def layer_centroid(layer) :
             cy += (c[i-1].y + c[i].y) * t
     return complex(cx / a / 6, cy / a / 6)
 
+
+_magic = 0.5522847498
+
+def do_circle(font, width, stem, num, uni = 0x25CC, name = 'uni25CC') :
+    g = font.createChar(uni, name)
+    if font.layers[font.activeLayer].is_quadratic :
+        do_circle_quadratic(g, width, stem, num)
+    else :
+        do_circle_cubic(g, width, stem, num)
+
+def do_circle_cubic(g, width, stem, num) :
+    stem = stem / 2
+    width = width / 2 - stem
+    offsets = [(stem, 0), (0, stem), (-stem, 0), (0, -stem)]
+    pen = g.glyphPen()
+    for i in range(num) :
+        org = (width * cos(2 * pi * i / num) + width + stem , width * sin(2 * pi * i / num) + width + stem)
+        curr = (org[0] + offsets[3][0], org[1] + offsets[3][1])
+        pen.moveTo(curr[0], curr[1])
+        for j in range(4) :
+            ncurr = (org[0] + offsets[j][0], org[1] + offsets[j][1])
+            pen.curveTo((curr[0] + _magic * offsets[j][0], curr[1] + _magic * offsets[j][1]),
+                        (ncurr[0] + _magic * offsets[j-1][0], ncurr[1] + _magic * offsets[j-1][1]),
+                        (ncurr[0], ncurr[1]))
+            curr = ncurr
+        pen.closePath()
+    g.width = width
+
+def do_circle_quadratic(g, width, stem, num) :
+    stem = stem / 2
+    width = width / 2 - stem
+    pen = g.glyphPen()
+    for i in range(num) :
+        org = (width * cos(2 * pi * i / num) + width + stem , width * sin(2 * pi * i / num) + width + stem)
+        curr = (org[0] + stem, org[1])
+        pen.moveTo(curr[0], curr[1])
+        for j in range(8) :
+            k = j + 1
+            ncurr = (org[0] + stem * cos(2 * pi * k / 8), org[1] + stem * sin(2 * pi * k / 8))
+            pcurr = (org[0] + stem / cos(2 * pi / 16) * cos(2 * pi * (2 * k - 1) / 16),
+                     org[1] + stem / cos(2 * pi / 16) * sin(2 * pi * (2 * k - 1) / 16))
+            pen.curveTo(pcurr, ncurr)
+        pen.closePath()
+    g.width = width
+    return g
 
