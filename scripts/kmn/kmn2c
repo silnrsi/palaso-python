@@ -482,7 +482,12 @@ deadres = "ROSDATA DEADKEY aDeadKey[] = {\n" + deadres + "{ MAKELONG(0, 0), 0, 0
 resdeadname = "ROSDATA LPWSTR aDeadKeyName[] = {\n"
 for d in dkeys :
     for m in d :
-        if m : resdeadname += "    \"%s\",\n" % (unicodedata.name(m))
+        if m : 
+            try :
+                nm = unicodedata.name(m)
+            except ValueError :
+                nm = "U%04X" % (ord(m))
+            resdeadname += "    \"%s\",\n" % (nm)
 resdeadname += '    NULL\n};'
 
 ligres = ""
