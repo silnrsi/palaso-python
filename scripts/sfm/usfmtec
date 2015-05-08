@@ -172,6 +172,8 @@ class usfm_transducer(object) :
                             lambda m : m.group(1) + m.group(2).upper(), res)
         if re.search(ur'[{1}][{0}]*\s*$'.format(self.cquotes, self.punc), res) :
             self.caps[-1] = 1
+        elif re.search(ur'[{0}]+\s*$'.format(self.cquotes), res) :
+            pass
         elif re.match(ur'^\s*\S', res) :
             self.caps[-1] = 0
         rlist = aswords(res)
