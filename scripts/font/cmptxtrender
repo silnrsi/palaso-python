@@ -6,6 +6,8 @@ from optparse import OptionParser
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
 import sys, os, shutil, re, json
+import json.encoder
+from xml.etree.ElementTree import parse
 
 tables = {
     'gr' : ('GDEF', 'GSUB', 'GPOS'),
@@ -31,6 +33,15 @@ def cmaplookup(tt, c) :
         return cmap.cmap.get(ord(c), '.notdef')
     return '.notdef'
 
+def makelabel(name, line, word) :
+    if name :
+        if word > 1 :
+            return "{} {}".format(name, word)
+        else :
+            return name
+    else :
+        return "{}.{}".format(line, word)
+
 def ftostr(x, dp=2) :
     res = ("{:." + str(dp) + "f}").format(x)
     if res.endswith("." + ("0" * dp)) :
@@ -39,9 +50,11 @@ def ftostr(x, dp=2) :
         res = re.sub(r"0*$", "", res)
     return res
 
+# Have the JSONEncoder use ftostr to render floats to 2dp rather than lots
+json.encoder.FLOAT_REPR=ftostr
+
 def strpoint(p) :
     return "("+",".join(map(ftostr, p))+")"
-
 
 class HTMLLog(object) :
     def __init__(self, f, fpaths, args, inputs) :
@@ -163,18 +176,23 @@ class JsonLog(object) :
         self.out = f
         self.opts = args
         self.out.write(u"[\n")
+        self.encoder = json.JSONEncoder()
 
-    def logentry(self, line, word, string, gglyphs, bases) :
+    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
+        s = makelabel(label, linenumber, wordnumber)
+        self.out.write('{ \"'+s+'\" : ')
         if len(gglyphs) > 1 :
             self.out.write("[")
-        self.out.write("\n".join(map(json.dumps, gglyphs)))
+        # have to use iterencode here to get json.encoder.FLOAT_REP to work
+        #res = "\n".join(map(lambda x : "".join(self.encoder.iterencode([(g[0], roundpt(g[1], 0.01)) for g in x])), gglyphs))
+        res = "".join(self.encoder.iterencode(gglyphs))
+        self.out.write(res)
         if len(gglyphs) > 1 :
-            self.out.write("],\n")
-        else :
-            self.out.write(",\n")
+            self.out.write("]")
+        self.out.write('},\n')
 
     def logend(self) :
-        self.out.write(u"[]]\n")
+        self.out.write(u"{}]\n")
 
 def dosafecopy(inf, outf, opts, i) :
     pid = os.getpid()
@@ -220,6 +238,32 @@ outputtypes = {
     'json' : JsonLog
 }
 
+def LineReader(infile, spliton=None) :
+    f = codecs.open(infile, encoding="utf_8")
+    for l in f.readlines() :
+        l = l.strip()
+        if spliton is not None :
+            res = (None, l.split(spliton))
+        else :
+            res = (None, (l, ))
+        yield res
+
+def FtmlReader(infile, spliton=None) :
+    etree = parse(infile)
+    for e in etree.iter('test') :
+        l = e.get('label', "")
+        s = e.find('string')
+        if spliton is not None:
+            res = (l, s.text.split(spliton))
+        else :
+            res = (l, (s.text, ))
+        yield res
+
+texttypes = {
+    'txt' : LineReader,
+    'ftml' : FtmlReader
+}
+
 parser = OptionParser(usage = '''%prog [options] infont1 infont2
 
 If the first font is above the output file in the filesystem hierarchy, it may not load.
@@ -239,6 +283,7 @@ parser.add_option("-L","--label",action="append",help="report font labels")
 parser.add_option("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
 parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 parser.add_option("--outputtype",help="Type of output file [*html, json]")
+parser.add_option("--texttype",help="Type of text input file [*txt, ftml]")
 (opts, args) = parser.parse_args()
 
 if not len(args) :
@@ -256,6 +301,9 @@ else :
 
 if not opts.label : opts.label = map(lambda x: "Input font{}".format(x+1), range(len(args)))
 if not opts.outputtype : opts.outputtype = 'html'
+if not opts.texttype : opts.texttype = 'txt'
+if opts.split : spliton = ' '
+else : spliton = None
 
 feats = {}
 if opts.feat :
@@ -279,18 +327,14 @@ for i in range(len(args)) :
         opts.engine.append(opts.engine[-1])
     fonts.append(make_shaper(opts.engine[i], args[i], 0, opts.rtl, feats, opts.script, opts.lang))
     tts.append(TTFont(args[i]))
-f = codecs.open(opts.text, encoding="utf_8")
+reader = texttypes[opts.texttype](opts.text, spliton)
 
 count = 0
 errors = 0
 log = None
-for l in f.readlines() :
+for label, words in reader :
+    if words[0] is None : continue
     count += 1
-    l = l.strip()
-    if opts.split :
-        words = l.split()
-    else :
-        words = (l, )
     wcount = 0
     for s in words :
         wcount += 1
@@ -305,7 +349,7 @@ for l in f.readlines() :
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, args)
             bases = map(lambda x: (cmaplookup(tts[0], x), (0,0)), s)
-            log.logentry(count, wcount, s, gls, bases)
+            log.logentry(label, count, wcount, s, gls, bases)
             errors += 1
 if log is not None : log.logend()
 outfile.close()
