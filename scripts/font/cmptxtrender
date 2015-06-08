@@ -5,7 +5,7 @@ from palaso.font.shape import make_shaper
 from optparse import OptionParser
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
-import sys, os, shutil, re
+import sys, os, shutil, re, json
 
 tables = {
     'gr' : ('GDEF', 'GSUB', 'GPOS'),
@@ -31,8 +31,23 @@ def cmaplookup(tt, c) :
         return cmap.cmap.get(ord(c), '.notdef')
     return '.notdef'
 
-def logstart(f, fpaths, args, inputs) :
-    temps = ("""
+def ftostr(x, dp=2) :
+    res = ("{:." + str(dp) + "f}").format(x)
+    if res.endswith("." + ("0" * dp)) :
+        res = res[:-dp-1]
+    else :
+        res = re.sub(r"0*$", "", res)
+    return res
+
+def strpoint(p) :
+    return "("+",".join(map(ftostr, p))+")"
+
+
+class HTMLLog(object) :
+    def __init__(self, f, fpaths, args, inputs) :
+        self.out = f
+        self.opts = args
+        temps = ("""
     @font-face {{
         font-family: testfont{1};
         src: url('{0}');
@@ -40,14 +55,14 @@ def logstart(f, fpaths, args, inputs) :
     .text{1} {{
         font-family: testfont{1};
     }}""",
-    """<tr><td>{2}:</td><td>{3}</td></tr>
+                """<tr><td>{2}:</td><td>{3}</td></tr>
 """)
-    _strs = []
-    for i in range(len(fpaths)) :
-        _strs.append(map(lambda x:x.format(fpaths[i], i+1, args.label[i], inputs[i]), temps))
-    strs = map(lambda x:"".join(x), zip(*_strs))
-    
-    f.write("""<html><head>
+        _strs = []
+        for i in range(len(fpaths)) :
+            _strs.append(map(lambda x:x.format(fpaths[i], i+1, args.label[i], inputs[i]), temps))
+        strs = map(lambda x:"".join(x), zip(*_strs))
+        
+        self.out.write("""<html><head>
 <meta charset="UTF8"/>
 <style>
     {0[0]}
@@ -78,80 +93,88 @@ def logstart(f, fpaths, args, inputs) :
 <p/>
 <table>
 """.format( strs,
-            args.text,
-            args.engine, 
-            args.lang if args.lang != 0 else '', 
-            args.script if args.script != 0 else '', 
-            ", ".join(args.feat if args.feat is not None else [])))
-    if args.label is not None and len(args.label) :
-        f.write("<tr><th></th><th>Original</th><th>{}</th>".format(args.label[0]))
-        for i in range(1, len(args.label)) :
-            f.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
-        f.write("</tr>\n")
+                args.text,
+                args.engine, 
+                args.lang if args.lang != 0 else '', 
+                args.script if args.script != 0 else '', 
+                ", ".join(args.feat if args.feat is not None else [])))
+        if args.label is not None and len(args.label) :
+            self.out.write("<tr><th></th><th>Original</th><th>{}</th>".format(args.label[0]))
+            for i in range(1, len(args.label)) :
+                self.out.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
+            self.out.write("</tr>\n")
 
-def ftostr(x, dp=2) :
-    res = ("{:." + str(dp) + "f}").format(x)
-    if res.endswith("." + ("0" * dp)) :
-        res = res[:-dp-1]
-    else :
-        res = re.sub(r"0*$", "", res)
-    return res
+    def style(self, g, c = 'neq') :
+        return "<span class='{}'>{}:\t{}</span>".format(c, g[0], strpoint(g[1]))
 
-def strpoint(p) :
-    return "("+",".join(map(ftostr, p))+")"
+    def _diffpos(self, l, r, lprev, rprev) :
+        res = [("<span class='eq'>{}:\t(</span>".format(l[0]), "<span class='eq'>{}:\t(</span>".format(r[0]))]
+        for i in range(0, 2) :
+            s = ',' if i == 0 else ')'
+            c = 'eq' if l[1][i] - lprev[1][i] == r[1][i] - rprev[1][i] else 'neq'
+            u = []
+            for t in (l[1][i], r[1][i]) :
+                u.append("<span class='{}'>{}</span>{}".format(c, ftostr(t), s))
+            res.append(u)
+        return map(lambda x: "".join(x), zip(*res))
 
-def style(g, c = 'neq') :
-    return "<span class='{}'>{}:\t{}</span>".format(c, g[0], strpoint(g[1]))
+    def logentry(self, line, word, string, gglyphs, bases) :
+        langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
+        self.out.write(u"  <tr><td>{0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(line, word, string, langstr, u"<br/>".join(map(lambda x:x[0], bases))))
+        if len(gglyphs) < 2 :
+            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t{}".format(x[0], strpoint(x[1])), gglyphs[0]))))
+            self.out.write("    </tr>\n")
+            return
 
-def diffpos(l, r, lprev, rprev) :
-    res = [("<span class='eq'>{}:\t(</span>".format(l[0]), "<span class='eq'>{}:\t(</span>".format(r[0]))]
-    for i in range(0, 2) :
-        s = ',' if i == 0 else ')'
-        c = 'eq' if l[1][i] - lprev[1][i] == r[1][i] - rprev[1][i] else 'neq'
-        u = []
-        for t in (l[1][i], r[1][i]) :
-            u.append("<span class='{}'>{}</span>{}".format(c, ftostr(t), s))
-        res.append(u)
-    return map(lambda x: "".join(x), zip(*res))
+        def getname(t) :
+            return str(t[0])
+        for l in range(1, len(gglyphs)) :
+            s = SequenceMatcher(None, map(getname, gglyphs[0]), map(getname, gglyphs[l]))
+            info = []
+            lprev = (0, (0, 0))
+            rprev = (0, (0, 0))
+            for o in s.get_opcodes() :
+                if o[0] == 'insert' :
+                    for i in range(o[3], o[4]) :
+                        info.append(('', self.style(gglyphs[l][i])))
+                elif o[0] == 'delete' :
+                    for i in range(o[1], o[2]) :
+                        info.append((self.style(gglyphs[0][i]), ''))
+                elif o[0] == 'replace' :
+                    for i in range(o[1], o[2]) :
+                        info.append((self.style(gglyphs[0][i]), self.style(gglyphs[l][i-o[1]+o[3]]) if i-o[1]+o[3] < o[4] else ''))
+                    for i in range(o[3] + o[2] - o[1], o[4]) :
+                        info.append(('', self.style(gglyphs[l][i])))
+                else :
+                    for i in range(o[1], o[2]) :
+                        info.append(self._diffpos(gglyphs[0][i], gglyphs[l][i-o[1]+o[3]], lprev, rprev))
+                        lprev = gglyphs[0][i]
+                        rprev = gglyphs[l][i-o[1]+o[3]]
+            for inf in zip(*info) :
+                self.out.write(u"    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
+            self.out.write(u"    <td class='text{0}'{2}>{1}</td>\n".format(l+1, string, langstr))
+        self.out.write("  </tr>\n")
 
-def logentry(f, line, word, string, gglyphs, opts, bases) :
-    langstr = " lang='{}'".format(opts.lang) if opts.lang else ""
-    f.write(u"  <tr><td>{0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(line, word, string, langstr, u"<br/>".join(map(lambda x:x[0], bases))))
-    if len(gglyphs) < 2 :
-        f.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t{}".format(x[0], strpoint(x[1])), gglyphs[0]))))
-        f.write("    </tr>\n")
-        return
-    def getname(t) :
-        return str(t[0])
-    for l in range(1, len(gglyphs)) :
-        s = SequenceMatcher(None, map(getname, gglyphs[0]), map(getname, gglyphs[l]))
-        info = []
-        lprev = (0, (0, 0))
-        rprev = (0, (0, 0))
-        for o in s.get_opcodes() :
-            if o[0] == 'insert' :
-                for i in range(o[3], o[4]) :
-                    info.append(('', style(gglyphs[l][i])))
-            elif o[0] == 'delete' :
-                for i in range(o[1], o[2]) :
-                    info.append((style(gglyphs[0][i]), ''))
-            elif o[0] == 'replace' :
-                for i in range(o[1], o[2]) :
-                    info.append((style(gglyphs[0][i]), style(gglyphs[l][i-o[1]+o[3]]) if i-o[1]+o[3] < o[4] else ''))
-                for i in range(o[3] + o[2] - o[1], o[4]) :
-                    info.append(('', style(gglyphs[l][i])))
-            else :
-                for i in range(o[1], o[2]) :
-                    info.append(diffpos(gglyphs[0][i], gglyphs[l][i-o[1]+o[3]], lprev, rprev))
-                    lprev = gglyphs[0][i]
-                    rprev = gglyphs[l][i-o[1]+o[3]]
-        for inf in zip(*info) :
-            f.write(u"    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
-        f.write(u"    <td class='text{0}'{2}>{1}</td>\n".format(l+1, string, langstr))
-    f.write("  </tr>\n")
+    def logend(self) :
+        self.out.write("</body></html>\n");
 
-def logend(f) :
-    f.write("</body></html>\n");
+class JsonLog(object) :
+    def __init__(self, f, fpaths, args, inputs) :
+        self.out = f
+        self.opts = args
+        self.out.write(u"[\n")
+
+    def logentry(self, line, word, string, gglyphs, bases) :
+        if len(gglyphs) > 1 :
+            self.out.write("[")
+        self.out.write("\n".join(map(json.dumps, gglyphs)))
+        if len(gglyphs) > 1 :
+            self.out.write("],\n")
+        else :
+            self.out.write(",\n")
+
+    def logend(self) :
+        self.out.write(u"[]]\n")
 
 def dosafecopy(inf, outf, opts, i) :
     pid = os.getpid()
@@ -192,6 +215,11 @@ def docopy(f, opts, i) :
         dosafecopy(f, fname, opts, i)
     return fname
 
+outputtypes = {
+    'html' : HTMLLog,
+    'json' : JsonLog
+}
+
 parser = OptionParser(usage = '''%prog [options] infont1 infont2
 
 If the first font is above the output file in the filesystem hierarchy, it may not load.
@@ -201,15 +229,16 @@ local filesystem. Alternatively use --copy to copy the font and reference that.'
 parser.add_option("-t","--text",help="text file to test each line from")
 parser.add_option("-o","--output",help="file to log results to")
 parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
-parser.add_option("-e","--engine",action="append",help="renderer(s) to use (ot,gr,hb,icu). Repeatable [gr]")
+parser.add_option("-e","--engine",action="append",help="renderer(s) to use (ot,*gr,hb,icu). Repeatable")
 parser.add_option("-l","--lang",help="language to tag text with")
 parser.add_option("-s","--script",help="script of text")
 parser.add_option("-r","--rtl",action="store_true",help="right to left")
 parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
 parser.add_option("-p","--split",action="store_true",help="Split on spaces")
 parser.add_option("-L","--label",action="append",help="report font labels")
-parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 parser.add_option("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
+parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
+parser.add_option("--outputtype",help="Type of output file [*html, json]")
 (opts, args) = parser.parse_args()
 
 if not len(args) :
@@ -226,6 +255,7 @@ else :
     outfile = codecs.getwriter("utf_8")(sys.stdout)
 
 if not opts.label : opts.label = map(lambda x: "Input font{}".format(x+1), range(len(args)))
+if not opts.outputtype : opts.outputtype = 'html'
 
 feats = {}
 if opts.feat :
@@ -253,7 +283,7 @@ f = codecs.open(opts.text, encoding="utf_8")
 
 count = 0
 errors = 0
-logstarted = False
+log = None
 for l in f.readlines() :
     count += 1
     l = l.strip()
@@ -272,13 +302,12 @@ for l in f.readlines() :
             if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1])
             if gls[-1] != gls[0] : logme = True
         if logme :
-            if not logstarted :
-                logstart(outfile, fpaths, opts, args)
-                logstarted = True
+            if log is None :
+                log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, args)
             bases = map(lambda x: (cmaplookup(tts[0], x), (0,0)), s)
-            logentry(outfile, count, wcount, s, gls, opts, bases)
+            log.logentry(count, wcount, s, gls, bases)
             errors += 1
-if logstarted : logend(outfile)
+if log is not None : log.logend()
 outfile.close()
 sys.exit(0 if opts.keep else errors)
 
