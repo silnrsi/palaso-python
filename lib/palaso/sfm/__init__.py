@@ -40,7 +40,9 @@ __all__ = ('usfm',                                           # Sub modules
 
 
 '''Immutable position data that attach to tokens'''
-position = collections.namedtuple('position', 'line col')
+class position(collections.namedtuple('position', 'line col')):
+    def __str__(self):
+        return 'line {0.line},{0.col}'.format(self)
 
 
 
@@ -304,12 +306,36 @@ class parser(collections.Iterable):
     '''
     >>> from pprint import pprint
     >>> import warnings
+    
+    Test edge case text handling
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("ignore")
+    ...     list(parser([])); list(parser([''])); list(parser('plain text'))
+    []
+    []
+    [text(u'plain text')]
+    
+    Test mixed marker and text and cross line coalescing
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("ignore")
+    ...     pprint(list(parser(r"""\\lonely
+    ... \\sfm text
+    ... bare text
+    ... \\more-sfm more text
+    ... over a line break\\marker""".splitlines(True))))
+    [element(u'lonely', content=[text(u'\\n')]),
+     element(u'sfm', content=[text(u'text\\nbare text\\n')]),
+     element(u'more-sfm', content=[text(u'more text\\nover a line break')]),
+     element(u'marker')]
+    
+    Backslash handling
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser([r"\\marker text",
     ...                         r"\\escaped backslash\\\\character"])))
     [element(u'marker', content=[text(u'text')]),
      element(u'escaped', content=[text(u'backslash\\\\\\\\character')])]
+    
     >>> doc=r"""
     ... \\id MAT EN
     ... \\ide UTF-8
@@ -390,7 +416,7 @@ class parser(collections.Iterable):
     ...     pprint(list(parser(doc.splitlines(True), tss)))
     Traceback (most recent call last):
     ...
-    SyntaxWarning: unknown marker \mt1: not in styesheet
+    SyntaxWarning: <string>: line 7,2: unknown marker \mt1: not in styesheet
     '''
     
     default_meta = _default_meta
@@ -410,8 +436,7 @@ class parser(collections.Iterable):
         assert error_level <= level.Marker or default_meta, 'default meta must be provided when error_level > level.Marker'
         
         # Set simple attributes
-        # TODO: self.source = getattr(source, 'name', '<string>')
-        self.source  = source.name if hasattr(source,'name') else '<string>'
+        self.source = getattr(source, 'name', '<string>')
         self.__default_meta = default_meta
         self.__pua_prefix   = private_prefix
         self._tokens        = _put_back_iter(self.__lexer(source))
@@ -429,10 +454,13 @@ class parser(collections.Iterable):
     def _error(self, severity, msg, ev, *args, **kwds):
         if severity >= 0  and severity >= self._error_level:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
-                                                               *args,**kwds).encode('utf_8')
+                                                                                               *args,**kwds).encode('utf_8')
             raise SyntaxError, msg
-        elif severity < 0 and severity >= self._error_level or severity > 0:
-            msg = unicode(msg).format(token=ev,*args,**kwds).encode('utf_8')
+        elif severity < 0 and severity < self._error_level: 
+            pass
+        else:
+            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
+                                                                                               *args,**kwds).encode('utf_8')
             warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
     
@@ -507,7 +535,7 @@ class parser(collections.Iterable):
                     # Spawn a sub-node
                     e = element(tag, tok.pos, parent=parent, meta=meta)
                     # and recurse
-                    e.extend(getattr(self,'_'+meta['TextType']+'_',self._default_) (e))
+                    e.extend(getattr(self,'_'+sub_parse+'_',self._default_) (e))
                     yield e
                 elif parent is None:
                     # We've failed to find a home for marker tag, poor thing.
