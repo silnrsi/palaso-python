@@ -26,7 +26,7 @@ import palaso.sfm.style as style
 import palaso.sfm as sfm
 from palaso.sfm import level
 from itertools import chain, ifilter, imap
-from functools import *
+from functools import partial
 
 
 
@@ -100,26 +100,121 @@ _default_meta = {'TextType':'Milestone', 'OccursUnder':None, 'Endmarker':None, '
 
 class parser(sfm.parser):
     '''
+    >>> from pprint import pprint
     >>> import warnings
+    
+    Tests for inline markers
+    >>> list(parser([r'\\test']))
+    [element(u'test')]
+    >>> list(parser([r'\\test text']))
+    [element(u'test'), text(u' text')]
+    >>> list(parser([r'\\id JHN\\ior text\\ior*']))
+    [element(u'id', content=[text(u'JHN'), element(u'ior', content=[text(u'text')])])]
+    >>> list(parser([r'\\id MAT\\mt Text \\f + \\fk deep\\fk*\\f*more text.']))
+    [element(u'id', content=[text(u'MAT'), element(u'mt', content=[text(u'Text '), element(u'f', args=[u'+'], content=[element(u'fk', content=[text(u'deep')])]), text(u'more text.')])])]
+
+    Test end marker recognition when it's a prefix
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     list(parser([r'\\id TEST\\mt \\f + text\\f*suffixed text']))
+    ...     list(parser([r'\\id TEST\\mt \\f + \\fr ref \\ft text\\f*suffixed text']))
+    [element(u'id', content=[text(u'TEST'), element(u'mt', content=[element(u'f', args=[u'+'], content=[text(u'text')]), text(u'suffixed text')])])]
+    [element(u'id', content=[text(u'TEST'), element(u'mt', content=[element(u'f', args=[u'+'], content=[element(u'fr', content=[text(u'ref ')]), text(u'text')]), text(u'suffixed text')])])]
+    
+    Test marker parameters, particularly chapter and verse markers
+    >>> list(parser([r'\\id TEST'         r'\\c 1']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'1'])])]
+    >>> list(parser([r'\\id TEST'         r'\\c 2 \\s text']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'2'], content=[element(u's', content=[text(u'text')])])])]
+    >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 1']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'1'])])])])]
+    >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 1-3']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'1-3'])])])])]
+    >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 2 text']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'2']), text(u'text')])])])]
+    >>> list(parser([r'\\id TEST'         r'\\c 2 \\p \\v 3 text\\v 4 verse']))
+    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'2'], content=[element(u'p', content=[element(u'v', args=[u'3']), text(u'text'), element(u'v', args=[u'4']), text(u'verse')])])])]
+
+    Test for error detection and reporting for structure
     >>> list(parser([r'\\id TEST\\mt text\\f*']))
     Traceback (most recent call last):
     ... 
     SyntaxError: <string>: line 1,17: orphan end marker \\f*: no matching opening marker \\f
-
     >>> list(parser([r'\\id TEST     \\p 1 text']))
     Traceback (most recent call last):
     ... 
     SyntaxError: <string>: line 1,14: orphan marker \\p: may only occur under \\c
-
     >>> list(parser([r'\\id TEST\\mt \\f + text\\fe*']))
     Traceback (most recent call last):
     ... 
     SyntaxError: <string>: line 1,22: orphan end marker \\fe*: no matching opening marker \\fe
-    
     >>> list(parser([r'\\id TEST\\mt \\f + text'], ))
     Traceback (most recent call last):
     ... 
     SyntaxError: <string>: line 1,1: invalid end marker end-of-file: \\f (line 1,13) can only be closed with \\f*
+
+    Test for error detection and reporting for USFM specific parses
+    Chapter numbers
+    >>> list(parser(['\\id TEST\\c\\p \\v 1 text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,9: missing chapter number after \\c
+    >>> list(parser(['\\id TEST\\c A\\p \\v 1 text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,9: missing chapter number after \\c
+    >>> list(parser([r'\\id TEST\\c 1 text\\p \\v 1 text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,14: text cannot follow chapter marker '\\c 1'
+    >>> list(parser([r'\\id TEST\\c 1text\\p \\v 1 text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,13: missing space after chapter number '1'
+    
+    Verse numbers
+    >>> list(parser([r'\\id TEST\\c 1\\p \\v \\p text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,16: missing verse number after \\v
+    >>> list(parser([r'\\id TEST\\c 1\\p \\v text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,16: missing verse number after \\v
+    >>> list(parser([r'\\id TEST\\c 1\\p \\v 1text']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,20: missing space after verse number '1'
+    
+    Note text parsing
+    >>> list(parser([r'\\id TEST\\mt \\f \\fk key\\fk* text.\\f*']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,13: missing caller parameter after \\f
+    >>> list(parser([r'\\id TEST\\mt \\f +text \\fk key\\fk* text.\\f*']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxError: <string>: line 1,17: missing space after caller parameter '+'
+    
+    Test warnable condition detection and reporting
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error", SyntaxWarning)
+    ...     list(parser([r'\\id TEST\\mt \\whoops']))
+    Traceback (most recent call last):
+    ... 
+    SyntaxWarning: <string>: line 1,14: unknown marker \whoops: not in styesheet
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error", SyntaxWarning)
+    ...     list(parser([r'\\id TEST\\mt \\whoops'], error_level=sfm.level.Marker))
+    Traceback (most recent call last):
+    ...
+    SyntaxError: <string>: line 1,14: unknown marker \whoops: not in styesheet
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error", SyntaxWarning)
+    ...     list(parser([r'\\id TEST\\mt \\zwhoops'], error_level=sfm.level.Note))
+    Traceback (most recent call last):
+    ... 
+    SyntaxWarning: <string>: line 1,14: unknown private marker \zwhoops: not it stylesheet using default marker definition
     '''
     
     default_meta = _default_meta
@@ -159,7 +254,6 @@ class parser(sfm.parser):
         else:
             chapter_marker.args = [unicode(tok[chapter.start(1):chapter.end(1)])]
             tok = tok[chapter.end():]
-        #import pdb; pdb.set_trace()
         if tok and not self.sep_re.match(tok):
             self._error(level.Content, 'missing space after chapter number \'{chapter}\'',
                                     tok, chapter=chapter_marker.args[0])
@@ -225,9 +319,28 @@ class parser(sfm.parser):
             self._error(level.Content, 'missing space after caller parameter \'{caller}\'',
                                     tok, caller=parent.args[0])
         
-        tok = tok.lstrip()
-        if tok: self._tokens.put_back(tok)
+        if tok.lstrip(): self._tokens.put_back(tok)
         return self._canonicalise_footnote(self._default_(parent))
 
-_test = ['test text\n', '\\test text\\\\words\n', 'more text \\test2\n', 'inline \\i text\\i* more text']
+class reference(sfm.position):
+    def __new__(cls, pos, ref):
+        p = super(reference,cls).__new__(cls, *pos)
+        p.book = ref[0]
+        p.chapter = ref[1]
+        p.verse = ref[2]
+        return p
+
+
+def decorate_references(source):
+    ref = [None,None,None]
+    def _g(_, e):
+        if isinstance(e, sfm.element):
+            if   e.name == 'id': ref[0] = str(e[0]).split()[0]
+            elif e.name == 'c':  ref[1] = e.args[0]
+            elif e.name == 'v':  ref[2] = e.args[0]
+            return reduce(_g, e, None)
+        e.pos = reference(e.pos, ref)
+    source = list(source)
+    reduce(_g, source, None)
+    return source
 

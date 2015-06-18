@@ -95,8 +95,8 @@ class parser(sfm.parser):
       u'Name': text(u'toc1 - File - Long Table of Contents Text'),
       u'OccursUnder': text(u'h h1 h2 h3')}]
     >>> demo_schema = schema('Marker', 
-    ...     {'Marker' : (str, SyntaxError('Marker start marker missing')),
-    ...      'Name'   : (str, SyntaxError('Marker {0} defintion missing: {1}')),
+    ...     {'Marker' : (str, UnrecoverableError('Start of record marker: {0} missing')),
+    ...      'Name'   : (str, StructureError('Marker {0} defintion missing: {1}')),
     ...      'Description'    : (str, ''),
     ...      'OccursUnder'    : (unique(sequence(str)), [None]),
     ...      'FontSize'       : (int,                   None),
@@ -154,10 +154,10 @@ class parser(sfm.parser):
         def record(rec):
             rec_ = proto.copy()
             rec_.update(rec)
-            fn,err = next(ifilter(lambda i: isinstance(i[1], ErrorLevel),rec_.iteritems()),('',None))
-            if err: 
-                self._error(err, err.msg, rec, rec.name, fn)
-                rec_[fn] = None
+            for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel),rec_.iteritems()):
+                if err: 
+                    self._error(err, err.msg, rec, rec.name, fn)
+                    rec_[fn] = None
             return rec_
         
         def accum(db, m):
