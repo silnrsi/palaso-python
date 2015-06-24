@@ -70,17 +70,34 @@ class HbFont(Font) :
         self.shapers = None
         self.script = script
         self.lang = lang
+        self.rtl = rtl
 
     def glyphs(self, text, includewidth = False) :
-        buf = hb.Buffer(text, script = self.script, lang = self.lang)
+        kws = {}
+        if self.rtl : kws['rtl'] = 1
+        buf = hb.Buffer(text, script = self.script, lang = self.lang, **kws)
         buf.shape(self.font, shapers = self.shapers)
         res = []
+        clus = []
         x = 0
         y = 0
         for g in buf.glyphs :
             res.append((g.gid, (x + g.offset[0], y + g.offset[1])))
+            clus.append(g.cluster)
             x += g.advance[0]
             y += g.advance[1]
+        if self.rtl :
+            temp = []
+            last = 0
+            currclus = -1
+            for i in range(len(clus)) :
+                if clus[i] != currclus :
+                    if currclus >= 0 :
+                        temp.extend(reversed(res[last:i]))
+                        last = i
+                    currclus = clus[i]
+            temp.extend(reversed(res[last:]))
+            res = list(reversed(temp))
         if includewidth : res.append((None, (x, y)))
         return res
 
