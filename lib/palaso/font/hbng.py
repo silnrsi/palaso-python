@@ -243,6 +243,9 @@ class Glyph(object) :
         self.offset = (position.x_offset, position.y_offset)
         self.advance = (position.x_advance, position.y_advance)
 
+    def __repr__(self) :
+        return "{0}={1}@{2[0]},{2[1]}+{3[0]},{3[1]}".format(self.gid, self.cluster, self.offset, self.advance)
+
 class Buffer(object) :
     def __init__(self, text, script=None, lang=None, unicodefuncs=None, **kwds) :
         """Takes a text string, script (string, optional), lang (string, optional)
