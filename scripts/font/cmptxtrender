@@ -131,9 +131,9 @@ class HTMLLog(object) :
             res.append(u)
         return map(lambda x: "".join(x), zip(*res))
 
-    def logentry(self, line, word, string, gglyphs, bases) :
+    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
-        self.out.write(u"  <tr><td>{0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(line, word, string, langstr, u"<br/>".join(map(lambda x:x[0], bases))))
+        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(map(lambda x:x[0], bases)), label))
         if len(gglyphs) < 2 :
             self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t{}".format(x[0], strpoint(x[1])), gglyphs[0]))))
             self.out.write("    </tr>\n")
