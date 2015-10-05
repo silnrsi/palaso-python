@@ -17,6 +17,13 @@ tables = {
     'icu' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat')
 }
 
+def roundfloat(f, res) :
+    try :
+        return(int(f / res) * res)
+    except ValueError :
+        pass
+    return 0
+
 def roundpt(pt, res) :
     try :
         return(int(pt[0] / res) * res, int(pt[1] / res) * res)
@@ -24,8 +31,14 @@ def roundpt(pt, res) :
         pass
     return (0, 0)
 
-def name(tt, gl) :
-    return (tt.getGlyphName(gl[0]) if gl[0] else None, roundpt(gl[1], 0.1))
+def name(tt, gl, rounding = 0.1) :
+    if gl[0] is None :
+        x = "_adv_"
+    elif gl[0] != 0 :
+        x = tt.getGlyphName(gl[0])
+    else :
+        x = "0:{:04X}".format(gl[2])
+    return (x, roundfloat(gl[1][0], rounding), roundfloat(gl[1][1], rounding))
 
 def cmaplookup(tt, c) :
     cmap = tt['cmap'].getcmap(3, 1) or tt['cmap'].getcmap(1, 0)
@@ -118,7 +131,7 @@ class HTMLLog(object) :
             self.out.write("</tr>\n")
 
     def style(self, g, c = 'neq') :
-        return "<span class='{}'>{}:\t{}</span>".format(c, g[0], strpoint(g[1]))
+        return "<span class='{}'>{}:\t{}</span>".format(c, g[0], ftostr(gl[1]), ftostr(gl[2]))
 
     def _diffpos(self, l, r, lprev, rprev) :
         res = [("<span class='eq'>{}:\t(</span>".format(l[0]), "<span class='eq'>{}:\t(</span>".format(r[0]))]
@@ -135,7 +148,7 @@ class HTMLLog(object) :
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
         self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(map(lambda x:x[0], bases)), label))
         if len(gglyphs) < 2 :
-            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t{}".format(x[0], strpoint(x[1])), gglyphs[0]))))
+            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])), gglyphs[0]))))
             self.out.write("    </tr>\n")
             return
 
@@ -175,24 +188,20 @@ class JsonLog(object) :
     def __init__(self, f, fpaths, args, inputs) :
         self.out = f
         self.opts = args
-        self.out.write(u"[\n")
+        self.out.write(u"{\n")
         self.encoder = json.JSONEncoder()
 
     def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
         s = makelabel(label, linenumber, wordnumber)
-        self.out.write('{ \"'+s+'\" : ')
-        if len(gglyphs) > 1 :
-            self.out.write("[")
+        self.out.write('\"'+s+'\" : ')
         # have to use iterencode here to get json.encoder.FLOAT_REP to work
         #res = "\n".join(map(lambda x : "".join(self.encoder.iterencode([(g[0], roundpt(g[1], 0.01)) for g in x])), gglyphs))
         res = "".join(self.encoder.iterencode(gglyphs))
         self.out.write(res)
-        if len(gglyphs) > 1 :
-            self.out.write("]")
-        self.out.write('},\n')
+        self.out.write(',\n')
 
     def logend(self) :
-        self.out.write(u"{}]\n")
+        self.out.write(u'"":[]}\n')
 
 def dosafecopy(inf, outf, opts, i) :
     pid = os.getpid()
@@ -339,12 +348,11 @@ for label, words in reader :
     for s in words :
         wcount += 1
         gls = [map(lambda x: name(tts[0], x), fonts[0].glyphs(s, includewidth = True))]
-        if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1])
+        if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
         for i in range(1, len(fonts)) :
             gls.append(map(lambda x: name(tts[i], x), fonts[i].glyphs(s, includewidth = True)))
-            if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1])
-            if gls[-1] != gls[0] : logme = True
+            if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         if logme :
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, args)

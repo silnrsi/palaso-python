@@ -52,7 +52,7 @@ class GrFont(Font) :
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
         res = []
         for s in seg.slots :
-            res.append((s.gid, s.origin))
+            res.append((s.gid, s.origin, seg.cinfo(s.original).unicode))
         if includewidth : res.append((None, seg.advance))
         return res
 
@@ -82,7 +82,7 @@ class HbFont(Font) :
         x = 0
         y = 0
         for g in buf.glyphs :
-            res.append((g.gid, (x + g.offset[0], y + g.offset[1])))
+            res.append((g.gid, (x + g.offset[0], y + g.offset[1]), 0))
             clus.append(g.cluster)
             x += g.advance[0]
             y += g.advance[1]
@@ -119,7 +119,7 @@ class IcuFont(Font) :
         poss = self.layout.getGlyphPositions()
         res = []
         for i in range(len(gids)) :
-            res.append((gids[i], poss[i]))
+            res.append((gids[i], poss[i], 0))
         return res
 
 _shapers = {
