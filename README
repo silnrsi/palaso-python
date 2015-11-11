@@ -1,8 +1,8 @@
 Palaso-Python
 -------------
-This contains pyhton scripts, modules and packages created by SIL at the Payap 
-Linguistic Institute Computing Unit. These are used by and made avaialble for 
-future use by Payap language software programs develeped at the Computing Unit 
+This contains python scripts, modules and packages created by SIL at the Payap 
+Linguistic Institute Computing Unit. These are used by and made available for 
+future use by Payap language software programs developed at the Computing Unit 
 such as ptxplus.
 
 This includes modules for:
