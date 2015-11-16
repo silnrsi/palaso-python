@@ -1,3 +1,21 @@
+python-palaso (0.7.3-hg338-1.1) trusty; urgency=medium
+
+  * New snapshot from the hg repo
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Tue, 10 Nov 2015 10:42:45 -0600
+
+python-palaso (0.7.3-1+330+) trusty; urgency=medium
+
+  * Fix shared file with python-palaso-core 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 29 Apr 2015 17:38:38 +0100
+
+python-palaso (0.7.3-1+322+) trusty; urgency=medium
+
+  * ppa release
+
+ -- Martin Hosken <martin_hosken@sil.org>  Tue, 16 Dec 2014 17:43:49 +0700
+
 python-palaso (0.7.1-2ubuntu1~palaso1~precise1) precise; urgency=low
 
   [ Nicolas Spalinger ]
