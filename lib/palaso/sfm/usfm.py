@@ -219,7 +219,7 @@ class parser(sfm.parser):
     
     default_meta = _default_meta
     numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)',re.UNICODE)
-    verse_re = re.compile(r'\s*([0-9]+\w?(:?\u200F?[\-,][0-9]+\w?)*)',re.UNICODE)
+    verse_re = re.compile(r'\s*(\d+(:?[-,\u2010\2011]\d+)?)',re.UNICODE)
     caller_re = re.compile(r'\s*([^\s\\])',re.UNICODE)
     sep_re = re.compile(r'\s|$',re.UNICODE)
     
@@ -287,7 +287,7 @@ class parser(sfm.parser):
         if not self.sep_re.match(tok):
             self._error(level.Content, 'missing space after verse number \'{verse}\'',
                                     tok, verse=verse_marker.args[0])
-        tok = tok.lstrip(u' ')
+        tok = tok.lstrip()
         
         if tok: self._tokens.put_back(tok)
         return tuple()
