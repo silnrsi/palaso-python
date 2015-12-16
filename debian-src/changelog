@@ -1,3 +1,22 @@
+python-palaso (0.7.3-hg343-1.3ubuntu1) trusty; urgency=medium
+
+  * Rebuild for LP 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 16 Dec 2015 16:46:10 -0600
+
+python-palaso (0.7.3-hg343-1.2ubuntu1) trusty; urgency=medium
+
+  * Added dh_python dependency 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 16 Dec 2015 16:36:47 -0600
+
+python-palaso (0.7.3-hg343-1.1) trusty; urgency=medium
+
+    * New snapshot from the hg repo
+    * migrate from python-support to dh_python2
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 16 Dec 2015 15:47:54 -0600
+
 python-palaso (0.7.3-hg338-1.1) trusty; urgency=medium
 
   * New snapshot from the hg repo

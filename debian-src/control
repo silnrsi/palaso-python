@@ -2,9 +2,9 @@ Source: python-palaso
 Section: python
 Priority: optional
 Maintainer: Martin Hosken <martin_hosken@sil.org>
-Build-Depends: debhelper (>= 7), python (>=2.6), python-pyrex (>= 0.9), python-dev (>= 2.6), libkmfl-dev, libkmflcomp-dev
-Build-Depends-Indep: python-support (>= 0.5.3)
-Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 7), python (>=2.6), dh-python, python-pyrex (>= 0.9), python-dev (>= 2.6), libkmfl-dev, libkmflcomp-dev
+Standards-Version: 3.9.5
+X-Python-Version: >= 2.6
 Homepage: http://projects.palaso.org/projects/show/palaso-python
 
 Package: python-palaso
@@ -19,7 +19,7 @@ Description: Payap Language Software python package and scripts
 Package: python-palaso-kbd
 Architecture: any
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}, libkmfl0, libkmflcomp0, python-palaso-core, python-support (>= 0.5.3)
+Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}, libkmfl0, libkmflcomp0, python-palaso-core 
 Provides: ${python:Provides}
 Description: Payap Language Software python keyboard support
  Python scripts and modules for interacting with keyboard descriptions,
@@ -28,7 +28,7 @@ Description: Payap Language Software python keyboard support
 Package: python-palaso-core
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-support (>= 0.5.3)
+Depends: ${python:Depends}, ${misc:Depends}
 Provides: ${python:Provides}
 Description: Payap Language Software general python modules
  Various general purpose Python modules.
@@ -45,7 +45,7 @@ Description: Payap Language Software python font support
 Package: python-palaso-teckit
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-palaso-core, python-support (>= 0.5.3)
+Depends: ${python:Depends}, ${misc:Depends}, python-palaso-core 
 Provides: ${python:Provides}
 Description: TECKit text mapping wrapper
  Python module and scripts to interact with TECKit mappings.
@@ -53,7 +53,7 @@ Description: TECKit text mapping wrapper
 Package: python-palaso-sfm
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-palaso-teckit, python-palaso-core, python-support (>= 0.5.3)
+Depends: ${python:Depends}, ${misc:Depends}, python-palaso-teckit, python-palaso-core
 Provides: ${python:Provides}
 Description: Standard Format Markup python support
  Python modules and scripts for interacting with SFM and USFM files.
@@ -61,7 +61,7 @@ Description: Standard Format Markup python support
 Package: python-palaso-unicode
 Architecture: all
 XS-Python-Version: ${python:Versions}
-Depends: ${python:Depends}, ${misc:Depends}, python-pyicu, python-gtk2 (>=2.14), python-palaso-core, python-support (>= 0.5.3)
+Depends: ${python:Depends}, ${misc:Depends}, python-pyicu, python-gtk2 (>=2.14), python-palaso-core
 Provides: ${python:Provides}
 Description: Payap Language Software unicode text processing
  Python modules and scripts to support Unicode text processing. Including:
