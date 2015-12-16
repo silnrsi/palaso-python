@@ -3,4 +3,4 @@
 export DH_OPTIONS=-v
 
 % :
-	dh $@
+	dh $@ --with python2 --buildsystem=pybuild
