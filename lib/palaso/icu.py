@@ -2,8 +2,22 @@ from ctypes import *
 from ctypes.util import *
 import sys, os
 
+def getversion(f) :
+    m = re.search(ur'\d+', f)
+    if m :
+        return int(f[m.start():m.end()], 10)
+    else :
+        return None
+
 
 class icu(object) :
+
+    class ICUErrorException(Exception) :
+        def __init__(self, base, error) :
+            self.error = error
+            self.string = base.u_errorName(error)
+        def __str__(self) :
+            return "ICU Error({:d}) {}".format(self.error, self.string)
 
     UChar = c_uint16
     UCharP = POINTER(c_uint16)
@@ -90,44 +104,90 @@ class icu(object) :
     UConverterFromUCallback = CFUNCTYPE(None, c_void_p, c_void_p, POINTER(c_uint16), c_int32, c_uint32, c_int, POINTER(c_int))
     UConverterUnicodeSet = c_int
 
+    # ucnvsel.h
+    UConverterSelectorP = c_void_p
+
     # uset.h
     USetP = c_void_p
     USetSpanCondition = c_int
     USerializedSetP = c_void_p
 
+    # udata.h
+    UDataInfoP = c_void_p
+    UDataMemoryP = c_void_p
+    UDataMemoryIsAcceptable = CFUNCTYPE(c_bool, c_void_p, c_char_p, c_char_p, c_void_p)
+    UDataFileAccess = c_int
+
+    # uidna.h
+    UIDNAP = c_void_p
+    UIDNAInfoP = c_void_p
+
+    # uiter.h
+    UCharIteratorP = c_void_p
+    UCharIteratorOrigin = c_int
+    UCharIteratorGetIndex = CFUNCTYPE(c_int32, c_void_p, c_int)
+    UCharIteratorMove = CFUNCTYPE(c_int32, c_void_p, c_int32, c_int)
+    UCharIteratorHasNext = CFUNCTYPE(c_bool, c_void_p)
+    UCharIteratorHasPrevious = CFUNCTYPE(c_bool, c_void_p)
+    UCharIteratorCurrent = CFUNCTYPE(c_uint32, c_void_p)
+    UCharIteratorNext = CFUNCTYPE(c_uint32, c_void_p)
+    UCharIteratorPrevious = CFUNCTYPE(c_uint32, c_void_p)
+    UCharIteratorReserved = CFUNCTYPE(c_int32, c_void_p, c_int32)
+    UCharIteratorGetState = CFUNCTYPE(c_uint32, c_void_p)
+    UCharIteratorSetState = CFUNCTYPE(None, c_void_p, c_uint32, POINTER(c_int))
 
 
-    def __init__(self) :
+    def __load_lib__(self, path=None, version=0) :
         if sys.platform == 'win32' :
-            version = 0
             curr = None
-            for p in os.environ['PATH'].split(os.pathsep) :
+            if path is None :
+                path = os.environ['PATH'].split(os.pathsep)
+            elif os.path.isdir(path) :
+                path = [path]
+            else :
+                curr = path
+                if version == 0 :
+                    version = getversion(path)
+                path = []
+            currversion = version
+            for p in path :
                 for f in os.listdir(p) :
                     if f.startswith('icuuc') and f.endswith('.dll') :
-                        m = re.search(ur'\d+', f)
-                        if m :
-                            v = int(f[m.start():m.end()], 10)
-                            if v > version :
-                                curr = os.path.join(p, f)
-                                version = v
+                        v = getversion(f)
+                        if v == version or (version == 0 and v > currversion) :
+                            curr = os.path.join(p, f)
+                            currversion = v
+            if version == 0 :
+                version = currversion
             if version == 0 :
                 raise ImportError("Unable to find icu library")
             else :
                 self._iculib = windll.LoadLibrary(curr)
                 self._icuversion = version
         else :
-            b = find_library('icuuc')
+            if path is None :
+                b = find_library('icuuc')
+            elif os.path.isdir(path) :
+                currversion = version
+                for f in os.listdir(path) :
+                    if f.startswith("libicuuc") :
+                        v = getversion(f)
+                        if v == version or (version == 0 and v > currversion) :
+                            b = os.path.join(path, f)
+                            currversion = v
+            else :
+                b = path
             if b is None :
                 raise ImportError("Unable to find icu library")
             while os.path.islink(b) :
                 b = os.readlink(b)
-            m = re.search(ur'\d+', b)
-            if m :
-                v = int(b[m.start():m.end()], 10)
-                self._icuversion = v
-                self._iculib = cdll.LoadLibrary(b)
-            else :
+            self._icuversion = getversion(b) if version == 0 else version
+            self._iculib = cdll.LoadLibrary(b)
+            if self._icuversion is None :
                 raise ImportError("Unable to ascertain icu version from icu library")
+
+    def __init__(self) :
+        self.__load_lib__()
 
     def __getattr__(self, name) :
         if name in self.__icufns__ :
@@ -141,7 +201,7 @@ class icu(object) :
                     parms.append(e)
                     res = f(*parms)
                     if e.val > 0 :
-                        raise self.ICUError("Error: %d" % e)
+                        raise self.ICUErrorException(self, e)
                     return res
                 setattr(self, name, g)
             else :
@@ -150,6 +210,16 @@ class icu(object) :
             return getattr(self, name)
         else :
             raise AttributeError(name)
+
+    def reload(self, path, version=0) :
+        """ Reloads the underlying icu library from a given path (dir or icuuc lib file)
+            Evicts all loaded functions. But you need to take care of any you hold in local variables.
+        """
+        # strip existing functions
+        for k in self.__dir__.keys() :
+            if k.startswith('u') :
+                del self.__dir__[k]
+        self.__load_lib__(path=path, version=version)
 
 icu.__icufns__ = {
     # utypes.h
@@ -540,6 +610,14 @@ icu.__icufns__ = {
     'ucnv_fromUCountPending' : (c_int32, (icu.UConverterP, icu.UErrorCodeP)),
     'ucnv_toUCountPending' : (c_int32, (icu.UConverterP, icu.UErrorCodeP)),
 
+    # ucnvsel.h
+    'ucnvsel_open' : (icu.UConverterSelectorP, (c_char_p, c_int32, icu.USetP, icu.UConverterUnicodeSet, icu.UErrorCodeP)),
+    'ucnvsel_close' : (None, (icu.UConverterSelectorP, )),
+    'ucnvsel_openFromSerialized' : (icu.UConverterSelectorP, (c_void_p, c_int32, icu.UErrorCodeP)),
+    'ucnvsel_serialize' : (c_int32, (icu.UConverterSelectorP, c_void_p, c_int32, icu.UErrorCodeP)),
+    'ucnvsel_selectForString' : (icu.UEnumerationP, (icu.UConverterSelectorP, icu.UCharP, c_int32, icu.UErrorCodeP)),
+    'ucnvsel_selectForUTF8' : (icu.UEnumerationP, (icu.UConverterSelectorP, c_char_p, c_int32, icu.UErrorCodeP)),
+
     # uset.h
     'uset_openEmpty' : (icu.USetP, (None, )),
     'uset_open' : (icu.USetP, (icu.UChar32, icu.UChar32)),
@@ -598,8 +676,40 @@ icu.__icufns__ = {
     'uset_getSerializedRangeCount' : (c_int32, (icu.USerializedSetP, )),
     'uset_getSerializedRange' : (c_bool, (icu.USerializedSetP, c_int32, icu.UChar32P, icu.UChar32P)),
 
+    # udata.h
+    'udata_open' : (icu.UDataMemoryP, (c_char_p, c_char_p, c_char_p, icu.UErrorCodeP)),
+    'udata_openChoice' : (icu.UDataMemoryP, (c_char_p, c_char_p, c_char_p, icu.UDataMemoryIsAcceptable, c_void_p, icu.UErrorCodeP)),
+    'udata_close' : (None, (icu.UDataMemoryP, )),
+    'udata_getMemory' : (c_void_p, (icu.UDataMemoryP, )),
+    'udata_getInfo' : (None, (icu.UDataMemoryP, icu.UDataInfoP)),
+    'udata_setCommonData' : (None, (c_void_p, icu.UErrorCodeP)),
+    'udata_setAppData' : (None, (c_char_p, c_void_p, icu.UErrorCodeP)),
+    'udata_setFileAccess' : (None, (icu.UDataFileAccess, icu.UErrorCodeP)),
 
-    
+    # uidna.h
+    'uidna_close' : (None, (icu.UIDNAP, )),
+    'uidna_labelToASCII' : (c_int32, (icu.UIDNAP, icu.UCharP, c_int32, icu.UCharP, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_labelToUnicode' : (c_int32, (icu.UIDNAP, icu.UCharP, c_int32, icu.UCharP, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_nameToASCII' : (c_int32, (icu.UIDNAP, icu.UCharP, c_int32, icu.UCharP, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_nameToUnicode' : (c_int32, (icu.UIDNAP, icu.UCharP, c_int32, icu.UCharP, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_labelToASCII_UTF8' : (c_int32, (icu.UIDNAP, c_char_p, c_int32, c_char_p, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_labelToUnicodeUTF8' : (c_int32, (icu.UIDNAP, c_char_p, c_int32, c_char_p, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_nameToASCII_UTF8' : (c_int32, (icu.UIDNAP, c_char_p, c_int32, c_char_p, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_nameToUnicodeUTF8' : (c_int32, (icu.UIDNAP, c_char_p, c_int32, c_char_p, c_int32, icu.UIDNAInfoP, icu.UErrorCodeP)),
+    'uidna_toASCII' : (c_int32, (icu.UCharP, c_int32, icu.UCharP, c_int32, c_int32, icu.UParseErrorP, icu.UErrorCodeP)),
+    'uidna_toUnicode' : (c_int32, (icu.UCharP, c_int32, icu.UCharP, c_int32, c_int32, icu.UParseErrorP, icu.UErrorCodeP)),
+    'uidna_IDNToASCII' : (c_int32, (icu.UCharP, c_int32, icu.UCharP, c_int32, c_int32, icu.UParseErrorP, icu.UErrorCodeP)),
+    'uidna_IDNToUnicode' : (c_int32, (icu.UCharP, c_int32, icu.UCharP, c_int32, c_int32, icu.UParseErrorP, icu.UErrorCodeP)),
+    'uidna_compare' : (c_int32, (icu.UCharP, c_int32, icu.UCharP, c_int32, c_int32, icu.UErrorCodeP)),
+
+    # uiter.h
+    'uiter_current32' : (icu.UChar32, (icu.UCharIteratorP, )),
+    'uiter_next32' : (icu.UChar32, (icu.UCharIteratorP, )),
+    'uiter_previous32' : (icu.UChar32, (icu.UCharIteratorP, )),
+    'uiter_getState' : (c_uint32, (icu.UCharIteratorP, )),
+    'uiter_setState' : (None, (icu.UCharIteratorP, c_uint32, icu.UErrorCodeP)),
+    'uiter_setString' : (None, (icu.UCharIteratorP, icu.UCharP, c_int32)),
+
 }
 
 if __name__ == '__main__' :
