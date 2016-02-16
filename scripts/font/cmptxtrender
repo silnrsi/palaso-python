@@ -332,9 +332,9 @@ fpaths = map(lambda x:os.path.relpath(x, start=(os.path.dirname(opts.output) if 
 fonts = []
 tts = []
 for i in range(len(args)) :
-    while len(opts.engine) < i :
+    while len(opts.engine) <= i :
         opts.engine.append(opts.engine[-1])
-    while len(opts.script) < i :
+    while len(opts.script) <= i :
         opts.script.append(opts.script[-1])
     fonts.append(make_shaper(opts.engine[i], args[i], 0, opts.rtl, feats, opts.script[i], opts.lang))
     tts.append(TTFont(args[i]))
