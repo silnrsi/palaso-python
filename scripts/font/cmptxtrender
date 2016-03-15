@@ -211,7 +211,10 @@ def dosafecopy(inf, outf, opts, i) :
     if opts.strip :
         f = TTFont(inf)
         for t in tables[opts.engine[i] if i < len(opts.engine) else opts.engine[-1]] :
-            del f[t]
+            try :
+                del f[t]
+            except KeyError :
+                pass # deleting a non-existing table is not an error
         f.save(outlocal)
         f.close()
     else :
