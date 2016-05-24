@@ -18,12 +18,12 @@ else :
     cmd = {'build_ext': build_ext}
 
 setup(name='palaso',
-      version='0.7.3',
+      version='0.7.4',
       description='Payap Language Software python package and scripts',
       long_description="Modules and scripts useful for building language software.",
       maintainer='Tim Eves',
       maintainer_email='tim_eves@sil.org',
-      url='http://projects.palaso.org/projects/show/palaso-python',
+      url='http://github.com/silnrsi/palaso-python',
       packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib', 'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums'],
       ext_modules = ext,
       cmdclass = cmd,
