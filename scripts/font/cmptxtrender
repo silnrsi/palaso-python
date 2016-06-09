@@ -273,7 +273,8 @@ def FtmlReader(infile, spliton=None) :
 
 texttypes = {
     'txt' : LineReader,
-    'ftml' : FtmlReader
+    'ftml' : FtmlReader,
+    'xml' : FtmlReader
 }
 
 parser = OptionParser(usage = '''%prog [options] infont1 infont2
@@ -295,14 +296,15 @@ parser.add_option("-L","--label",action="append",help="report font labels")
 parser.add_option("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
 parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 parser.add_option("--outputtype",help="Type of output file [*html, json]")
-parser.add_option("--texttype",help="Type of text input file [*txt, ftml]")
+parser.add_option("--texttype",help="Type of text input file else taken from text file extension")
 (opts, args) = parser.parse_args()
 
 if not len(args) :
     parser.print_help()
     sys.exit(1)
 if not opts.lang : opts.lang = 0
-if not len(opts.script) : opts.script[0] = 0
+if opts.script is None : opts.script = []
+if not len(opts.script) : opts.script.append(0)
 if not opts.rtl : opts.rtl = 0
 if not opts.engine or not len(opts.engine) : opts.engine = ['gr']
 if opts.output :
@@ -313,7 +315,9 @@ else :
 
 if not opts.label : opts.label = map(lambda x: "Input font{}".format(x+1), range(len(args)))
 if not opts.outputtype : opts.outputtype = 'html'
-if not opts.texttype : opts.texttype = 'txt'
+if not opts.texttype :
+    (_, ext) = os.path.splitext(opts.text) if opts.text is not None else ('', '.txt')
+    opts.texttype = ext[1:]
 if opts.split : spliton = ' '
 else : spliton = None
 

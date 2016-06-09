@@ -12,7 +12,7 @@ with defaultapp() :
     parser.add_option("-l", "--ldml", help = "LDML file containing collation")
     parser.add_option("-i", "--icu", help = "ICU file containing collation")
     parser.add_option("-a", "--alt", help = "Optional alternate collation to use")
-    parser.add_option("-d", "--depth", default = 15, help = "sort level")
+    parser.add_option("-d", "--depth", default = 15, type = int, help = "sort level")
     parser.add_option("-p", "--preprocess", action="store_true", help = "Preprocess strings rather than flatten")
     parser.add_option("--prefile", help = "Store preprocessed strings here")
     parser.add_option("-z", action="store_true")
