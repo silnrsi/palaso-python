@@ -265,10 +265,11 @@ def FtmlReader(infile, spliton=None) :
     for e in etree.iter('test') :
         l = e.get('label', "")
         s = e.find('string')
+        t = "".join(s.itertext())
         if spliton is not None:
-            res = (l, s.text.split(spliton))
+            res = (l, t.split(spliton))
         else :
-            res = (l, (s.text, ))
+            res = (l, (t, ))
         yield res
 
 texttypes = {
