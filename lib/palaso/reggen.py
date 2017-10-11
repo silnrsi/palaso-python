@@ -4,17 +4,32 @@
 import sre_parse
 from random import randrange, choice
 
+class ExpandingList(list):
+    def __init__(self, *p, **kw):
+        if 'default' in kw:
+            self.default = kw['default']
+            del kw['default']
+        else:
+            self.default = None
+        list.__init__(self, *p, **kw)
+
+    def __setitem__(self, i, val):
+        while i >= len(self):
+            self.append(self.default)
+        list.__setitem__(self, i, val)
+
+
 class MatchObj :
     def __init__(self, pattern, str) :
         self.string = str
         self.pattern = pattern
-        self.startpos = [0]
-        self.endpos = [0]
+        self.startpos = ExpandingList([0], default=0)
+        self.endpos = ExpandingList([0], default=0)
         self.patient = -1
     def __copy__(self) :
         res = MatchObj(self.pattern, self.string)
-        res.startpos = self.startpos[:]
-        res.endpos = self.endpos[:]
+        res.startpos = ExpandingList(self.startpos, default=0)
+        res.endpos = ExpandingList(self.endpos, default=0)
         return res
     def copy(self) :
         return self.__copy__()
@@ -119,10 +134,10 @@ def _proc(pattern, data, match) :
             yield match
     elif op == 'subpattern' :   # ('subpattern', (index | None, [contents]))
         if data[1][0] :
-            match.startpos.insert(data[1][0], len(match.string))
+            match.startpos[data[1][0]] = len(match.string)
         for s in _iterate(pattern, data[1][1], match) :
             if data[1][0] :
-                s.endpos.insert(data[1][0], len(s.string))
+                s.endpos[data[1][0]] = len(s.string)
             yield s
     elif op == 'in' :           # ('in', [contents])
         allchars = []

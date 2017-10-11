@@ -113,6 +113,7 @@ def process_rule(lhs, rhs, presets, iskey = True, contextref = False) :
                     lstore = kb.store(str(lstorenum))
                     npre = presets[:]
                     for k in range(len(lstore)) :
+                        if k >= len(store) or k >= len(lstore): continue
                         npre[offset - 1] = k
                         newrhs[j] = ord(store[k])
                         newlhs[offset - 1] = ord(lstore[k])
@@ -184,7 +185,7 @@ print """  </identity>
   <special>
     <keyboards xmlns="http://www.palaso.org/ldml/0.2">
       <keyboard name="%s"%s>""" % (name, mnemattr)
-for i in range(kb.num_rules()) :
+for i in range(kb._num_rules()) :
     (lhs, rhs, gpnum, flags) = kb.rule(i)
     for r in process_rule(lhs, rhs, [0] * len(lhs), iskey = (flags & 1)) :
         if r.key in rules :

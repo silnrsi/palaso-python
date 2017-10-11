@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2
 
 import sys, xml.sax, palaso, pprint, PyICU, re
 from optparse import OptionParser
