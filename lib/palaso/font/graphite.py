@@ -1,19 +1,39 @@
+#    Copyright 2012, SIL International
+#    All rights reserved.
+#
+#    This library is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU Lesser General Public License as published
+#    by the Free Software Foundation; either version 2.1 of License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#    Lesser General Public License for more details.
+#
+#    You should also have received a copy of the GNU Lesser General Public
+#    License along with this library in the file named "LICENSE".
+#    If not, write to the Free Software Foundation, 51 Franklin Street,
+#    suite 500, Boston, MA 02110-1335, USA or visit their web page on the 
+#    internet at http://www.fsf.org/licenses/lgpl.html.
+
 
 from ctypes import *
 import ctypes.util
+import sys, os, platform
 
-gr2 = None
-gr2lib = ctypes.util.find_library("graphite2")
-if not gr2lib :
-    try :
-        gr2 = CDLL("libgraphite2.so")
-    except OSError :
-        gr2 = None
 
-if not gr2lib and not gr2 :
-    raise RuntimeError, "Graphite2 library not found"
-if not gr2 :
-    gr2 = CDLL(gr2lib)
+gr2 = cdll.LoadLibrary(os.environ.get('PYGRAPHITE2_LIBRARY_PATH', 
+                                      ctypes.util.find_library("graphite2")))
+
+
+
+def grversion() :
+    a = c_int()
+    b = c_int()
+    c = c_int()
+    gr2.gr_engine_version(byref(a), byref(b), byref(c))
+    return (a.value, b.value, c.value)
 
 def fn(name, res, *params) :
     f = getattr(gr2, name)
@@ -28,8 +48,9 @@ class FaceInfo(Structure) :
 tablefn = CFUNCTYPE(c_void_p, c_void_p, c_uint, POINTER(c_size_t))
 advfn = CFUNCTYPE(c_float, c_void_p, c_ushort)
 
+fn('gr_engine_version', None, POINTER(c_int), POINTER(c_int), POINTER(c_int))
 fn('gr_make_face', c_void_p, c_void_p, tablefn, c_uint)
-# fn('gr_make_face_with_seg_cache', c_void_p, c_void_p, tablefn, c_uint, c_uint)
+#fn('gr_make_face_with_seg_cache', c_void_p, c_void_p, tablefn, c_uint, c_uint)
 fn('gr_str_to_tag', c_uint32, c_char_p)
 fn('gr_tag_to_str', None, c_uint32, POINTER(c_char))
 fn('gr_face_featureval_for_lang', c_void_p, c_void_p, c_uint32)
@@ -43,7 +64,7 @@ fn('gr_face_n_glyphs', c_ushort, c_void_p)
 fn('gr_face_info', POINTER(FaceInfo), c_void_p)
 fn('gr_face_is_char_supported', c_int, c_void_p, c_uint32, c_uint32)
 fn('gr_make_file_face', c_void_p, c_char_p, c_uint)
-# fn('gr_make_file_face_with_seg_cache', c_void_p, c_char_p, c_uint, c_uint)
+#fn('gr_make_file_face_with_seg_cache', c_void_p, c_char_p, c_uint, c_uint)
 fn('gr_make_font', c_void_p, c_float, c_void_p)
 fn('gr_make_font_with_advance_fn', c_void_p, c_float, c_void_p, advfn, c_void_p)
 fn('gr_font_destroy', None, c_void_p)
@@ -73,7 +94,7 @@ fn('gr_seg_cinfo', c_void_p, c_void_p, c_uint)
 fn('gr_seg_n_slots', c_uint, c_void_p)
 fn('gr_seg_first_slot', c_void_p, c_void_p)
 fn('gr_seg_last_slot', c_void_p, c_void_p)
-fn('gr_seg_justify', None, c_void_p, c_void_p, c_void_p, c_double, c_int, c_void_p, c_void_p)
+fn('gr_seg_justify', c_float, c_void_p, c_void_p, c_void_p, c_double, c_int, c_void_p, c_void_p)
 fn('gr_slot_next_in_segment', c_void_p, c_void_p)
 fn('gr_slot_prev_in_segment', c_void_p, c_void_p)
 fn('gr_slot_attached_to', c_void_p, c_void_p)
@@ -92,6 +113,18 @@ fn('gr_slot_can_insert_before', c_int, c_void_p)
 fn('gr_slot_original', c_int, c_void_p)
 fn('gr_slot_linebreak_before', None, c_void_p)
 
+(major, minor, debug) = grversion()
+if major > 1 or minor > 1 :
+    fn('gr_start_logging', c_int, c_void_p, c_char_p)
+    fn('gr_stop_logging', None, c_void_p)
+else :
+    fn('graphite_start_logging', c_int, c_void_p, c_int)
+    fn('graphite_stop_logging', None)
+ 
+def tag_to_str(num) :
+    s = create_string_buffer('\000' * 5)
+    gr2.gr_tag_to_str(num, s)
+    return str(s.value)
 
 class Label(unicode) :
     def __new__(typename, ref, size) :
@@ -101,7 +134,7 @@ class Label(unicode) :
         self.ref = ref
 
     def __del__(self) :
-        gr2.gr_label_destroy(self.ref)
+        if self.ref : gr2.gr_label_destroy(self.ref)
 
 
 class FeatureVal(object) :
@@ -120,8 +153,9 @@ class FeatureVal(object) :
 
 
 class FeatureRef(object) :
-    def __init__(self, fref) :
+    def __init__(self, fref, index = 0) :
         self.fref = fref
+        self.index = index
 
     def num(self) :
         return gr2.gr_fref_n_values(self.fref)
@@ -140,6 +174,9 @@ class FeatureRef(object) :
         length = c_uint32(0)
         res = gr2.gr_fref_value_label(self.fref, ind, byref(lngid), 1, byref(length))
         return Label(res, length.value)
+
+    def tag(self) :
+        return tag_to_str(gr2.gr_fref_id(self.fref))
 
 
 class Face(object) :
@@ -166,20 +203,19 @@ class Face(object) :
 
     def get_featureval(self, lang) :
         if isinstance(lang, basestring) :
-            if len(lang) < 4 : lang = lang + "    "[:-len(lang)]
-            lang = gr2.gr_str_to_tag(lang)
+            lang = gr_str_to_tag(lang)
         return FeatureVal(gr2.gr_face_featureval_for_lang(self.face, lang))
 
     def get_featureref(self, featid) :
         if isinstance(featid, basestring) :
-            featid = gr2.gr_str_to_tag(featid)
+            featid = gr_str_to_tag(featid)
         return FeatureRef(gr2.gr_face_find_fref(self.face, featid))
 
     @property
     def featureRefs(self) :
         num = gr2.gr_face_n_fref(self.face)
         for i in range(num) :
-            yield FeatureRef(gr2.gr_face_fref(self.face, i))
+            yield FeatureRef(gr2.gr_face_fref(self.face, i), index = i)
 
     @property
     def featureLangs(self) :
@@ -237,6 +273,10 @@ class Slot(object) :
             s = gr2.gr_slot_next_sibling_attachment(s)
 
     @property
+    def index(self) :
+        return gr2.gr_slot_index(self.slot)
+
+    @property
     def gid(self) :
         return gr2.gr_slot_gid(self.slot)
 
@@ -282,7 +322,7 @@ class Segment(object) :
             length = len(string)
         if isinstance(scriptid, basestring) :
             scriptid = gr2.gr_str_to_tag(scriptid)
-        self.seg = gr2.gr_make_seg(font.font, face.face, scriptid, (feats.fval if feats else 0), 1, string.encode('utf_8'), length, rtl)
+        self.seg = gr2.gr_make_seg(font.font if font is not None else 0, face.face, scriptid, (feats.fval if feats else 0), 1, string.encode('utf_8'), length, rtl)
 
     def __del__(self) :
         gr2.gr_seg_destroy(self.seg)
