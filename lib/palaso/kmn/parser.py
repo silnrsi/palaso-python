@@ -150,9 +150,10 @@ class Rule(object):
         cls.allRules[grp] = []
 
     def __init__(self, toklist, temp=False):
-        self.before = toklist[0]
-        self.match = toklist[2]
-        self.output = toklist[3]
+        p = toklist.index(u'+')
+        self.before = toklist[p-1]
+        self.match = toklist[p+1]
+        self.output = toklist[p+2]
         if not temp:
             self.allRules[self.current_group].append(self)
 
@@ -180,6 +181,8 @@ class Rule(object):
             if hasattr(o, '__len__') and isinstance(o[0], Token):
                 if o[0].value.lower() == 'context':
                     out.append(before[o[1]])
+                elif o[0].value.lower() == 'outs':
+                    out.extend(allStores[o[1]].values)
             elif isinstance(o, Token):
                 if o.value.lower() == 'context':
                     out.extend(before)
@@ -325,11 +328,13 @@ def tokenize(text):
         ('SPACE', (r'(\\\r?\n|[ \t])+',re.MULTILINE)),
         ('COMMENT', (r'c\s+[^\n]*',)),
         ('NL', (r'\r?\n',re.MULTILINE)),
-        ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|context', re.I)),
+        ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|dk|context|'
+                      'if|match|nomatch|notany|return|reset|save|set', re.I)),
         ('USINGKEYS', (r'using\s*keys', re.I)),
-        ('HEADER', (r'name|hotkey', re.I)),
+        ('HEADER', (r'name|hotkey|baselayout|bitmap|bitmaps|caps always off|caps on only|'
+                     'shift frees caps|copyright|language|layer|layout|message|platform', re.I)),
         ('HEADERN', (r'version', re.I)),
-        ('OP', (r'[(),\[\]>]',)),
+        ('OP', (r'[(),\[\]>=]',)),
         ('STRING', (r'(["\']).*?\1',)),
         ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)',)),
         ('PLUS', (r'\+',)),
@@ -358,7 +363,7 @@ def get_num(s):
 begins = {}
 def store_begin(seq):
     global begins
-    begins[seq[1].lower()] = seq[2]
+    begins[seq[1].lower()] = seq[2][1]
 
 def parse(seq):
     const = lambda x: lambda _: x
@@ -368,34 +373,39 @@ def parse(seq):
     keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
     op = lambda s: a(Token('OP', s)) >> tokval
     op_ = lambda s: skip(op(s))
-    name = toktype('NAME')
+    name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
     number = toktype('NUMBER') >> get_num
     get_string = lambda v: v[1:-1]
     get_char = lambda v: unichr(int(v[2:], 16)) if v[0] in "uU" else unichr(int(v[1:], 10))
     string = (toktype('STRING') >> get_string) | (toktype('CHAR') >> get_char)
     nl = skip(toktype('NL'))
+    simple_func = lambda k: keyword(k) + op_('(') + name + op_(')')
+    assign_func = lambda k: keyword(k) + op_('(') + name + op_('=') + (name | string) + op_(')')
 
-    func = keyword('any') + op_('(') + name + op_(')')
+    notany_statement = simple_func('notany')
     vkey = op_('[') + many(name) + op_(']')
     context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
     index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
-    deadkey = keyword('deadkey') + op_('(') + number + op_(')')
-    context = context_statement | keyword('beep') | (index_statement >> AnyIndex) | string | (deadkey >> DeadKey)
-    match = (func >> AnyIndex) | string | (deadkey >> DeadKey)
+    use_statement = simple_func('use')
+    deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + number + op_(')')
+    context = context_statement | keyword('beep') | keyword('nul') | use_statement | \
+                (index_statement >> AnyIndex) | string | (deadkey >> DeadKey) | \
+                simple_func('reset') | simple_func('save') | assign_func('set')
+    match = (simple_func('any') >> AnyIndex) | string | (deadkey >> DeadKey)
 
-    header = ((toktype('HEADER') + string) | (toktype('HEADERN') + number)) + nl
+    stripspace = lambda s: s.replace(' ', '')
+    header = (((toktype('HEADER') >> stripspace) + string) | (toktype('HEADERN') + number)) + nl
     group = keyword('group') + op_('(') + ((name | toktype('KEYWORD')) >> Rule.set_group) + op_(')') + \
                 toktype('USINGKEYS') + nl
-    store = keyword('store') + op_('(') + name + op_(')') + many(string | \
-             (keyword('outs') + op_('(') + name + op_(')'))) + nl
-    begin = keyword('begin') + name + op_('>') + \
-            skip(keyword('use')) + op_('(') + (name | toktype('KEYWORD')) + op_(')') + nl
-    rule = maybe(many(match)) + toktype('PLUS') + \
-            ((vkey >> VKey) | string | (func >> AnyIndex)) + op_('>') + many(context) + nl
+    store = simple_func('store') + many(string | simple_func('outs')) + nl
+    begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
+    rule = maybe(many(assign_func('if'))) + maybe(many(match)) + toktype('PLUS') + \
+            ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex)) + op_('>') + many(context) + nl
+    matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl
 
     make_header = lambda s: Store(['header', '&'+s[0], [s[1]]])
     kmfile = (many((header >> make_header) | (store >> Store) | skip(begin >> store_begin)) + \
-                maybe(skip(group) + many(rule >> Rule)))
+                maybe(skip(group) + many((rule >> Rule) | matchrule)))
     return kmfile.parse(seq)
 
 def loads(s):
