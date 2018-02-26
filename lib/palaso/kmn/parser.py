@@ -141,14 +141,20 @@ class AttrString(unicode):
     pass
 
 class Rule(object):
-    allRules = []
+    allRules = { "": [] }
+    current_group = ""
+
+    @classmethod
+    def set_group(cls, grp):
+        cls.current_group = grp
+        cls.allRules[grp] = []
 
     def __init__(self, toklist, temp=False):
         self.before = toklist[0]
         self.match = toklist[2]
         self.output = toklist[3]
         if not temp:
-            self.allRules.append(self)
+            self.allRules[self.current_group].append(self)
 
     def __repr__(self):
         return str(self.before) + " + " + repr(self.match) + " > " + str(self.output)
@@ -319,7 +325,7 @@ def tokenize(text):
         ('SPACE', (r'(\\\r?\n|[ \t])+',re.MULTILINE)),
         ('COMMENT', (r'c\s+[^\n]*',)),
         ('NL', (r'\r?\n',re.MULTILINE)),
-        ('KEYWORD', (r'any|index|store|outs|group|unicode|begin|use|beep|deadkey|context', re.I)),
+        ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|context', re.I)),
         ('USINGKEYS', (r'using\s*keys', re.I)),
         ('HEADER', (r'name|hotkey', re.I)),
         ('HEADERN', (r'version', re.I)),
@@ -349,6 +355,11 @@ def get_num(s):
     except:
         return float(s)
 
+begins = {}
+def store_begin(seq):
+    global begins
+    begins[seq[1].lower()] = seq[2]
+
 def parse(seq):
     const = lambda x: lambda _: x
     unarg = lambda f: lambda x: f(*x)
@@ -373,17 +384,17 @@ def parse(seq):
     match = (func >> AnyIndex) | string | (deadkey >> DeadKey)
 
     header = ((toktype('HEADER') + string) | (toktype('HEADERN') + number)) + nl
-    group = keyword('group') + op_('(') + (name | toktype('KEYWORD')) + op_(')') + \
+    group = keyword('group') + op_('(') + ((name | toktype('KEYWORD')) >> Rule.set_group) + op_(')') + \
                 toktype('USINGKEYS') + nl
     store = keyword('store') + op_('(') + name + op_(')') + many(string | \
              (keyword('outs') + op_('(') + name + op_(')'))) + nl
-    begin = keyword('begin') + keyword('unicode') + op_('>') + \
-            keyword('use') + op_('(') + (name | toktype('KEYWORD')) + op_(')') + nl
+    begin = keyword('begin') + name + op_('>') + \
+            skip(keyword('use')) + op_('(') + (name | toktype('KEYWORD')) + op_(')') + nl
     rule = maybe(many(match)) + toktype('PLUS') + \
             ((vkey >> VKey) | string | (func >> AnyIndex)) + op_('>') + many(context) + nl
 
     make_header = lambda s: Store(['header', '&'+s[0], [s[1]]])
-    kmfile = (many((header >> make_header) | (store >> Store) | skip(begin)) + \
+    kmfile = (many((header >> make_header) | (store >> Store) | skip(begin >> store_begin)) + \
                 maybe(skip(group) + many(rule >> Rule)))
     return kmfile.parse(seq)
 
@@ -403,7 +414,7 @@ def main():
     for s in Store.allStores.values():
         s.flatten()
     maps = { "" : {}, "shift" : {} }
-    for r in Rule.allRules:
+    for r in Rule.allRules[begins['unicode']]:
         if len(r.before):
             continue
         error = False
@@ -426,7 +437,7 @@ def main():
 
     simples = {}
     finals = {}
-    for r in Rule.allRules:
+    for r in Rule.allRules[begins['unicode']]:
         if not len(r.before):
             continue
         isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
