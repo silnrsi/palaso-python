@@ -30,22 +30,12 @@ def mapkey(tok):
         return (k[0], ("shift" if k[1] else ""))
 
 class Rule(object):
-    allRules = { "": [] }
-    current_group = ""
 
-    @classmethod
-    def set_group(cls, seq):
-        grp = seq[1]
-        cls.current_group = grp
-        cls.allRules[grp] = []
-
-    def __init__(self, toklist, temp=False):
+    def __init__(self, toklist):
         p = toklist.index(u'+')
         self.before = toklist[p-1]
         self.match = toklist[p+1]
         self.output = toklist[p+2]
-        if not temp:
-            self.allRules[self.current_group].append(self)
 
     def __repr__(self):
         return str(self.before) + " + " + repr(self.match) + " > " + str(self.output)
@@ -78,7 +68,7 @@ class Rule(object):
                     out.extend(before)
             else:
                 out.append(self._apply(allStores, o, vec))
-        return Rule((before, '+', match, out), temp=True)
+        return Rule((before, '+', match, out))
 
     def _len(self, allStores, x):
         if isinstance(x, AnyIndex):
@@ -162,17 +152,11 @@ class VKey(object):
         return "[" + " ".join(self.modifiers + [self.key]) + "]"
 
 class Store(object):
-    allStores = {}
-    allHeaders = {}
 
     def __init__(self, toklist):
         self.name = toklist[1].lower()
         self.seq = toklist[2]
         self.values = None
-        if not self.name.startswith("&"):
-            self.allStores[self.name] = self
-        else:
-            self.allHeaders[self.name] = self
 
     def __repr__(self):
         return "store " + self.name + " " + \
@@ -191,99 +175,118 @@ class Store(object):
             else:
                 self.values.extend(s)
 
-
-def tokenize(text):
-    lexer_specs = [
-        ('SPACE', (r'(\\\r?\n|[ \t])+',re.MULTILINE)),
-        ('COMMENT', (r'c\s+[^\n]*',)),
-        ('NL', (r'\r?\n',re.MULTILINE)),
-        ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|dk|context|'
-                      'if|match|nomatch|notany|return|reset|save|set|nul', re.I)),
-        ('USINGKEYS', (r'using\s*keys', re.I)),
-        ('HEADER', (r'name|hotkey|baselayout|bitmap|bitmaps|caps always off|caps on only|'
-                     'shift frees caps|copyright|language|layer|layout|message|platform', re.I)),
-        ('HEADERN', (r'version', re.I)),
-        ('OP', (r'[(),\[\]>=]',)),
-        ('STRING', (r'(["\']).*?\1',)),
-        ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)',)),
-        ('PLUS', (r'\+',)),
-        ('NAME', (r'[A-Za-z&][A-Za-z0-9_]*',)),
-        ('NUMBER', (r'[0-9]+(\.[0-9]+)?',)),
-    ]
-    useless = ['SPACE', 'COMMENT']
-    t = make_tokenizer(lexer_specs)
-    res = []
-    blank = True
-    for i, x in enumerate(t(text)):
-        if x.type in useless:
-            continue
-        if blank and x.type == 'NL':
-            continue
-        blank = x.type == 'NL'
-        res.append(x)
-    return res
-
 def get_num(s):
     try:
         return int(s)
     except:
         return float(s)
 
-begins = {}
-def store_begin(seq):
-    global begins
-    begins[seq[1].lower()] = seq[2][1]
+class Parser(object):
 
-def parse(seq):
-    const = lambda x: lambda _: x
-    unarg = lambda f: lambda x: f(*x)
-    tokval = lambda x: x.value
-    toktype = lambda s: some(lambda x: x.type == s) >> tokval
-    keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
-    op = lambda s: a(Token('OP', s)) >> tokval
-    op_ = lambda s: skip(op(s))
-    name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
-    number = toktype('NUMBER') >> get_num
-    get_string = lambda v: v[1:-1]
-    get_char = lambda v: unichr(int(v[2:], 16)) if v[0] in "uU" else unichr(int(v[1:], 10))
-    string = (toktype('STRING') >> get_string) | (toktype('CHAR') >> get_char)
-    nl = skip(toktype('NL'))
-    simple_func = lambda k: keyword(k) + op_('(') + name + op_(')')
-    assign_func = lambda k: keyword(k) + op_('(') + name + op_('=') + (name | string) + op_(')')
+    def __init__(self, s, debug=False):
+        self.allRules = { "": [] }
+        self.current_group = ""
+        self.begins = {}
+        self.allStores = {}
+        self.allHeaders = {}
+        seq = self.tokenize(s)
+        if debug:
+            print(seq)
+        self.tree = self.parse(seq)
 
-    # statement components
-    vkey = op_('[') + many(name) + op_(']')
-    context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
-    index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
-    deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + number + op_(')')
-    context = context_statement | keyword('beep') | keyword('nul') | simple_func('use') | \
-                (index_statement >> AnyIndex) | string | (deadkey >> DeadKey) | \
-                simple_func('reset') | simple_func('save') | assign_func('set') | \
-                simple_func('outs')
-    match = (simple_func('any') >> AnyIndex) | string | (deadkey >> DeadKey) | simple_func('notany')
+    def tokenize(self, text):
+        lexer_specs = [
+            ('SPACE', (r'(\\\r?\n|[ \t])+',re.MULTILINE)),
+            ('COMMENT', (r'c\s+[^\n]*',)),
+            ('NL', (r'\r?\n',re.MULTILINE)),
+            ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|dk|context|'
+                          'if|match|nomatch|notany|return|reset|save|set|nul', re.I)),
+            ('USINGKEYS', (r'using\s*keys', re.I)),
+            ('HEADER', (r'name|hotkey|baselayout|bitmap|bitmaps|caps always off|caps on only|'
+                         'shift frees caps|copyright|language|layer|layout|message|platform', re.I)),
+            ('HEADERN', (r'version', re.I)),
+            ('OP', (r'[(),\[\]>=]',)),
+            ('STRING', (r'(["\']).*?\1',)),
+            ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)',)),
+            ('PLUS', (r'\+',)),
+            ('NAME', (r'[A-Za-z&][A-Za-z0-9_]*',)),
+            ('NUMBER', (r'[0-9]+(\.[0-9]+)?',)),
+        ]
+        useless = ['SPACE', 'COMMENT']
+        t = make_tokenizer(lexer_specs)
+        res = []
+        blank = True
+        for i, x in enumerate(t(text)):
+            if x.type in useless:
+                continue
+            if blank and x.type == 'NL':
+                continue
+            blank = x.type == 'NL'
+            res.append(x)
+        return res
 
-    # top level statements
-    stripspace = lambda s: s.replace(' ', '')
-    header = (((toktype('HEADER') >> stripspace) + string) | (toktype('HEADERN') + number)) + nl
-    group  = (simple_func('group') >> Rule.set_group) + maybe(toktype('USINGKEYS')) + nl
-    store = simple_func('store') + many(string | simple_func('outs')) + nl
-    begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
-    rule = maybe(many(assign_func('if'))) + maybe(many(match)) + toktype('PLUS') + \
-            ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex)) + op_('>') + many(context) + nl
-    matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl
+    def make_store(self, seq):
+        s = Store(seq)
+        if not s.name.startswith("&"):
+            self.allStores[s.name] = s
+        else:
+            self.allHeaders[s.name] = s
+        return s
 
-    # a file is a sequence of certain types of statement
-    make_header = lambda s: Store(['header', '&'+s[0], [s[1]]])
-    kmfile = many((header >> make_header) | (store >> Store) | skip(begin >> store_begin)) + \
-                maybe(many(group | (rule >> Rule) | matchrule))
-    return kmfile.parse(seq)
+    def set_group(self, seq):
+        grp = seq[1]
+        self.current_group = grp
+        self.allRules[grp] = []
 
-def loads(s, debug):
-    seq = tokenize(s)
-    if debug:
-        print(seq)
-    return parse(seq)
+    def make_rule(self, seq):
+        r = Rule(seq)
+        self.allRules[self.current_group].append(r)
+        return r
 
-if __name__ == '__main__':
-    main()
-    
+    def store_begin(self, seq):
+        self.begins[seq[1].lower()] = seq[2][1]
+
+    def parse(self, seq):
+        const = lambda x: lambda _: x
+        unarg = lambda f: lambda x: f(*x)
+        tokval = lambda x: x.value
+        toktype = lambda s: some(lambda x: x.type == s) >> tokval
+        keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
+        op = lambda s: a(Token('OP', s)) >> tokval
+        op_ = lambda s: skip(op(s))
+        name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
+        number = toktype('NUMBER') >> get_num
+        get_string = lambda v: v[1:-1]
+        get_char = lambda v: unichr(int(v[2:], 16)) if v[0] in "uU" else unichr(int(v[1:], 10))
+        string = (toktype('STRING') >> get_string) | (toktype('CHAR') >> get_char)
+        nl = skip(toktype('NL'))
+        simple_func = lambda k: keyword(k) + op_('(') + name + op_(')')
+        assign_func = lambda k: keyword(k) + op_('(') + name + op_('=') + (name | string) + op_(')')
+
+        # statement components
+        vkey = op_('[') + many(name) + op_(']')
+        context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
+        index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
+        deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + number + op_(')')
+        context = context_statement | keyword('beep') | keyword('nul') | simple_func('use') | \
+                    (index_statement >> AnyIndex) | string | (deadkey >> DeadKey) | \
+                    simple_func('reset') | simple_func('save') | assign_func('set') | \
+                    simple_func('outs')
+        match = (simple_func('any') >> AnyIndex) | string | (deadkey >> DeadKey) | simple_func('notany')
+
+        # top level statements
+        stripspace = lambda s: s.replace(' ', '')
+        header = (((toktype('HEADER') >> stripspace) + string) | (toktype('HEADERN') + number)) + nl
+        group  = (simple_func('group') >> self.set_group) + maybe(toktype('USINGKEYS')) + nl
+        store = simple_func('store') + many(string | simple_func('outs')) + nl
+        begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
+        rule = maybe(many(assign_func('if'))) + maybe(many(match)) + toktype('PLUS') + \
+                ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex)) + op_('>') + many(context) + nl
+        matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl
+
+        # a file is a sequence of certain types of statement
+        make_header = lambda s: Store(['header', '&'+s[0], [s[1]]])
+        kmfile = many((header >> make_header) | (store >> self.make_store) | skip(begin >> self.store_begin)) + \
+                    maybe(many(group | (rule >> self.make_rule) | matchrule))
+        return kmfile.parse(seq)
+

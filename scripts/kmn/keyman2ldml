@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import argparse, codecs, unicodedata, re
-from palaso.kmn.parser import loads, Store, Rule, mapkey, begins, Token, DeadKey
+from palaso.kmn.parser import Parser, mapkey, Token, DeadKey
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
 from pprint import pformat
@@ -150,15 +150,15 @@ class AttrString(unicode):
     pass
 
 def process_kmn(ldml, kmnfile):
-    f = codecs.open(kmnfile, "r", encoding="utf-8")
-    input = "".join(f.readlines())
-    tree = list(loads(input, (args.debug & 2)))
+    with codecs.open(kmnfile, "r", encoding="utf-8") as f:
+        lines = "".join(f.readlines())
+    p = Parser(lines, debug = (args.debug & 2))
     if (args.debug & 1):
-        print(pformat(tree))
-    for s in Store.allStores.values():
+        print(pformat(p.tree))
+    for s in p.allStores.values():
         s.flatten()
     maps = { "" : {}, "shift" : {} }
-    for r in Rule.allRules[begins['unicode']]:
+    for r in p.allRules[p.begins['unicode']]:
         if len(r.before):
             continue
         error = False
@@ -166,22 +166,22 @@ def process_kmn(ldml, kmnfile):
             if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
                 error = True
                 break
-        for rf in r.flatten(Store.allStores):
+        for rf in r.flatten(p.allStores):
             k = mapkey(rf.match)
             if k[1] not in maps:
                 maps[k[1]] = {}
             maps[k[1]][k[0]] = AttrString(u"".join(rf.output))
             if error:
                 maps[k[1]][k[0]].error = True
-    if '&NAME' in Store.allHeaders:
-        ldml.setname(Store.allHeaders['&NAME'].seq[0])
+    if '&NAME' in p.allHeaders:
+        ldml.setname(p.allHeaders['&NAME'].seq[0])
     for km in sorted(maps.keys()):
         ldml.addKeyMap(maps[km], km)
 
     simples = {}
     finals = {}
     backups = {}
-    for r in Rule.allRules[begins['unicode']]:
+    for r in p.allRules[p.begins['unicode']]:
         if not len(r.before):
             continue
         isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
@@ -190,7 +190,7 @@ def process_kmn(ldml, kmnfile):
             if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
                 error = True
                 break
-        for rf in r.flatten(Store.allStores):
+        for rf in r.flatten(p.allStores):
             bs = []
             for b in rf.before:
                 bs.extend(b)
@@ -221,6 +221,13 @@ def process_kmn(ldml, kmnfile):
         ldml.addTransform('final', finals)
     if len(backups):
         ldml.addTransform('backspace', backups, keyword="backspace")
+
+def process_layout(ldml, jsfile):
+    layermap = {"default": "", "shift": "shift"}
+    with codecs.open(jsfile, "r", encoding="utf-8") as f:
+        linfo = js.load(f)
+    layers = [(l["id"], i) for i, l in enumerate(linfo["layer"])]
+    
 
 
 parser = argparse.ArgumentParser()
