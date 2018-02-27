@@ -4,13 +4,12 @@ from distutils.core import setup
 from glob import glob
 import platform, sys
 
-if '--kmn' in sys.argv:
+try:
     from Pyrex.Distutils.extension import Extension
     from Pyrex.Distutils import build_ext
     ext =[ Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"]) ] 
     cmd = {'build_ext': build_ext}
-    sys.argv.remove('--kmn')
-else:
+except ImportError:
     ext = []
     cmd = {}
 
