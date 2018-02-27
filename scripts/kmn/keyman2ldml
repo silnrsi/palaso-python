@@ -149,84 +149,92 @@ class LDMLKeyboard(ETWriter):
 class AttrString(unicode):
     pass
 
+def process_kmn(ldml, kmnfile):
+    f = codecs.open(kmnfile, "r", encoding="utf-8")
+    input = "".join(f.readlines())
+    tree = list(loads(input, (args.debug & 2)))
+    if (args.debug & 1):
+        print(pformat(tree))
+    for s in Store.allStores.values():
+        s.flatten()
+    maps = { "" : {}, "shift" : {} }
+    for r in Rule.allRules[begins['unicode']]:
+        if len(r.before):
+            continue
+        error = False
+        for o in r.output:
+            if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
+                error = True
+                break
+        for rf in r.flatten(Store.allStores):
+            k = mapkey(rf.match)
+            if k[1] not in maps:
+                maps[k[1]] = {}
+            maps[k[1]][k[0]] = AttrString(u"".join(rf.output))
+            if error:
+                maps[k[1]][k[0]].error = True
+    if '&NAME' in Store.allHeaders:
+        ldml.setname(Store.allHeaders['&NAME'].seq[0])
+    for km in sorted(maps.keys()):
+        ldml.addKeyMap(maps[km], km)
+
+    simples = {}
+    finals = {}
+    backups = {}
+    for r in Rule.allRules[begins['unicode']]:
+        if not len(r.before):
+            continue
+        isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
+        error = False
+        for o in r.output:
+            if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
+                error = True
+                break
+        for rf in r.flatten(Store.allStores):
+            bs = []
+            for b in rf.before:
+                bs.extend(b)
+            btxt = u"".join(bs)
+            otxt = AttrString(u"".join(rf.output))
+            k = mapkey(rf.match)
+            if k[0] == 'bksp':
+                backups[btxt] = otxt
+                continue
+            mp = maps[k[1]]
+            if k[0] not in mp:
+                mp[k[0]] = unichr(DeadKey.missing)
+                finals[unichr(DeadKey.missing)] = ""
+                DeadKey.missing += 1
+            m = mp[k[0]]
+            btxt += m
+            if error:
+                otxt.error = True
+            if btxt == otxt and not error:
+                continue
+            if isdead:
+                simples[btxt] = otxt
+            elif any(x not in otxt for x in btxt): # skip reorderings
+                finals[btxt] = otxt
+    if len(simples):
+        ldml.addTransform('simple', simples)
+    if len(finals):
+        ldml.addTransform('final', finals)
+    if len(backups):
+        ldml.addTransform('backspace', backups, keyword="backspace")
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('outfile',help="Generated LDML file")
 parser.add_argument('-k','--kmn',help='Process kmn file')
 parser.add_argument('-z','--debug',default=0)
 args = parser.parse_args()
 
-f = codecs.open(args.kmn, "r", encoding="utf-8")
-input = "".join(f.readlines())
-tree = list(loads(input, (args.debug & 2)))
-if (args.debug & 1):
-    print(pformat(tree))
-for s in Store.allStores.values():
-    s.flatten()
-maps = { "" : {}, "shift" : {} }
-for r in Rule.allRules[begins['unicode']]:
-    if len(r.before):
-        continue
-    error = False
-    for o in r.output:
-        if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
-            error = True
-            break
-    for rf in r.flatten(Store.allStores):
-        k = mapkey(rf.match)
-        if k[1] not in maps:
-            maps[k[1]] = {}
-        maps[k[1]][k[0]] = AttrString(u"".join(rf.output))
-        if error:
-            maps[k[1]][k[0]].error = True
 ldml = LDMLKeyboard()
-if '&NAME' in Store.allHeaders:
-    ldml.setname(Store.allHeaders['&NAME'].seq[0])
-for km in sorted(maps.keys()):
-    ldml.addKeyMap(maps[km], km)
 
-simples = {}
-finals = {}
-backups = {}
-for r in Rule.allRules[begins['unicode']]:
-    if not len(r.before):
-        continue
-    isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
-    error = False
-    for o in r.output:
-        if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
-            error = True
-            break
-    for rf in r.flatten(Store.allStores):
-        bs = []
-        for b in rf.before:
-            bs.extend(b)
-        btxt = u"".join(bs)
-        otxt = AttrString(u"".join(rf.output))
-        k = mapkey(rf.match)
-        if k[0] == 'bksp':
-            backups[btxt] = otxt
-            continue
-        mp = maps[k[1]]
-        if k[0] not in mp:
-            mp[k[0]] = unichr(DeadKey.missing)
-            finals[unichr(DeadKey.missing)] = ""
-            DeadKey.missing += 1
-        m = mp[k[0]]
-        btxt += m
-        if error:
-            otxt.error = True
-        if btxt == otxt and not error:
-            continue
-        if isdead:
-            simples[btxt] = otxt
-        elif any(x not in otxt for x in btxt): # skip reorderings
-            finals[btxt] = otxt
-if len(simples):
-    ldml.addTransform('simple', simples)
-if len(finals):
-    ldml.addTransform('final', finals)
-if len(backups):
-    ldml.addTransform('backspace', backups, keyword="backspace")
+if args.kmn:
+    process_kmn(ldml, args.kmn)
+
+
 
 with codecs.open(args.outfile, "w", encoding="utf-8") as f:
     ldml.serialize_xml(f.write)

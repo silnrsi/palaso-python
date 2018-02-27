@@ -3,9 +3,8 @@
 import re, os
 import itertools
 from pprint import pformat
-from funcparserlib.lexer import make_tokenizer, Token, LexerError
-from funcparserlib.parser import (some, a, maybe, many, skip, finished, NoParseError)
-from funcparserlib.util import pretty_tree
+from palaso.contrib.funcparserlib.lexer import make_tokenizer, Token, LexerError
+from palaso.contrib.funcparserlib.parser import (some, a, maybe, many, skip, finished, NoParseError)
 
 _keyrowmap = {
     "E" : "1234567890-=",
