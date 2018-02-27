@@ -1,0 +1,233 @@
+#!/usr/bin/python
+
+import argparse, codecs, unicodedata, re
+from palaso.kmn.parser import loads, Store, Rule, mapkey, begins, Token, DeadKey
+from xml.etree import ElementTree as et
+from xml.etree import ElementPath as ep
+from pprint import pformat
+
+_elementprotect = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;' }
+_attribprotect = dict(_elementprotect)
+_attribprotect['"'] = '&quot;'
+
+class ETWriter(object):
+    """ General purpose ElementTree pretty printer complete with options for attribute order
+        beyond simple sorting, and which elements should use cdata """
+
+    nscount = 0
+    indent = "\t"
+
+    def __init__(self, et, namespaces = None, attributeOrder = {}, takesCData = set()):
+        self.root = et
+        if namespaces is None: namespaces = {}
+        self.namespaces = namespaces
+        self.attributeOrder = attributeOrder
+        self.maxAts = max([0] + attributeOrder.values()) + 1
+        self.takesCData = takesCData
+
+    def _localisens(self, tag):
+        if tag[0] == '{':
+            ns, localname = tag[1:].split('}', 1)
+            qname = self.namespaces.get(ns, '')
+            if qname:
+                return ('{}:{}'.format(qname, localname), qname, ns)
+            else:
+                self.nscount += 1
+                return (localname, 'ns_' + str(self.nscount), ns)
+        else:
+            return (tag, None, None)
+
+    def _protect(self, txt, base=_attribprotect):
+        return re.sub(ur'['+ur"".join(base.keys())+ur"]", lambda m: base[m.group(0)], txt)
+
+    def _nsprotectattribs(self, attribs, localattribs, namespaces):
+        if attribs is not None:
+            for k, v in attribs.items():
+                (lt, lq, lns) = self._localisens(k)
+                if lns and lns not in namespaces:
+                    namespaces[lns] = lq
+                    localattribs['xmlns:'+lq] = lns
+                localattribs[lt] = v
+        
+    def _sortedattrs(self, n, attribs=None):
+        def getorder(x):
+            return self.attributeOrder.get(n.tag, {}).get(x, self.maxAts)
+        def cmpat(x, y):
+            return cmp(getorder(x), getorder(y)) or cmp(x, y)
+        if attribs != None :
+            return sorted(attribs, cmp=cmpat)
+        else:
+            return sorted(n.keys(), cmp=cmpat)
+
+    def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}):
+        """Output the object using write() in a normalised way:
+                topns if set puts all namespaces in root element else put them as low as possible"""
+        if base is None:
+            base = self.root
+            write('<?xml version="1.0" encoding="utf-8"?>\n')
+        (tag, q, ns) = self._localisens(base.tag)
+        localattribs = {}
+        if ns and ns not in namespaces:
+            namespaces[ns] = q
+            localattribs['xmlns:'+q] = ns
+        if topns:
+            if base == self.root:
+                for n,q in self.namespaces.items():
+                    localattribs['xmlns:'+q] = n
+                    namespaces[n] = q
+        else:
+            for c in base:
+                (lt, lq, lns) = self._localisens(c.tag)
+                if lns and lns not in namespaces:
+                    namespaces[lns] = q
+                    localattribs['xmlns:'+lq] = lns
+        self._nsprotectattribs(getattr(base, 'attrib', None), localattribs, namespaces)
+        for c in getattr(base, 'comments', []):
+            write(u'{}<!--{}-->\n'.format(indent, c))
+        write(u'{}<{}'.format(indent, tag))
+        if len(localattribs):
+            def getorder(x):
+                return self.attributeOrder.get(tag, {}).get(x, self.maxAts)
+            def cmpattrib(x, y):
+                return cmp(getorder(x), getorder(y)) or cmp(x, y)
+            for k in self._sortedattrs(base, localattribs):
+                write(u' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
+        if len(base):
+            write('>\n')
+            for b in base:
+                self.serialize_xml(write, base=b, indent=indent + self.indent, topns=topns, namespaces=namespaces.copy())
+            write('{}</{}>\n'.format(indent, tag))
+        elif base.text:
+            if tag not in self.takesCData:
+                t = self._protect(base.text.replace('\n', '\n' + indent), base=_elementprotect)
+            else:
+                t = "<![CDATA[\n\t" + indent + base.text.replace('\n', '\n\t' + indent) + "\n" + indent + "]]>"
+            write(u'>{}</{}>\n'.format(t, tag))
+        else:
+            write('/>\n')
+        for c in getattr(base, 'commentsafter', []):
+            write(u'{}<!--{}-->\n'.format(indent, c))
+
+class LDMLKeyboard(ETWriter):
+    def __init__(self):
+        doc = et.fromstring("""<?xml version="1.0"?>
+<keyboard>
+<version platform="1" number="1"/>
+</keyboard>
+""")
+        let = et.ElementTree()
+        let._setroot(doc)
+        ETWriter.__init__(self, doc)
+
+    def setname(self, name):
+        nms = et.SubElement(self.root, "names")
+        et.SubElement(nms, "name", {"value": name})
+
+    def _readable(self, s):
+        return u"".join("\\u{:04X}".format(ord(x)) \
+                if unicodedata.category(x) in ("Cf", "WS", "Mc", "Mn") else x for x in s)
+
+    def addKeyMap(self, keymap, modifiers):
+        km = et.SubElement(self.root, "keyMap", attrib={'modifiers' : modifiers})
+        for k, v in sorted(keymap.items()):
+            a = {"iso": k, "to": self._readable(v)}
+            if getattr(v, 'error', False):
+                a['error'] = "fail"
+            et.SubElement(km, "map", attrib=a)
+
+    def addTransform(self, t, rules, keyword="transform"):
+        ts = et.SubElement(self.root, keyword+"s", attrib={'type': t})
+        for k, v in sorted(rules.items()):
+            a = {'from': self._readable(k), 'to': self._readable(v)}
+            if getattr(v, 'error', False):
+                a['error'] = "fail"
+            et.SubElement(ts, keyword, attrib=a)
+
+class AttrString(unicode):
+    pass
+
+parser = argparse.ArgumentParser()
+parser.add_argument('outfile',help="Generated LDML file")
+parser.add_argument('-k','--kmn',help='Process kmn file')
+parser.add_argument('-z','--debug',default=0)
+args = parser.parse_args()
+
+f = codecs.open(args.kmn, "r", encoding="utf-8")
+input = "".join(f.readlines())
+tree = list(loads(input, (args.debug & 2)))
+if (args.debug & 1):
+    print(pformat(tree))
+for s in Store.allStores.values():
+    s.flatten()
+maps = { "" : {}, "shift" : {} }
+for r in Rule.allRules[begins['unicode']]:
+    if len(r.before):
+        continue
+    error = False
+    for o in r.output:
+        if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
+            error = True
+            break
+    for rf in r.flatten(Store.allStores):
+        k = mapkey(rf.match)
+        if k[1] not in maps:
+            maps[k[1]] = {}
+        maps[k[1]][k[0]] = AttrString(u"".join(rf.output))
+        if error:
+            maps[k[1]][k[0]].error = True
+ldml = LDMLKeyboard()
+if '&NAME' in Store.allHeaders:
+    ldml.setname(Store.allHeaders['&NAME'].seq[0])
+for km in sorted(maps.keys()):
+    ldml.addKeyMap(maps[km], km)
+
+simples = {}
+finals = {}
+backups = {}
+for r in Rule.allRules[begins['unicode']]:
+    if not len(r.before):
+        continue
+    isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
+    error = False
+    for o in r.output:
+        if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
+            error = True
+            break
+    for rf in r.flatten(Store.allStores):
+        bs = []
+        for b in rf.before:
+            bs.extend(b)
+        btxt = u"".join(bs)
+        otxt = AttrString(u"".join(rf.output))
+        k = mapkey(rf.match)
+        if k[0] == 'bksp':
+            backups[btxt] = otxt
+            continue
+        mp = maps[k[1]]
+        if k[0] not in mp:
+            mp[k[0]] = unichr(DeadKey.missing)
+            finals[unichr(DeadKey.missing)] = ""
+            DeadKey.missing += 1
+        m = mp[k[0]]
+        btxt += m
+        if error:
+            otxt.error = True
+        if btxt == otxt and not error:
+            continue
+        if isdead:
+            simples[btxt] = otxt
+        elif any(x not in otxt for x in btxt): # skip reorderings
+            finals[btxt] = otxt
+if len(simples):
+    ldml.addTransform('simple', simples)
+if len(finals):
+    ldml.addTransform('final', finals)
+if len(backups):
+    ldml.addTransform('backspace', backups, keyword="backspace")
+
+with codecs.open(args.outfile, "w", encoding="utf-8") as f:
+    ldml.serialize_xml(f.write)
+
