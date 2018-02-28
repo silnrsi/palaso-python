@@ -55,7 +55,7 @@ class ETWriter(object):
         
     def _sortedattrs(self, n, attribs=None):
         def getorder(x):
-            return self.attributeOrder.get(n.tag, {}).get(x, self.maxAts)
+            return self.attributeOrder.get(x, self.maxAts)
         def cmpat(x, y):
             return cmp(getorder(x), getorder(y)) or cmp(x, y)
         if attribs != None :
@@ -112,6 +112,8 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
+attributeorders = ('from', 'iso', 'to', 'layer', 'display')
+
 class LDMLKeyboard(ETWriter):
     def __init__(self):
         doc = et.fromstring("""<?xml version="1.0"?>
@@ -122,7 +124,7 @@ class LDMLKeyboard(ETWriter):
 """)
         let = et.ElementTree()
         let._setroot(doc)
-        ETWriter.__init__(self, doc)
+        ETWriter.__init__(self, doc, attributeOrder=dict((x, i+1) for i,x in enumerate(attributeorders)))
 
     def setname(self, name):
         nms = et.SubElement(self.root, "names")
@@ -155,10 +157,12 @@ class LDMLKeyboard(ETWriter):
         k = self.root.find('.//keyMap[@modifiers="'+modifiers+'"]')
         if k is None:
             k = et.SubElement(self.root, "keyMap", attrib={'modifiers': modifiers})
-        et.SubElement(k, 'map', attrib={'iso': key, 'to': to})
+        return et.SubElement(k, 'map', attrib={'iso': key, 'to': to})
 
     def keyAddAttrs(self, modifiers, key, attrs):
         k = self.root.find('.//keyMap[@modifiers="'+modifiers+'"]/map[@iso="'+key+'"]')
+        if k is None:
+            k = self.addKey(modifiers, key, self.mapKey(key, modifiers))
         k.attrib.update(attrs)
 
     def addDisplay(self, to, display):
@@ -172,7 +176,7 @@ class LDMLKeyboard(ETWriter):
 
     def addTransform(self, t, rules, keyword="transform"):
         ts = et.SubElement(self.root, keyword+"s", attrib={'type': t})
-        for k, v in sorted(rules.items()):
+        for k, v in sorted(rules.items(), key=lambda x:(-len(x[0]), x[0])):
             a = {'from': self._readable(k), 'to': self._readable(v)}
             if getattr(v, 'error', False):
                 a['error'] = "fail"
@@ -192,10 +196,10 @@ class LDMLKeyboard(ETWriter):
 class AttrString(unicode):
     pass
 
-def process_kmn(ldml, kmnfile):
+def process_kmn(ldml, kmnfile, platform={}):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
-    p = Parser(lines, debug = (args.debug & 2))
+    p = Parser(lines, debug = (args.debug & 2), platform = platform)
     if (args.debug & 1):
         print(pformat(p.tree))
     for s in p.allStores.values():
@@ -273,21 +277,22 @@ nonoutputkeys = set(("lshift", "rshift", "shift", "lcontrol", "lctrl", "rcontrol
                     "numerals", "shifted", "upper", "lower", "symbols", "bksp", "numlock",
                     "lopt", "ropt", "opt", "enter", "space"))
 sparekeyCount = 1
-def process_layout(ldml, jsfile):
+def process_layout(ldml, jsfile, platform = {}):
+    layertype = platform['form']
     with codecs.open(jsfile, "r", encoding="utf-8") as f:
         linfo = json.load(f)
-    layers = dict((l["id"], i) for i, l in enumerate(linfo["phone"]["layer"]))
+    layers = dict((l["id"], i) for i, l in enumerate(linfo[layertype]["layer"]))
     jobs = set(["default"])
     jobsdone = set()
     while len(jobs):
         newjobs = set()
         for j in jobs:
-            newjobs.update(process_layer(ldml, linfo, layers, j))
+            newjobs.update(process_layer(ldml, linfo, layertype, layers, j))
             jobsdone.add(j)
         jobs = newjobs - jobsdone
 
-def process_layer(ldml, linfo, layers, lid):
-    layer = linfo["phone"]["layer"][layers[lid]]
+def process_layer(ldml, linfo, layertype, layers, lid):
+    layer = linfo[layertype]["layer"][layers[lid]]
     mods = layermap.get(lid, lid)
     rows = []
     res = set()
@@ -308,7 +313,10 @@ def process_layer(ldml, linfo, layers, lid):
             if "width" not in k:
                 currrow.append((kid, "100"))
             else:
-                currrow.append((kid, k["width"]))
+                v = k["width"]
+                if not re.match(ur'[0-9]+$', v):
+                    v = "100"
+                currrow.append((kid, v))
             if "nextlayer" in k:
                 res.add(k["nextlayer"])
                 switches.append((kid, k["nextlayer"], k.get('text', '')))
@@ -338,7 +346,7 @@ def process_key(ldml, mods, k, isSubKey=False):
         kid = k["id"].replace("_", "").lower()
         to = unichr(int(k["id"][2:], 16))
         if not isSubKey:
-            ldml.addkey(mods, kid, to)
+            ldml.addKey(mods, kid, to)
     else:
         kid = k["id"].replace("_", "").lower()
         to = k.get("text", '')
@@ -352,16 +360,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument('outfile',help="Generated LDML file")
 parser.add_argument('-k','--kmn',help='Process kmn file')
 parser.add_argument('-l','--layout',help='Process layout .js file')
+parser.add_argument('-f','--form',default='phone',help='form factor platform [phone]')
+parser.add_argument('-u','--ui',default='touch',help='User Interface platform [touch]')
+parser.add_argument('-O','--os',default='windows',help='Operating Systems platform [windows]')
 parser.add_argument('-z','--debug',type=int,default=0)
 args = parser.parse_args()
 
 ldml = LDMLKeyboard()
 
+platform = dict((x, getattr(args, x)) for x in ('form', 'ui', 'os'))
+
 if args.kmn:
-    process_kmn(ldml, args.kmn)
+    process_kmn(ldml, args.kmn, platform=platform)
 
 if args.layout:
-    process_layout(ldml, args.layout)
+    process_layout(ldml, args.layout, platform=platform)
 
 with codecs.open(args.outfile, "w", encoding="utf-8") as f:
     ldml.serialize_xml(f.write)

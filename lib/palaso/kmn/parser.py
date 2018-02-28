@@ -72,7 +72,9 @@ class Rule(object):
 
     def _len(self, allStores, x):
         if isinstance(x, AnyIndex):
-            return len(allStores[x.name].values)
+            if x.name not in allStores:
+                return 0
+            return len(allStores[x.name].flatten().values)
         else:
             return 1
 
@@ -132,6 +134,8 @@ class VKey(object):
                 mod = "R"
             if s.startswith("k_"):
                 self.key = s[2:]
+            elif s[0] in "ut" and s[1] == "_":
+                self.key = s.replace("_","")
             else:
                 self.modifiers += [s + mod]
 
@@ -153,11 +157,14 @@ class VKey(object):
         return "[" + " ".join(self.modifiers + [self.key]) + "]"
 
 class Store(object):
+    allStores = {}
 
     def __init__(self, toklist):
-        self.name = toklist[1].lower()
-        self.seq = toklist[2]
+        base = len(toklist) - 2
+        self.name = toklist[base][1].lower()
+        self.seq = toklist[base + 1]
         self.values = None
+        self.allStores[self.name] = self
 
     def __repr__(self):
         return "store " + self.name + " " + \
@@ -165,16 +172,19 @@ class Store(object):
 
     def flatten(self):
         if self.values is not None:
-            return
+            return self
         self.values = []
         for s in self.seq:
-            if isinstance(s[0], Token):
+            if isinstance(s, VKey):
+                self.values.append(s)
+            elif isinstance(s[0], Token):
                 if s[0].value.lower() == 'outs':
                     sub = self.allStores[s[1].lower()]
                     sub.flatten()
                     self.values.extend(sub.values)
             else:
                 self.values.extend(s)
+        return self
 
 def get_num(s):
     try:
@@ -182,14 +192,25 @@ def get_num(s):
     except:
         return float(s)
 
+def get_char(v):
+    if v[0] in 'uU':
+        return unichr(int(v[2:], 16))
+    elif v[0] in 'xX':
+        return unichr(int(v[1:], 16))
+    elif v[0] in 'dD':
+        return unichr(int(v[1:]))
+    else:
+        return unichr(int(v, 8))
+
 class Parser(object):
 
-    def __init__(self, s, debug=False):
+    def __init__(self, s, debug=False, platform={}):
         self.allRules = { "": [] }
         self.current_group = ""
         self.begins = {}
         self.allStores = {}
         self.allHeaders = {}
+        self.platform = platform
         seq = self.tokenize(s)
         if debug:
             print(seq)
@@ -197,21 +218,22 @@ class Parser(object):
 
     def tokenize(self, text):
         lexer_specs = [
-            ('SPACE', (r'(\\\r?\n|[ \t])+',re.MULTILINE)),
+            ('SPACE', (r'(\\[ \t]*\r?\n|[ \t])+',re.MULTILINE)),
             ('COMMENT', (r'c\s+[^\n]*',)),
             ('NL', (r'\r?\n',re.MULTILINE)),
             ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|dk|context|'
-                          'if|match|nomatch|notany|return|reset|save|set|nul', re.I)),
+                          'if|match|nomatch|notany|return|reset|save|set|nul|platform', re.I)),
             ('USINGKEYS', (r'using\s*keys', re.I)),
             ('HEADER', (r'name|hotkey|baselayout|bitmap|bitmaps|caps always off|caps on only|'
                          'shift frees caps|copyright|language|layer|layout|message|platform', re.I)),
             ('HEADERN', (r'version', re.I)),
             ('OP', (r'[(),\[\]>=]',)),
             ('STRING', (r'(["\']).*?\1',)),
-            ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)',)),
+            ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)|([xX][0-9A-Fa-f]+)',)),
             ('PLUS', (r'\+',)),
-            ('NAME', (r'[A-Za-z&][A-Za-z0-9_]*',)),
+            ('NAME', (r'[A-Za-z&][A-Za-z0-9_\-]*',)),
             ('NUMBER', (r'[0-9]+(\.[0-9]+)?',)),
+            ('TARGET', (r'\$[a-z]+:',)),
         ]
         useless = ['SPACE', 'COMMENT']
         t = make_tokenizer(lexer_specs)
@@ -226,8 +248,27 @@ class Parser(object):
             res.append(x)
         return res
 
+    def prefix_test(self, s):
+        if s is None or not len(s):
+            return True
+        if isinstance(s[0], Token):
+            if s.type == 'KEYWORD' and s.value == 'platform':
+                res = True
+                for w in s[1].split(' '):
+                    if w not in self.platform.values():
+                        res = False
+                return res
+            else:
+                return True
+        if s == '$keyman:': return True
+        if s == '$keymanonly:' and self.platform['ui'] == 'hardware': return True
+        if s == '$keymanweb:' and self.platform['ui'] == 'touch': return True
+        return False
+
     def make_store(self, seq):
-        s = Store(seq)
+        if not self.prefix_test(seq[0]):
+            return None
+        s = Store(seq[1:])
         if not s.name.startswith("&"):
             self.allStores[s.name] = s
         else:
@@ -240,6 +281,8 @@ class Parser(object):
         self.allRules[grp] = []
 
     def make_rule(self, seq):
+        if not self.prefix_test(seq[0]):
+            return None
         r = Rule(seq)
         self.allRules[self.current_group].append(r)
         return r
@@ -258,14 +301,15 @@ class Parser(object):
         name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
         number = toktype('NUMBER') >> get_num
         get_string = lambda v: v[1:-1]
-        get_char = lambda v: unichr(int(v[2:], 16)) if v[0] in "uU" else unichr(int(v[1:], 10))
         string = (toktype('STRING') >> get_string) | (toktype('CHAR') >> get_char)
         nl = skip(toktype('NL'))
-        simple_func = lambda k: keyword(k) + op_('(') + name + op_(')')
+        typed_func = lambda k, c: keyword(k) + op_('(') + c + op_(')')
+        simple_func = lambda k: typed_func(k, name)
         assign_func = lambda k: keyword(k) + op_('(') + name + op_('=') + (name | string) + op_(')')
 
         # statement components
         vkey = op_('[') + many(name) + op_(']')
+        prefix = toktype('TARGET') | assign_func('if') | typed_func('platform', string) 
         context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
         index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
         deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + number + op_(')')
@@ -279,14 +323,14 @@ class Parser(object):
         stripspace = lambda s: s.replace(' ', '')
         header = (((toktype('HEADER') >> stripspace) + string) | (toktype('HEADERN') + number)) + nl
         group  = (simple_func('group') >> self.set_group) + maybe(toktype('USINGKEYS')) + nl
-        store = simple_func('store') + many(string | simple_func('outs')) + nl
+        store = maybe(many(prefix)) + simple_func('store') + many(string | simple_func('outs') | (vkey >> VKey)) + nl
         begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
-        rule = maybe(many(assign_func('if'))) + maybe(many(match)) + toktype('PLUS') + \
+        rule = maybe(many(prefix)) + maybe(many(match)) + toktype('PLUS') + \
                 ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex)) + op_('>') + many(context) + nl
         matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl
 
         # a file is a sequence of certain types of statement
-        make_header = lambda s: Store(['header', '&'+s[0], [s[1]]])
+        make_header = lambda s: Store([(Token('HEADER', 'header'), '&'+s[0]), [s[1]]])
         kmfile = many((header >> make_header) | (store >> self.make_store) | skip(begin >> self.store_begin)) + \
                     maybe(many(group | (rule >> self.make_rule) | matchrule))
         return kmfile.parse(seq)
