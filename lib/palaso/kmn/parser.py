@@ -6,7 +6,7 @@ from pprint import pformat
 from palaso.contrib.funcparserlib.lexer import make_tokenizer, Token, LexerError
 from palaso.contrib.funcparserlib.parser import (some, a, maybe, many, skip, finished, NoParseError)
 
-_keyrowmap = {
+keyrowmap = {
     "E" : "1234567890-=",
     "D" : "qwertyuiop[]",
     "C" : "asdfghjkl;'",
@@ -18,7 +18,7 @@ _keyrowmap = {
 }
 
 keymap = dict([(k, ("{}{:02d}".format(rk[-1], i+1), rk.startswith("_"))) 
-                for rk, r in _keyrowmap.items() for i, k in enumerate(r)])
+                for rk, r in keyrowmap.items() for i, k in enumerate(r)])
 keymap.update({ "|" : ("B00", True), "\\" : ("B00", False),
                 "`" : ("E00", False), "~" : ("E00", True)})
 
@@ -110,10 +110,9 @@ class DeadKey(object):
         self.missing += 1
 
 specialkeys = {
-    "quote": "C11", "space": "A03", "bkquote": "E00", "comma": "B08",
+    "quote": "C11", "bkquote": "E00", "comma": "B08", "bksp": "bksp",
     "hyphen": "E11", "period": "B09", "slash": "B10", "colon": "C10",
     "equal": "E12", "lbrkt": "D11", "bkslash": "B00", "rbrkt": "D12",
-    "bksp": "bksp"
 }
 
 class VKey(object):
@@ -141,6 +140,8 @@ class VKey(object):
             k = keymap[self.key][0]
         elif self.key in specialkeys:
             k = specialkeys[self.key]
+        else:
+            k = self.key
         m = "+".join(sorted(self.modifiers))
         return (k, m)
 

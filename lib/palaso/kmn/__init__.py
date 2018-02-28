@@ -1,6 +1,10 @@
 import re, itertools
 import os, collections
-from palaso.kmfl import kmfl
+try:
+    from palaso.kmfl import kmfl
+    kmflorobject = kmfl
+except ImportError:
+    kmflorobject = object
 
 keyboard_template = os.path.join(os.path.dirname(__file__), 'keyboard.svg')
 
@@ -472,8 +476,7 @@ class Key(int) :
         return item_to_key(self)
 
 
-class Keyman(kmfl) :
-
+class Keyman(kmflorobject) :
     def create_sequences(self, input, mode = 'all', cache = None, history=None) :
         """ Given an input string of items, return all the strings of items that
             would produce this input sequence if executed

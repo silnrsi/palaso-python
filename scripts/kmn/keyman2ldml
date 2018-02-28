@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 import argparse, codecs, unicodedata, re
-from palaso.kmn.parser import Parser, mapkey, Token, DeadKey
+from palaso.kmn.parser import Parser, mapkey, Token, DeadKey, VKey, keyrowmap
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
 from pprint import pformat
+import json
 
 _elementprotect = {
     '&': '&amp;',
@@ -116,6 +117,7 @@ class LDMLKeyboard(ETWriter):
         doc = et.fromstring("""<?xml version="1.0"?>
 <keyboard>
 <version platform="1" number="1"/>
+<import path="langs/e/en/en-us-win/en-us-win.xml"/>
 </keyboard>
 """)
         let = et.ElementTree()
@@ -138,6 +140,36 @@ class LDMLKeyboard(ETWriter):
                 a['error'] = "fail"
             et.SubElement(km, "map", attrib=a)
 
+    def mapKey(self, key, modifiers):
+        k = self.root.find('.//keyMap[@modifiers="'+modifiers+'"]/map[@iso="'+key+'"]')
+        if k is None and (modifiers == '' or modifiers == 'shift'):
+            try:
+                to = keyrowmap[("_" if modifiers == 'shift' else '')+key[0]][int(key[1:])-1]
+            except:
+                to = ''
+        else:
+            to = k.get('to', '') if k is not None else ''
+        return to
+
+    def addKey(self, modifiers, key, to):
+        k = self.root.find('.//keyMap[@modifiers="'+modifiers+'"]')
+        if k is None:
+            k = et.SubElement(self.root, "keyMap", attrib={'modifiers': modifiers})
+        et.SubElement(k, 'map', attrib={'iso': key, 'to': to})
+
+    def keyAddAttrs(self, modifiers, key, attrs):
+        k = self.root.find('.//keyMap[@modifiers="'+modifiers+'"]/map[@iso="'+key+'"]')
+        k.attrib.update(attrs)
+
+    def addDisplay(self, to, display):
+        k = self.root.find(".//displayMap")
+        if k is None:
+            k = et.SubElement(self.root, "displayMap")
+        pto = (u'"{}"' if '"' not in to else u"'{}'").format(to)
+        pdisplay = (u'"{}"' if '"' not in display else u"'{}'").format(display)
+        if self.root.find('.//displayMap/display[@to='+pto+']') is None:
+            et.SubElement(k, "display", attrib={'to': to, 'display': display})
+
     def addTransform(self, t, rules, keyword="transform"):
         ts = et.SubElement(self.root, keyword+"s", attrib={'type': t})
         for k, v in sorted(rules.items()):
@@ -146,11 +178,22 @@ class LDMLKeyboard(ETWriter):
                 a['error'] = "fail"
             et.SubElement(ts, keyword, attrib=a)
 
+    def addLayer(self, rows, modifiers, switches):
+        ls = et.SubElement(self.root, "layer", attrib={'modifiers': modifiers})
+        for r in rows:
+            a = {'keys': " ".join(zip(*r)[0])}
+            w = zip(*r)[1]
+            if any(x for x in w if int(x) != 100):
+                a['widths'] = " ".join(w)
+            et.SubElement(ls, "row", attrib=a)
+        for s in switches:
+            et.SubElement(ls, "switch", attrib={'iso': s[0], 'layer': s[1], 'display': s[2]})
+
 class AttrString(unicode):
     pass
 
 def process_kmn(ldml, kmnfile):
-    with codecs.open(kmnfile, "r", encoding="utf-8") as f:
+    with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
     p = Parser(lines, debug = (args.debug & 2))
     if (args.debug & 1):
@@ -222,18 +265,94 @@ def process_kmn(ldml, kmnfile):
     if len(backups):
         ldml.addTransform('backspace', backups, keyword="backspace")
 
+layermap = {"default": "", "shift": "shift", "leftctrl": "ctrlL", "rightctrl": "ctrlR",
+            "ctrl": "ctrl", "leftalt": "altL", "rightalt": "altR", "lefctrl-rightalt": "altR+ctrlL",
+            "ctrl-alt": "alt+ctrl"}
+nonoutputkeys = set(("lshift", "rshift", "shift", "lcontrol", "lctrl", "rcontrol", "rctrl",
+                    "ctrl", "lmenu", "lalt", "rmenu", "ralt", "alt", "altgr", "currencies",
+                    "numerals", "shifted", "upper", "lower", "symbols", "bksp", "numlock",
+                    "lopt", "ropt", "opt", "enter", "space"))
+sparekeyCount = 1
 def process_layout(ldml, jsfile):
-    layermap = {"default": "", "shift": "shift"}
     with codecs.open(jsfile, "r", encoding="utf-8") as f:
-        linfo = js.load(f)
-    layers = [(l["id"], i) for i, l in enumerate(linfo["layer"])]
-    
+        linfo = json.load(f)
+    layers = dict((l["id"], i) for i, l in enumerate(linfo["phone"]["layer"]))
+    jobs = set(["default"])
+    jobsdone = set()
+    while len(jobs):
+        newjobs = set()
+        for j in jobs:
+            newjobs.update(process_layer(ldml, linfo, layers, j))
+            jobsdone.add(j)
+        jobs = newjobs - jobsdone
+
+def process_layer(ldml, linfo, layers, lid):
+    layer = linfo["phone"]["layer"][layers[lid]]
+    mods = layermap.get(lid, lid)
+    rows = []
+    res = set()
+    switches = []
+    for r in layer["row"]:
+        currrow = []
+        rows.append(currrow)
+        for k in r["key"]:
+            if "id" not in k:
+                continue
+            kid, to = process_key(ldml, mods, k)
+            longpress = []
+            for sk in k.get("sk", []):
+                (_, sto) = process_key(ldml, mods, sk, isSubKey=True)
+                longpress.append(sto)
+            if len(longpress):
+                ldml.keyAddAttrs(mods, kid, {"longpress": u" ".join(longpress)})
+            if "width" not in k:
+                currrow.append((kid, "100"))
+            else:
+                currrow.append((kid, k["width"]))
+            if "nextlayer" in k:
+                res.add(k["nextlayer"])
+                switches.append((kid, k["nextlayer"], k.get('text', '')))
+    ldml.addLayer(rows, mods, switches)
+    return res
+
+def process_key(ldml, mods, k, isSubKey=False):
+    global sparekeyCount
+    kid = ""
+    if k["id"].startswith("K_"):
+        vkey = VKey((k["id"],))
+        vk = vkey.getkey()
+        if "layer" in k:
+            testmod = k["layer"]
+        elif mods in layermap.values():
+            testmod = mods
+        else:
+            testmod = ""
+        to = ldml.mapKey(vk[0], layermap.get(testmod, testmod))
+        if not isSubKey and vk[0] not in nonoutputkeys and (to == '' or testmod != mods):
+            kid = "SK{:02}".format(sparekeyCount)
+            sparekeyCount += 1
+            ldml.addKey(mods, kid, to)
+        else:
+            kid = vk[0]
+    elif k["id"].startswith("U_"):
+        kid = k["id"].replace("_", "").lower()
+        to = unichr(int(k["id"][2:], 16))
+        if not isSubKey:
+            ldml.addkey(mods, kid, to)
+    else:
+        kid = k["id"].replace("_", "").lower()
+        to = k.get("text", '')
+    if to != '' and to != k.get("text", to):
+        ldml.addDisplay(to, k["text"])
+    return (kid, to)
+
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('outfile',help="Generated LDML file")
 parser.add_argument('-k','--kmn',help='Process kmn file')
-parser.add_argument('-z','--debug',default=0)
+parser.add_argument('-l','--layout',help='Process layout .js file')
+parser.add_argument('-z','--debug',type=int,default=0)
 args = parser.parse_args()
 
 ldml = LDMLKeyboard()
@@ -241,7 +360,8 @@ ldml = LDMLKeyboard()
 if args.kmn:
     process_kmn(ldml, args.kmn)
 
-
+if args.layout:
+    process_layout(ldml, args.layout)
 
 with codecs.open(args.outfile, "w", encoding="utf-8") as f:
     ldml.serialize_xml(f.write)
