@@ -1,10 +1,10 @@
 
 import palaso.font.graphite as gr
 import palaso.font.hbng as hb
-import palaso.font.icule as icule
+#import palaso.font.icule as icule
 import palaso.contrib.freetype as ft
-from icu import LayoutEngine as le
-from icu import ScriptCode, LanguageCode
+#from icu import LayoutEngine as le
+#from icu import ScriptCode, LanguageCode
 
 class Font(object) :
     def __init__(self, fname, size, rtl) :
@@ -125,8 +125,8 @@ class IcuFont(Font) :
 _shapers = {
     'gr' : GrFont,
     'ot' : HbOTFont,
-    'hb' : HbFont,
-    'icu' : IcuFont
+    'hb' : HbFont
+#    'icu' : IcuFont
 }
  
 def make_shaper(engine, fname, size, rtl, feats = {}, script = 0, lang = 0) :
