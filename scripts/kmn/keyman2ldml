@@ -116,9 +116,9 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
-attributeorders = ('from', 'iso', 'to', 'layer', 'display')
-elementOrder = ('version', 'names', 'settings', 'import', 'keyMap', 'displayMap', 'layer', 'vkeys',
-                'transforms', 'reorders', 'backspaces')
+attributeorders = ('before', 'from', 'after', 'iso', 'to', 'layer', 'display')
+#elementOrder = ('version', 'names', 'settings', 'import', 'keyMap', 'displayMap', 'layer', 'vkeys',
+#                'transforms', 'reorders', 'backspaces')
 
 class LDMLKeyboard(ETWriter):
     def __init__(self, locale):
@@ -130,21 +130,16 @@ class LDMLKeyboard(ETWriter):
 """.format(locale))
         let = et.ElementTree()
         let._setroot(doc)
-        ETWriter.__init__(self, doc, attributeOrder=dict((x, i+1) for i,x in enumerate(attributeorders)),
-                          elementOrder=elementOrder)
+        ETWriter.__init__(self, doc, attributeOrder=dict((x, i+1) for i,x in enumerate(attributeorders)))
 
     def setname(self, name):
         nms = et.SubElement(self.root, "names")
         et.SubElement(nms, "name", {"value": name})
 
-    def _readable(self, s):
-        return u"".join("\\u{:04X}".format(ord(x)) \
-                if unicodedata.category(x) in ("Cf", "WS", "Mc", "Mn") else x for x in s)
-
     def addKeyMap(self, keymap, modifiers):
         km = et.SubElement(self.root, "keyMap", attrib={'modifiers' : modifiers})
         for k, v in sorted(keymap.items()):
-            a = {"iso": k, "to": self._readable(v)}
+            a = {"iso": k, "to": readable(v)}
             if getattr(v, 'error', False):
                 a['error'] = "fail"
             et.SubElement(km, "map", attrib=a)
@@ -178,19 +173,49 @@ class LDMLKeyboard(ETWriter):
             k = et.SubElement(self.root, "displayMap")
         pto = (u'"{}"' if '"' not in to else u"'{}'").format(to)
         pdisplay = (u'"{}"' if '"' not in display else u"'{}'").format(display)
-        if self.root.find('.//displayMap/display[@to='+pto+']') is None:
-            et.SubElement(k, "display", attrib={'to': to, 'display': display})
+        if self.root.find('.//displayMap/display[@mapOutput='+pto+']') is None:
+            et.SubElement(k, "display", attrib={'mapOutput': to, 'display': display})
 
     def addTransform(self, t, rules, keyword="transform"):
         if t == keyword:
             ts = et.SubElement(self.root, keyword+"s")
         else:
             ts = et.SubElement(self.root, keyword+"s", attrib={'type': t})
+        transforms = TransformElements()
         for k, v in sorted(rules.items(), key=lambda x:(-len(x[0]), x[0])):
-            a = {'from': self._readable(k), 'to': self._readable(v)}
+            fr = unicode(k)
+            to = unicode(v)
+            for i in range(min(len(to), len(fr))):
+                if fr[i] != to[i]:
+                    before = fr[:i]
+                    fr = fr[i:]
+                    to = to[i:]
+                    break
+            else:
+                continue
+            for i in range(1, min(len(to), len(fr))):
+                if fr[-i] != to[-i]:
+                    if i > 1:
+                        end = fr[1-i:]
+                        fr = fr[:1-i]
+                        to = to[:1-i]
+                    else:
+                        end = ""
+                    break
+            else:
+                end = ""
+            a = {}
+            if len(before): a['before'] = before
+            a['from'] = fr
+            if len(end) : a['after'] = end
+            a['to'] = to
+            #a['test_from'] = self._readable(k)
+            #a['test_to'] = self._readable(v)
             if getattr(v, 'error', False):
                 a['error'] = "fail"
-            et.SubElement(ts, keyword, attrib=a)
+            transforms.addElement(**a)
+        for v in transforms.asReadable():
+            et.SubElement(ts, keyword, attrib=v)
 
     def addLayer(self, rows, modifiers, switches, extras):
         ls = et.SubElement(self.root, "layer", attrib={'modifier': modifiers})
@@ -203,10 +228,96 @@ class LDMLKeyboard(ETWriter):
         for s in switches:
             et.SubElement(ls, "switch", attrib={'iso': s[0], 'layer': s[1], 'display': s[2]})
 
-class AttrString(unicode):
-    pass
+    def addImport(self, path):
+        i = et.SubElement(self.root, "import", attrib={'path': path})
 
-def process_kmn(ldml, kmnfile, platform={}):
+def readable(s):
+    return u"".join("\\u{:04X}".format(ord(x)) \
+            if unicodedata.category(x) in ("Cf", "WS", "Mc", "Mn") else x for x in unicode(s))
+
+class TransformElements:
+    def __init__(self):
+        self.elements = {}
+
+    def addElement(self, **kw):
+        test = "|".join("|".join(x) for x in sorted((k, v) for k,v in kw.items() if k != 'before' and k != 'after'))
+        if test in self.elements:
+            e = self.elements[test]
+            count = 0
+            for k in ('before', 'after'):
+                if (k in kw) != (k in e):
+                    break
+                if k not in kw: continue
+                count += self.countDiffs(kw[k], e[k])
+            if count == 1:
+                for k in ('before', 'after'):
+                    if k not in kw: continue
+                    e[k] = self.mergeTransform(e[k], kw[k])
+                return
+            elif count == 0:
+                return
+        self.elements[test] = kw
+
+    def countDiffs(self, new, old):
+        if len(new) != len(old):
+            return False
+        count = 0
+        for i,o in enumerate(old):
+            if isinstance(o, basestring):
+                if o != new[i]:
+                    count += 1
+            elif new[i] not in o:
+                count += 1
+        return count
+
+    def mergeTransform(self, old, new):
+        if isinstance(old, basestring):
+            old = [set(x) for x in old]
+        for i, o in enumerate(old):
+            if new[i] not in o:
+                o.add(new[i])
+        return old
+
+    def asReadable(self):
+        for v in (dict(v) for v in sorted(self.elements.values(), key=lambda x:([(-len(x[y]),x[y]) if y in x else (0, "") for y in ('from', 'before', 'after', 'to')],x))):
+            for k,b in v.items():
+                if k in ('before', 'after'):
+                    res = u""
+                    for l in b:
+                        if len(l) > 1:
+                            res += "[" + u"".join(readable(x) for x in sorted(l)) + "]"
+                        else:
+                            res += readable(list(l)[0])
+                else:
+                    res = readable(b)
+                v[k] = res
+            yield v
+        
+
+class OutputString:
+    def __init__(self, toklist):
+        self.str = u""
+        self.error = 0
+        import pdb
+        for t in toklist:
+            if isinstance(t, basestring):
+                self.str += t
+            elif isinstance(t, Token) and t.type == 'KEYWORD':
+                if t.value == 'beep':
+                    self.error = 1
+            else:
+                pdb.set_trace()
+
+    def __unicode__(self):
+        return self.str
+
+def process_uses(p, name, *extras):
+    for t in p.uses.get(name, set()):
+        for r in p.allRules[t]:
+            make_transform(r, p, *extras)
+        process_uses(p, t, *extras)
+
+def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
     p = Parser(lines, debug = (args.debug & 2), platform = platform)
@@ -219,17 +330,12 @@ def process_kmn(ldml, kmnfile, platform={}):
         if len(r.before):
             continue
         error = False
-        for o in r.output:
-            if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
-                error = True
-                break
         for rf in r.flatten(p.allStores):
+            if rf.match is None: continue
             k = mapkey(rf.match)
             if k[1] not in maps:
                 maps[k[1]] = {}
-            maps[k[1]][k[0]] = AttrString(u"".join(rf.output))
-            if error:
-                maps[k[1]][k[0]].error = True
+            maps[k[1]][k[0]] = OutputString(rf.output)
     if '&NAME' in p.allHeaders:
         ldml.setname(p.allHeaders['&NAME'].seq[0])
     else:
@@ -240,22 +346,34 @@ def process_kmn(ldml, kmnfile, platform={}):
     simples = {}
     finals = {}
     backups = {}
+    uses = set()
     for r in p.allRules[p.begins['unicode']]:
-        if not len(r.before):
-            continue
-        isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
-        error = False
-        for o in r.output:
-            if isinstance(o, Token) and o.type == 'KEYWORD' and o.value.lower() == 'beep':
-                error = True
-                break
-        for rf in r.flatten(p.allStores):
-            bs = []
-            for b in rf.before:
-                bs.extend(b)
-            btxt = u"".join(bs)
-            otxt = AttrString(u"".join(rf.output))
-            k = mapkey(rf.match)
+        make_transform(r, p, maps, simples, finals, backups)
+    process_uses(p, p.begins['unicode'], maps, simples, finals, backups)
+    if len(simples):
+        ldml.addTransform('simple', simples)
+    if reorder:
+        ldml.addImport('shared/reorders.xml')
+    if reorderfile:
+        ldml.addImport(reorderfile)
+    if len(finals):
+        ldml.addTransform('final', finals)
+    if len(backups):
+        ldml.addTransform('backspace', backups, keyword="backspace")
+
+def make_transform(r, p, maps, simples, finals, backups):
+    if not len(r.before):
+        return
+    isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
+    error = False
+    for rf in r.flatten(p.allStores):
+        bs = []
+        for b in rf.before:
+            bs.extend(b)
+        btxt = u"".join(bs)
+        otxt = OutputString(rf.output)
+        k = mapkey(rf.match)
+        if k is not None:
             if k[0] == 'bksp':
                 backups[btxt] = otxt
                 continue
@@ -265,21 +383,17 @@ def process_kmn(ldml, kmnfile, platform={}):
                 finals[unichr(DeadKey.missing)] = ""
                 DeadKey.missing += 1
             m = mp[k[0]]
-            btxt += m
-            if error:
-                otxt.error = True
-            if btxt == otxt and not error:
-                continue
-            if isdead:
-                simples[btxt] = otxt
-            elif any(x not in otxt for x in btxt): # skip reorderings
-                finals[btxt] = otxt
-    if len(simples):
-        ldml.addTransform('simple', simples)
-    if len(finals):
-        ldml.addTransform('final', finals)
-    if len(backups):
-        ldml.addTransform('backspace', backups, keyword="backspace")
+            btxt += unicode(m)
+        if error:
+            otxt.error = True
+        if btxt == unicode(otxt) and not error:
+            continue
+        if isdead:
+            if btxt not in simples:
+                simples[btxt] = unicode(otxt)
+        elif any(x not in unicode(otxt) for x in btxt): # skip reorderings
+            if btxt not in finals:
+                finals[btxt] = unicode(otxt)
 
 layermap = {"default": "", "shift": "shift", "leftctrl": "ctrlL", "rightctrl": "ctrlR",
             "ctrl": "ctrl", "leftalt": "altL", "rightalt": "altR", "lefctrl-rightalt": "altR+ctrlL",
@@ -374,6 +488,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('outfile',help="Generated LDML file")
 parser.add_argument('-k','--kmn',help='Process kmn file')
 parser.add_argument('-l','--layout',help='Process layout .js file')
+parser.add_argument('-r','--reorder',action='store_true',help='Add reordering import')
+parser.add_argument('-R','--reorderfile',help='Specifies reorder file to import, can occur with -r for standard import')
 parser.add_argument('-L','--locale',default="und-Zyyy",help='Keyboard Locale identifier')
 parser.add_argument('-f','--form',default='phone',help='form factor platform [phone]')
 parser.add_argument('-u','--ui',default='touch',help='User Interface platform [touch]')
@@ -387,7 +503,7 @@ ldml = LDMLKeyboard(args.locale)
 platform = dict((x, getattr(args, x)) for x in ('form', 'ui', 'os'))
 
 if args.kmn:
-    process_kmn(ldml, args.kmn, platform=platform)
+    process_kmn(ldml, args.kmn, platform=platform, reorder=args.reorder, reorderfile=args.reorderfile)
 
 if args.layout:
     process_layout(ldml, args.layout, platform=platform, extras=args.full)

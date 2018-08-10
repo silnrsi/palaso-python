@@ -23,7 +23,9 @@ keymap.update({ "|" : ("B00", True), "\\" : ("B00", False),
                 "`" : ("E00", False), "~" : ("E00", True)})
 
 def mapkey(tok):
-    if isinstance(tok, VKey):
+    if tok is None:
+        return tok
+    elif isinstance(tok, VKey):
         return tok.getkey()
     else:
         k = keymap[tok]
@@ -32,10 +34,20 @@ def mapkey(tok):
 class Rule(object):
 
     def __init__(self, toklist):
-        p = toklist.index(u'+')
-        self.before = toklist[p-1]
-        self.match = toklist[p+1]
-        self.output = toklist[p+2]
+        for i,p in enumerate(toklist):
+            try:
+                if p is None:
+                    p = [None, None]
+                    break
+                elif p[0] == '+':
+                    break
+            except AttributeError: pass
+            except TypeError: pass
+            except IndexError: pass
+
+        self.before = toklist[i-1]
+        self.match = p[1]
+        self.output = toklist[i+1] if i < len(toklist)-1 else []
 
     def __repr__(self):
         return str(self.before) + " + " + repr(self.match) + " > " + str(self.output)
@@ -68,7 +80,7 @@ class Rule(object):
                     out.extend(before)
             else:
                 out.append(self._apply(allStores, o, vec))
-        return Rule((before, '+', match, out))
+        return Rule((before, ('+', match), out))
 
     def _len(self, allStores, x):
         if isinstance(x, AnyIndex):
@@ -104,12 +116,18 @@ class AnyIndex(object):
             return "index(" + self.name + ", " + str(self.index) + ")"
 
 class DeadKey(object):
-    missing = 0xFDD0
+    missing = 0xFDD2
+
+    @classmethod
+    def increment(cls):
+        cls.missing += 1
+        if cls.missing == 0xFDE0:
+            cls.missing = 0xEFFF0
 
     def __init__(self, toklist):
         self.number = toklist[1]
         self.char = unichr(self.missing)
-        self.missing += 1
+        self.increment()
 
 specialkeys = {
     "quote": "C11", "bkquote": "E00", "comma": "B08", "bksp": "bksp",
@@ -206,6 +224,7 @@ class Parser(object):
 
     def __init__(self, s, debug=False, platform={}):
         self.allRules = { "": [] }
+        self.uses = {}
         self.current_group = ""
         self.begins = {}
         self.allStores = {}
@@ -287,6 +306,12 @@ class Parser(object):
         self.allRules[self.current_group].append(r)
         return r
 
+    def make_match_rule(self, seq):
+        if seq[0].value == 'match' and \
+                isinstance(seq[1][0][0], Token) and seq[1][0][0].type == 'KEYWORD' and \
+                    seq[1][0][0].value == 'use':
+            self.uses.setdefault(self.current_group, set()).add(seq[1][0][1])
+
     def store_begin(self, seq):
         self.begins[seq[1].lower()] = seq[2][1]
 
@@ -312,7 +337,7 @@ class Parser(object):
         prefix = toktype('TARGET') | assign_func('if') | typed_func('platform', string) 
         context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
         index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
-        deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + number + op_(')')
+        deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + (number | name) + op_(')')
         context = context_statement | keyword('beep') | keyword('nul') | simple_func('use') | \
                     (index_statement >> AnyIndex) | string | (deadkey >> DeadKey) | \
                     simple_func('reset') | simple_func('save') | assign_func('set') | \
@@ -323,15 +348,19 @@ class Parser(object):
         stripspace = lambda s: s.replace(' ', '')
         header = (((toktype('HEADER') >> stripspace) + string) | (toktype('HEADERN') + number)) + nl
         group  = (simple_func('group') >> self.set_group) + maybe(toktype('USINGKEYS')) + nl
-        store = maybe(many(prefix)) + simple_func('store') + many(string | simple_func('outs') | (vkey >> VKey)) + nl
+        store = maybe(many(prefix)) + simple_func('store') + many(string | simple_func('outs') | \
+                        (vkey >> VKey) | (deadkey >> DeadKey) | keyword('beep')) + nl
         begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
-        rule = maybe(many(prefix)) + maybe(many(match)) + toktype('PLUS') + \
-                ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex)) + op_('>') + many(context) + nl
+        rule = maybe(many(prefix)) + maybe(many(match)) + maybe(toktype('PLUS') + \
+                ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex))) + op_('>') + many(context) + nl
         matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl
 
         # a file is a sequence of certain types of statement
         make_header = lambda s: Store([(Token('HEADER', 'header'), '&'+s[0]), [s[1]]])
-        kmfile = many((header >> make_header) | (store >> self.make_store) | skip(begin >> self.store_begin)) + \
-                    maybe(many(group | (rule >> self.make_rule) | matchrule))
+        kmfile = many((header >> make_header) | (store >> self.make_store) | \
+                      skip(begin >> self.store_begin)) + \
+                 maybe(many(group | (rule >> self.make_rule) | \
+                            (matchrule >> self.make_match_rule) | \
+                            (store >> self.make_store))) + finished
         return kmfile.parse(seq)
 
