@@ -36,7 +36,6 @@ def create_tests():
         def makefn(tst):
             def testfn(self):
                 res = self.reorder.reorder(tst[1])
-                # print res.encode("unicode_escape"), tst[2].encode("unicode_escape")
                 self.assertEqual(res, tst[2])
             return testfn
         setattr(TestLana, "test_{}".format(t[0]), makefn(t))

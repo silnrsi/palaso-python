@@ -1,2 +1,3 @@
-__all__ =["reggen","unicsv","kmfl","kmn","font","contexts","debian","teckit","text","core"]
+__all__ =["reggen", "langtags", "unicsv", "contexts", "kmfl", 
+          "kmn", "font", "debian", "teckit", "text", "sldr"]
 

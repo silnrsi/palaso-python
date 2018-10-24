@@ -20,13 +20,20 @@ setup(name='palaso',
       maintainer='Tim Eves',
       maintainer_email='tim_eves@sil.org',
       url='http://github.com/silnrsi/palaso-python',
-      packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib', 'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums', 'palaso.contrib.funcparserlib', 'palaso.unicode'],
+      packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 
+                'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib',
+                'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums',
+                'palaso.contrib.funcparserlib', 'palaso.unicode', 'palaso.sldr'],
       ext_modules = ext,
       cmdclass = cmd,
       scripts=filter(lambda x : x.rfind(".") == -1, glob('scripts/*/*')),
       license='LGPL',
       platforms=['Linux','Win32','Mac OS X'],
       package_dir={'':'lib'},
-      package_data={'palaso.sfm':['usfm.sty'], 'palaso.kmn':['keyboard.svg'], 'palaso.collation' : ['sort_trainer.glade']}
+      package_data={'palaso.sfm':['usfm.sty'], 'palaso.kmn':['keyboard.svg'], 
+                    'palaso.collation' : ['sort_trainer.glade'],
+                    'palaso.sldr': ['allkeys.txt', 'language-subtag-registry.txt',
+                                    'likelySubtags.xml', 'supplementalData.xml',
+                                    'supplementalMetadata.xml']}
      )
 
