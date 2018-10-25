@@ -130,6 +130,7 @@ class LangTag(object) :
         if len(extensions) : self.extensions = extensions
 
     def merge_equivalent(self, tag) :
+        oldscript = self.script
         if self.script is None and self.script != tag.script :
             self.script = tag.script
         elif tag.script is not None and self.script != tag.script:
@@ -139,6 +140,7 @@ class LangTag(object) :
         if self.region is None and self.region != tag.region :
             self.region = tag.region
         elif tag.region is not None and tag.region != self.region:
+            self.script = oldscript
             return False
         if self.region == tag.region and not self.hideregion :
             self.hideregion = tag.hideregion
@@ -354,14 +356,11 @@ class LangTags(dict):
             k = sorted(merge, key=len)[-1]
             v = self[k]
             if v.merge_equivalent(tag):
-                for a in v.allforms():
-                    if a not in self:
-                        self[a] = v
+                tag = v
             else:
                 diff.update(merge)
         for a in diff:
-            if a not in self:
-                self[a] = tag
+            self[a] = tag
 
     def generate_alltags(self) :
         res = []
