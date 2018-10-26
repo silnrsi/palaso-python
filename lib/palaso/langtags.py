@@ -171,6 +171,8 @@ class LangTag(object) :
         for b in self.base:
             if b in history:
                 continue
+            if len(res) == 1:
+                res = res + res
             res = res[:-1] + b.allforms(history=history + [b]) + res[-1:]
         return res
 
