@@ -55,6 +55,7 @@ class LangTag(object) :
         self.hideboth = (self.script is None and self.region is None)
         self.variants = variants
         self.extensions = extensions
+        self.base = []
         if tag is not None : self.parse(tag)
 
     def _extensions(self) :
@@ -148,14 +149,14 @@ class LangTag(object) :
             self.hideboth = tag.hideboth
         return True
 
-    def allforms(self) :
+    def allforms(self, history=[]) :
         ss = []
-        if self.hidescript :
+        if self.hidescript or self.script is None:
             ss.append(None)
         if self.script is not None:
             ss.append(self.script)
         rs = []
-        if self.hideregion:
+        if self.hideregion or self.region is None:
             rs.append(None)
         if self.region is not None:
             rs.append(self.region)
@@ -167,8 +168,10 @@ class LangTag(object) :
                 extras.append(ns)
                 extras.extend(sorted(self.extensions[ns]))
         res = ["-".join([x for x in [self.lang] + s + extras if x is not None]) for s in srs]
-        if self.base is not None:
-            res = res[:-1] + self.base.allforms() + res[-1:]
+        for b in self.base:
+            if b in history:
+                continue
+            res = res[:-1] + b.allforms(history=history + [b]) + res[-1:]
         return res
 
     def matches(self, other) :
@@ -291,18 +294,25 @@ class LangTags(dict):
         with open(fname) as f :
             currlang = None
             mode = None
+            deprecated = False
             for l in f.readlines() :
                 l = l.strip()
                 if l.startswith("Type: ") :
                     mode = l[6:]
+                    if currlang is not None:
+                        self.add(tag)
                     currlang = None
                 elif l.startswith("Subtag: ") :
                     if mode == "language" :
                         currlang = l[8:]
+                        tag = LangTag(lang=currlang)
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
-                    tag = LangTag(lang=currlang, script=l[17:])
+                    tag.script = l[17:]
                     tag.hidescript = True
-                    self.add(tag)
+                elif l.startswith("Deprecated: "):
+                    tag.deprecated = True
+            if currlang is not None:
+                self.add(tag)
 
     def readSupplementalData(self, fname = None) :
         """Reads supplementalData.xml from CLDR to get useful structural information on LDML"""
