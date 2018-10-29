@@ -313,6 +313,10 @@ class LangTags(dict):
                     tag.hidescript = True
                 elif l.startswith("Deprecated: "):
                     tag.deprecated = True
+                elif l.startswith("Description: "):
+                    if not hasattr(tag, 'desc'):
+                        tag.desc = []
+                    tag.desc.append(l[13:].strip())
             if currlang is not None:
                 self.add(tag)
 
