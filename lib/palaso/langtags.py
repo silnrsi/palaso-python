@@ -105,6 +105,14 @@ class LangTag(object) :
             self.lang = bits[curr].lower()
             curr += 1
             self.hideboth = True
+        elif bits[curr] == "x" and curr < len(bits) - 1:
+            # private use, try to parse as extlang
+            self.lang = "x-"
+            curr += 1
+            while curr < len(bits) and 1 < len(bits[curr]) < 4:
+                self.lang += bits[curr] + "-"
+                curr += 1
+            self.lang = self.lang[:-1]
         if curr >= len(bits) : return
         if len(bits[curr]) == 4 :
             self.script = bits[curr].title()
@@ -132,18 +140,22 @@ class LangTag(object) :
 
     def merge_equivalent(self, tag) :
         oldscript = self.script
-        if self.script is None and self.script != tag.script :
+        if self.script is None and self.script != tag.script:
             self.script = tag.script
         elif tag.script is not None and self.script != tag.script:
             return False
-        if self.script == tag.script and not self.hidescript :
+        if self.script == tag.script and not self.hidescript:
             self.hidescript = tag.hidescript
-        if self.region is None and self.region != tag.region :
+        elif tag.script is None:
+            self.hidescript = True
+        if self.region is None and self.region != tag.region:
             self.region = tag.region
         elif tag.region is not None and tag.region != self.region:
             self.script = oldscript
             return False
-        if self.region == tag.region and not self.hideregion :
+        elif tag.region is None:
+            self.hidescript = True
+        if self.region == tag.region and not self.hideregion:
             self.hideregion = tag.hideregion
         if not self.hideboth:
             self.hideboth = tag.hideboth
@@ -226,40 +238,37 @@ class LangTag(object) :
 class LangTags(dict):
     __metaclass__ = Singleton
 
-    def __init__(self, extrasfile=None, noalltags=False):
+    def __init__(self, extrasfile=None, noalltags=False, alltags=None):
         super(LangTags, self).__init__()
-        if noalltags or not self.readAlltags():
+        if noalltags or not self.readAlltags(alltags):
             self.readIana()
             self.readLikelySubtags()
             if extrasfile is not None :
                 self.readExtras(extrasfile)
             self.readSupplementalData()
 
-    def readAlltags(self):
-        for p in [os.path.dirname(__file__),
-                  os.path.join(os.path.dirname(__file__), '../../../extras')]:
-            fname = os.path.join(p, 'alltags.txt')
-            if os.path.exists(fname):
-                break
-        else:
-            return False
+    def readAlltags(self, fname=None):
+        if fname is None:
+            for p in [os.path.dirname(__file__)]:
+                fname = os.path.join(p, 'alltags.txt')
+                if os.path.exists(fname):
+                    break
+            else:
+                return False
         with open(fname) as fh:
             for l in fh.readlines():
                 tags = [x[1:] if x.startswith("*") else x for x in l.strip().split() if x != "="]
                 temp = {}
-                ltag = LangTag(tag=tags[-1])
-                while ltag.lang not in temp:
-                    self[tags[-1]] = ltag
-                    temp[ltag.lang] = ltag
-                    tags.pop()
-                    if not len(tags):
-                        break
-                    ltag = LangTag(tag=tags[-1])
+                t = tags.pop()
+                ltag = LangTag(tag=t)
+                self[t] = ltag
                 for t in tags:
                     lt = LangTag(tag=t)
-                    if not lt.script: temp[lt.lang].hidescript = True
-                    if not lt.region: temp[lt.lang].hideregion = True
-                    self[t] = temp[lt.lang]
+                    if ltag.lang == lt.lang:
+                        if lt.script is None and lt.region is None:
+                            lt.hideboth = True
+                        ltag.merge_equivalent(lt)
+                    self[t] = ltag
         return True
 
     def readLikelySubtags(self, fname = None) :
