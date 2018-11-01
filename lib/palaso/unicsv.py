@@ -68,7 +68,7 @@ class DictReader:
     def line_num(self): return self.__reader.line_num
 
     @property
-    def fieldnames(self): return self.__reader.fieldnames
+    def fieldnames(self): return self.__reader.fieldnames and [unicode(f,'utf-8') for f in self.__reader.fieldnames]
 
 
 class DictWriter:
@@ -77,7 +77,7 @@ class DictWriter:
 
     @staticmethod
     def __make_row(row):
-        return dict((unicode(k).encode('utf-8'),unicode(v).encode('utf-8')) for k,v in row.iteritems())
+        return dict((k,unicode(v).encode('utf-8')) for k,v in row.iteritems())
 
     def writerow(self,row):
         self.__writer.writerow(self.__make_row(row))
@@ -86,7 +86,7 @@ class DictWriter:
         self.__writer.writerows(self.__make_row(row) for row in rows)
 
     def writeheader(self):
-        self.__writer.writerow(dict((g,g) for g in (unicode(f).encode('utf-8') for f in self.__writer.fieldnames)))
+        self.__writer.writerow(dict((f,unicode(f).encode('utf-8')) for f in self.__writer.fieldnames))
 
     @property
     def extrasaction(self): return self.__writer.extrasaction
