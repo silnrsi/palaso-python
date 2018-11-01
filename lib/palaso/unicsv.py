@@ -17,22 +17,22 @@ __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
 
 
 def _utf8_recoder(f,enc):
-    return (f if enc in ('utf_8','U8','UTF','utf8') 
+    return (f if enc in ('utf_8','U8','UTF','utf8')
               else codecs.EncodedFile(f,'utf_8',enc))
 
 class reader:
     def __init__(self, f, dialect=excel, encoding='utf-8', *args, **kwds):
         self.__reader = csv.reader(_utf8_recoder(f,encoding), dialect, *args, **kwds)
-    
+
     def next(self):
         return tuple(unicode(cell,'utf-8') for cell in self.__reader.next())
-    
+
     def __iter__(self):
         return self
-    
+
     @property
     def dialect(self): return self.__reader.dialect
-    
+
     @property
     def line_num(self): return self.__reader.line_num
 
@@ -40,13 +40,13 @@ class reader:
 class writer:
     def __init__(self, f, dialect=excel, encoding='utf-8', *args, **kwds):
         self.__writer = csv.writer(_utf8_recoder(f,encoding), dialect, *args, **kwds)
-    
+
     def writerow(self,row):
         self.__writer.writerow([unicode(cell).encode('utf-8') for cell in row])
-    
+
     def writerows(self,rows):
         self.__writer.writerows([[unicode(cell).encode('utf-8') for cell in row] for row in rows])
-    
+
     @property
     def dialect(self): return self.__writer.dialect
 
@@ -55,18 +55,18 @@ class writer:
 class DictReader:
     def __init__(self, f, fieldnames=None, restkey=None, restval=None, dialect=excel, encoding='utf-8', *args, **kwds):
         self.__reader=csv.DictReader(_utf8_recoder(f,encoding), dialect=dialect, *args, **kwds)
-    
+
     def __iter__(self): return self
-    
+
     def next(self):
         return dict((unicode(k,'utf-8'),unicode(v,'utf-8')) for k,v in self.__reader.next().iteritems())
-    
+
     @property
     def dialect(self): return self.__reader.dialect
-    
+
     @property
     def line_num(self): return self.__reader.line_num
-    
+
     @property
     def fieldnames(self): return self.__reader.fieldnames
 
@@ -74,17 +74,29 @@ class DictReader:
 class DictWriter:
     def __init__(self, f, fieldnames, restval='', extrasaction='raise', dialect=excel, encoding='utf-8', *args, **kwds):
         self.__writer=csv.DictWriter(_utf8_recoder(f,encoding), fieldnames, extrasaction=extrasaction, dialect=dialect, *args, **kwds)
-    
+
     @staticmethod
     def __make_row(row):
         return dict((unicode(k).encode('utf-8'),unicode(v).encode('utf-8')) for k,v in row.iteritems())
-    
+
     def writerow(self,row):
         self.__writer.writerow(self.__make_row(row))
-    
+
     def writerows(self,rows):
         self.__writer.writerows(self.__make_row(row) for row in rows)
-    
+
+    def writeheader(self):
+        self.__writer.writerow(dict((g,g) for g in (unicode(f).encode('utf-8') for f in self.__writer.fieldnames)))
+
+    @property
+    def extrasaction(self): return self.__writer.extrasaction
+
+    @property
+    def fieldnames(self): return self.__writer.fieldnames
+
+    @property
+    def restval(self): return self.__writer.restval
+
     @property
     def dialect(self): return self.__writer.dialect
 
@@ -95,7 +107,6 @@ class Sniffer(csv.Sniffer):
         Returns a dialect (or None) corresponding to the sample
         """
         csv.Sniffer.sniff(self, sample.decode(encoding).encode('utf-8') if encoding != 'utf-8' else sample)
-    
+
     def has_header(self, sample, encoding='utf-8'):
         csv.Sniffer.has_header(self, sample.decode(encoding).encode('utf-8') if encoding != 'utf-8' else sample)
-
