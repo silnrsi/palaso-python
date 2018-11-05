@@ -27,10 +27,13 @@
 # Py2 and Py3 compatibility
 from builtins import str
 
+import os.path
+import sys
+import codecs
+
 from icu import Char, Script, UCharCategory, UProperty, UScriptCode
 from icu import Normalizer2, UNormalizationMode2, UnicodeString
 from collections import Counter
-import codecs
 
 try:
     import sldr.UnicodeSets

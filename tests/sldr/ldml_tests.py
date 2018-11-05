@@ -9,7 +9,7 @@ except ImportError:
 try:
     from sldr.ldml import Ldml, draftratings
 except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib', 'palaso')))
     from sldr.ldml import Ldml, draftratings, etwrite
 
 

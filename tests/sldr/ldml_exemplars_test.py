@@ -36,7 +36,7 @@ import unittest
 try:
     from sldr.ldml_exemplars import UCD, Exemplars
 except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib', 'palaso')))
     from sldr.ldml_exemplars import UCD, Exemplars
 
 
