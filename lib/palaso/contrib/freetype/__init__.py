@@ -19,10 +19,10 @@ Note:
   the specified one. 
 '''
 from ctypes import *
-from ft_types import *
-from ft_enums import *
-from ft_errors import *
-from ft_structs import *
+from .ft_types import *
+from .ft_enums import *
+from .ft_errors import *
+from .ft_structs import *
 import ctypes.util
 
 
@@ -35,7 +35,7 @@ if not FT_Library_filename:
     except OSError:
         __dll__ = None
 if not FT_Library_filename and not __dll__:
-    raise RuntimeError, 'Freetype library not found'
+    raise RuntimeError('Freetype library not found')
 if not __dll__:
   __dll__ = ctypes.CDLL(FT_Library_filename)
 
@@ -224,8 +224,7 @@ def set_lcd_filter_weights(a,b,c,d,e):
         error = FT_Library_SetLcdFilterWeights(library, weights)
         if error: raise FT_Exception(error)
     else:
-        raise RuntimeError, \
-              'set_lcd_filter_weights require freetype > 2.4.0'
+        raise RuntimeError('set_lcd_filter_weights require freetype > 2.4.0')
 
 
 

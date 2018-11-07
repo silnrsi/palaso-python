@@ -234,7 +234,7 @@ def docopy(f, opts, i) :
         if not os.path.exists(dname) :
             try :
                 os.makedirs(dname)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != 17 : raise e     # race condition, job done already
     else :
         bstat = os.stat(f)
