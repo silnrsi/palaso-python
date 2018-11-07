@@ -120,6 +120,24 @@ class UCDTests(unittest.TestCase):
 
     # other tests
 
+    def test_zwnj_true(self):
+        self.assertTrue(self.ucd.is_zwnj(u'\u200c'))
+
+    def test_zwnj_false(self):
+        self.assertFalse(self.ucd.is_zwnj(u'\u200d'))
+
+    def test_zwj_true(self):
+        self.assertTrue(self.ucd.is_zwj(u'\u200d'))
+
+    def test_zwj_false(self):
+        self.assertFalse(self.ucd.is_zwj(u'\u200c'))
+
+    def test_vs_true(self):
+        self.assertTrue(self.ucd.is_vs(u'\ufe00'))
+
+    def test_vs_false(self):
+        self.assertFalse(self.ucd.is_vs(u'\u1000'))
+
     def test_number_true(self):
         self.assertTrue(self.ucd.isnumber(u'1'))
 
@@ -413,13 +431,35 @@ class ExemplarsTests(unittest.TestCase):
         self.assertEqual(u'\u0915\u093c \u0916\u093c \u0917\u093c \u093e',
                          self.exemplars.main)
 
-    def test_devanagari_graphemes(self):
+    def test_devanagari_graphemes_loanwords(self):
         """Graphemes are the found clusters before doing analysis."""
         self.exemplars.process(u'\u0958\u093e \u0959\u093e \u0959\u093e '
                                u'\u095a\u093e \u095a\u093e \u095a\u093e')
         self.exemplars.analyze()
         self.assertEqual(u'\u0917\u093c\u093e \u0916\u093c\u093e \u0915\u093c\u093e',
                          self.exemplars.graphemes)
+
+    def test_devanagari_graphemes_nobreak(self):
+        """Some characters group together to make a cluster.
+
+        Ideally, only one cluster would result,
+        but we do not look at the whole Indic syllable structure.
+        """
+        self.exemplars.process(u'\u0915\u094d\u0915')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0915\u094d \u0915', self.exemplars.graphemes)
+
+    def test_devanagari_graphemes_spaces(self):
+        """Space characters (Zs) break a cluster."""
+        self.exemplars.process(u'\u0915\u094d\u2000\u0915')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0915\u094d \u0915', self.exemplars.graphemes)
+
+    def test_devanagari_graphemes_interlinear(self):
+        """Interlinear annotation characters break a cluster."""
+        self.exemplars.process(u'\ufff9\u0915\u094d\ufffb\u0915')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0915\u094d \u0915', self.exemplars.graphemes)
 
     def test_devanagari_frequency(self):
         """For debugging, show the counts of each grapheme."""
@@ -533,6 +573,50 @@ class ExemplarsTests(unittest.TestCase):
         self.exemplars.analyze()
         self.assertEqual(u'a\u0324 b c\u0303 d e f\u0324\u0303 \u0301 \u0306 \u032a',
                          self.exemplars.main)
+
+    def test_oriya_zwnj(self):
+        """ZWNJ breaks a cluster, but is part of the cluster."""
+        self.exemplars.process(u'\u0b15\u0b4d\u200c\u0b24')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0b15\u0b4d\u200c \u0b24', self.exemplars.graphemes)
+
+    def test_oriya_zwj(self):
+        """ZWJ does not break a cluster.
+
+        Ideally, only one cluster would result,
+        but we do not look at the whole Indic syllable structure.
+        """
+        self.exemplars.process(u'\u0b15\u200d\u0b4d\u0b24')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0b15\u200d\u0b4d \u0b24', self.exemplars.graphemes)
+
+    def test_myanmar_vs(self):
+        """Variation Selectors do not break a cluster."""
+        self.exemplars.process(u'\u1000\ufe00\u1031\u102c')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u1000\ufe00\u1031\u102c', self.exemplars.graphemes)
+
+    def test_rtl_digits_mark(self):
+        """Digits followed by RTL marks are separate clusters.
+
+        Therefore, the digit will be in it's own cluster,
+        and put into the digit exemplar.
+        """
+        self.exemplars.process(u'1\u200f')
+        self.exemplars.analyze()
+        self.assertEqual(u'', self.exemplars.main)
+        self.assertEqual(u'', self.exemplars.auxiliary)
+        self.assertEqual(u'1', self.exemplars.digits)
+        self.assertEqual(u'1', self.exemplars.graphemes)
+
+    def test_rtl_digits_lettermark(self):
+        """The RTL letter mark should be ignored."""
+        self.exemplars.process(u'\u061c14-6-2011')
+        self.exemplars.analyze()
+        self.assertEqual(u'', self.exemplars.main)
+        self.assertEqual(u'\u061c', self.exemplars.auxiliary)
+        self.assertEqual(u'-', self.exemplars.punctuation)
+        self.assertEqual(u'0 1 2 4 6', self.exemplars.digits)
 
 
 if __name__ == '__main__':

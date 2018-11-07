@@ -118,6 +118,30 @@ class UCD(object):
         return True
 
     @staticmethod
+    def is_zwnj(char):
+        """True if the character is ZWNJ."""
+        if ord(char) == 0x200C:
+            return True
+        return False
+
+    @staticmethod
+    def is_zwj(char):
+        """True if the character is ZWJ."""
+        if ord(char) == 0x200D:
+            return True
+        return False
+
+    @staticmethod
+    def is_vs(char):
+        """True if the character is a Variation Selector."""
+        numeric_char = ord(char)
+        if 0xFE00 <= numeric_char <= 0xFE0F:
+            return True
+        if 0xE0100 <= numeric_char <= 0xE01EF:
+            return True
+        return False
+
+    @staticmethod
     def isnumber(char):
         """True if the character is a number (general category Nd or No)."""
         numeric_char_type = Char.charType(char)
@@ -395,6 +419,7 @@ class Exemplars(object):
             self.find_marks_on_same_bases()
             self.find_productive_marks()
             self.find_second_marks()
+        self.parcel_marks()
         self.parcel_ignorable()
         self.parcel_frequency()
         self.make_index()
@@ -547,16 +572,24 @@ class Exemplars(object):
 
                 previous_trailer = trailer
 
-    def parcel_ignorable(self):
-        """Move Default_Ignorable_Code_Point characters to auxiliary."""
+    def parcel_marks(self):
+        """Move Marks to auxiliary if needed."""
         for exemplar in list(self.clusters.keys()):
             for trailer in exemplar.trailers:
                 if trailer not in self.bases_for_marks:
-                    # if Char.hasBinaryProperty(trailer, UProperty.DEFAULT_IGNORABLE_CODE_POINT):
-                    # The trailer is a Default_Ignorable_Code_Point
-                    # which needs to go in the auxiliary list.
                     self._auxiliary.add(trailer)
                     del self.clusters[exemplar]
+
+    def parcel_ignorable(self):
+        """Move Default_Ignorable_Code_Point characters to auxiliary."""
+        for exemplar in list(self.clusters.keys()):
+            if exemplar.base == '':
+                return
+            if Char.hasBinaryProperty(exemplar.base, UProperty.DEFAULT_IGNORABLE_CODE_POINT):
+                # The base is a Default_Ignorable_Code_Point
+                # which needs to go in the auxiliary list.
+                self._auxiliary.add(exemplar.base)
+                del self.clusters[exemplar]
 
     def parcel_frequency(self):
         """Parcel exemplars between main and auxiliary based on frequency."""
@@ -680,10 +713,15 @@ class Exemplars(object):
             length = base_length = 1
             while i + length < len(text):
                 trailer = text[i + length]
-                if Char.hasBinaryProperty(trailer, UProperty.DEFAULT_IGNORABLE_CODE_POINT):
-                    # A Default_Ignorable_Code_Point was found, so the cluster continues.
+                if self.ucd.is_zwj(trailer):
+                    # ZWJ found, so the cluster continues.
                     length += 1
                     continue
+                if self.ucd.is_zwnj(trailer):
+                    # ZWNJ found, so the end of the cluster has been reached,
+                    # but put include ZWNJ in the cluster
+                    length += 1
+                    break
                 if self.ucd.ismark(trailer):
                     # A Mark was found, so the cluster continues.
                     length += 1
