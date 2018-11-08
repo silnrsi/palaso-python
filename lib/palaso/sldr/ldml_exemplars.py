@@ -401,10 +401,20 @@ class Exemplars(object):
             list_exemplars = exemplars
 
         list_nfc_exemplars = map(self.ucd.normalize_nfc, list_exemplars)
+
+        # Ignore exemplars not of most common script found in the data.
+        list_nfc_exemplars_main_script = list()
+        for exemplar in list_nfc_exemplars:
+            char = exemplar[0] # only look at the first character in an exemplar.
+            script = Script.getScript(char)
+            script_name = Script.getShortName(script)
+            if script_name == self._get_script() or not self.ucd.is_specific_script(char):
+                list_nfc_exemplars_main_script.append(exemplar)
+
         if self.unittest:
-            return ' '.join(list_nfc_exemplars)
+            return ' '.join(list_nfc_exemplars_main_script)
         else:
-            return sldr.UnicodeSets.list2us(list_nfc_exemplars, self.ucd)
+            return sldr.UnicodeSets.list2us(list_nfc_exemplars_main_script, self.ucd)
 
     def analyze(self):
         """Analyze the found exemplars and classify them."""

@@ -237,7 +237,7 @@ class ExemplarsTests(unittest.TestCase):
         """
         self.exemplars.main = u'z'
         self.exemplars.digits = u'0'
-        self.exemplars.process(u'[{cab.1}]')
+        self.exemplars.process(u'[{cab.1}] abc bac')
         self.exemplars.analyze()
         self.assertEqual(u'a b c', self.exemplars.main)
         self.assertEqual(u'1', self.exemplars.digits)
@@ -297,9 +297,9 @@ class ExemplarsTests(unittest.TestCase):
         self.assertEqual(u'', self.exemplars.main)
 
     def test_lithuanian_main(self):
-        self.exemplars.process(u'\u00c1\u0328 \u00e1\u0328 I\u0307\u0301 i\u0307\u0301')
+        self.exemplars.process(u'\u00c1\u0328 \u00e1\u0328 I\u0307\u0301 i\u0307\u0301 iastreon')
         self.exemplars.analyze()
-        self.assertEqual(u'\u0105 i\u0307 \u0301', self.exemplars.main)
+        self.assertEqual(u'a \u0105 e i i\u0307 n o r s t \u0301', self.exemplars.main)
 
     def test_lithuanian_index(self):
         self.exemplars.process(u'a \u0105 b c A \u0104 B C Z')
@@ -530,6 +530,18 @@ class ExemplarsTests(unittest.TestCase):
         self.exemplars.analyze()
         self.assertEqual(u'Zzzz', self.exemplars.script)
 
+    def test_main_script(self):
+        """Only return exemplars from the most common script.
+
+        Characters with a script of Common or Inherited will still be returned.
+        """
+        self.exemplars.process(u'1: \u0e01\u0e02a \u0e03\u0e04b \u0e05\u0e06c \u0e07\u0e08d')
+        self.exemplars.analyze()
+        self.assertEqual(u'\u0e01 \u0e02 \u0e03 \u0e04 \u0e05 \u0e06 \u0e07 \u0e08',
+                         self.exemplars.main)
+        self.assertEqual(u':', self.exemplars.punctuation)
+        self.assertEqual(u'1', self.exemplars.digits)
+
     def test_nonbmp(self):
         """Handle non-BMP characters."""
         self.exemplars.process(u'\U0001D52A')
@@ -561,17 +573,19 @@ class ExemplarsTests(unittest.TestCase):
         high_rising = u'\u00e1\u1eaf\u1ea5\u00e9\u1ebf\u00ed\u00f3\u1ed1\u1edb\u00fa\u1ee9\u00fd'
         glottal_falling = u'\u1ea1\u1eb7\u1ead\u1eb9\u1ec7\u1ecb\u1ecd\u1ed9\u1ee3\u1ee5\u1ef1\u1ef5'
         text = mid + low_falling + mid_falling + glottal_rising + high_rising + glottal_falling
+        text += 'nhcitgu nhcitgu nhcitgu nhcitgu'
         self.exemplars.process(text)
         self.exemplars.analyze()
-        self.assertEqual(u'a \u00e2 \u0103 e \u00ea i o \u00f4 \u01a1 u \u01b0 y '
+        self.assertEqual(u'a \u00e2 \u0103 c e \u00ea g h i n o \u00f4 \u01a1 t u \u01b0 y '
                          u'\u0300 \u0301 \u0303 \u0309 \u0323', self.exemplars.main)
 
     def test_stacking_diacritics(self):
         """Second level diacritics are always separate."""
         self.exemplars.process(u'a\u0324 b\u032a c\u0303 d\u0306 e\u0301 '
-                               u'f\u0324\u032a\u0303\u0306\u0301')
+                               u'f\u0324\u032a\u0303\u0306\u0301 nhcitgu')
         self.exemplars.analyze()
-        self.assertEqual(u'a\u0324 b c\u0303 d e f\u0324\u0303 \u0301 \u0306 \u032a',
+        self.assertEqual(u'a\u0324 b c '
+                         u'c\u0303 d e f\u0324\u0303 g h i n t u \u0301 \u0306 \u032a',
                          self.exemplars.main)
 
     def test_oriya_zwnj(self):
@@ -611,9 +625,11 @@ class ExemplarsTests(unittest.TestCase):
 
     def test_rtl_digits_lettermark(self):
         """The RTL letter mark should be ignored."""
-        self.exemplars.process(u'\u061c14-6-2011')
+        self.exemplars.process(u'\u0627\u0628\u0629 \u061c14-6-2011 '
+                               u'\u062a\u062b\u062c\u062d\u062e\u062f\u0630\u0631\u0632')
         self.exemplars.analyze()
-        self.assertEqual(u'', self.exemplars.main)
+        self.assertEqual(u'\u0627 \u0628 \u0629 \u062a \u062b \u062c \u062d \u062e \u062f \u0630 \u0631 \u0632',
+                         self.exemplars.main)
         self.assertEqual(u'\u061c', self.exemplars.auxiliary)
         self.assertEqual(u'-', self.exemplars.punctuation)
         self.assertEqual(u'0 1 2 4 6', self.exemplars.digits)
