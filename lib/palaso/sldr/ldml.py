@@ -423,7 +423,7 @@ class Ldml(ETWriter):
         comments = []
 
         if fname is None:
-            self.root = et.Element('ldml')
+            self.root = getattr(et, '_Element_Py', et.Element)('ldml')
             self.root.document = self
             self.default_draft = 'unconfirmed'
             return
