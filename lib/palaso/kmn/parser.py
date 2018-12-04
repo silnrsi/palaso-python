@@ -19,7 +19,7 @@ keyrowmap = {
 
 keymap = dict([(k, ("{}{:02d}".format(rk[-1], i+1), rk.startswith("_"))) 
                 for rk, r in keyrowmap.items() for i, k in enumerate(r)])
-keymap.update({ "|" : ("B00", True), "\\" : ("B00", False),
+keymap.update({ "|" : ("B00", True), "\\" : ("B00", False), " ": ("A03", True),
                 "`" : ("E00", False), "~" : ("E00", True)})
 
 def mapkey(tok):
@@ -78,6 +78,8 @@ class Rule(object):
             elif isinstance(o, Token):
                 if o.value.lower() == 'context':
                     out.extend(before)
+                else:
+                    out.append(o)
             else:
                 out.append(self._apply(allStores, o, vec))
         return Rule((before, ('+', match), out))
@@ -117,6 +119,7 @@ class AnyIndex(object):
 
 class DeadKey(object):
     missing = 0xFDD2
+    allkeys = []
 
     @classmethod
     def increment(cls):
@@ -127,6 +130,7 @@ class DeadKey(object):
     def __init__(self, toklist):
         self.number = toklist[1]
         self.char = unichr(self.missing)
+        self.allkeys.append(self)
         self.increment()
 
 specialkeys = {
@@ -195,6 +199,8 @@ class Store(object):
         for s in self.seq:
             if isinstance(s, VKey):
                 self.values.append(s)
+            elif isinstance (s, Token) and s.value == 'beep':
+                self.values.append(s)
             elif isinstance(s[0], Token):
                 if s[0].value.lower() == 'outs':
                     sub = self.allStores[s[1].lower()]
@@ -238,7 +244,7 @@ class Parser(object):
     def tokenize(self, text):
         lexer_specs = [
             ('SPACE', (r'(\\[ \t]*\r?\n|[ \t])+',re.MULTILINE)),
-            ('COMMENT', (r'c\s+[^\n]*',)),
+            ('COMMENT', (r'[cC](?:[ \t]+[^\r\n]*)?(?=\r?\n)',)),
             ('NL', (r'\r?\n',re.MULTILINE)),
             ('KEYWORD', (r'any|index|store|outs|group|begin|use|beep|deadkey|dk|context|'
                           'if|match|nomatch|notany|return|reset|save|set|nul|platform', re.I)),
@@ -250,7 +256,7 @@ class Parser(object):
             ('STRING', (r'(["\']).*?\1',)),
             ('CHAR', (r'([uU]\+[0-9a-fA-F]{4,6})|([dD][0-9]+)|([xX][0-9A-Fa-f]+)',)),
             ('PLUS', (r'\+',)),
-            ('NAME', (r'[A-Za-z&][A-Za-z0-9_\-]*',)),
+            ('NAME', (r'[A-Za-z&][A-Za-z0-9_\-\.]*',)),
             ('NUMBER', (r'[0-9]+(\.[0-9]+)?',)),
             ('TARGET', (r'\$[a-z]+:',)),
         ]
@@ -295,7 +301,7 @@ class Parser(object):
         return s
 
     def set_group(self, seq):
-        grp = seq[1]
+        grp = seq[1].lower()
         self.current_group = grp
         self.allRules[grp] = []
 
@@ -310,33 +316,37 @@ class Parser(object):
         if seq[0].value == 'match' and \
                 isinstance(seq[1][0][0], Token) and seq[1][0][0].type == 'KEYWORD' and \
                     seq[1][0][0].value == 'use':
-            self.uses.setdefault(self.current_group, set()).add(seq[1][0][1])
+            self.uses.setdefault(self.current_group, set()).add(seq[1][0][1].lower())
 
     def store_begin(self, seq):
-        self.begins[seq[1].lower()] = seq[2][1]
+        self.begins[seq[1].lower()] = seq[2][1].lower()
 
     def parse(self, seq):
         const = lambda x: lambda _: x
         unarg = lambda f: lambda x: f(*x)
         tokval = lambda x: x.value
         toktype = lambda s: some(lambda x: x.type == s) >> tokval
+        def sumstr(s):
+            #import pdb; pdb.set_trace()
+            return u"".join(unicode(x) for x in s)
         keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
         op = lambda s: a(Token('OP', s)) >> tokval
         op_ = lambda s: skip(op(s))
+        onename = many(toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')) >> sumstr
         name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
         number = toktype('NUMBER') >> get_num
         get_string = lambda v: v[1:-1]
         string = (toktype('STRING') >> get_string) | (toktype('CHAR') >> get_char)
         nl = skip(toktype('NL'))
         typed_func = lambda k, c: keyword(k) + op_('(') + c + op_(')')
-        simple_func = lambda k: typed_func(k, name)
+        simple_func = lambda k: typed_func(k, onename)
         assign_func = lambda k: keyword(k) + op_('(') + name + op_('=') + (name | string) + op_(')')
 
         # statement components
         vkey = op_('[') + many(name) + op_(']')
         prefix = toktype('TARGET') | assign_func('if') | typed_func('platform', string) 
         context_statement = (keyword('context') + op_('(') + number + op_(')')) | keyword('context')
-        index_statement = keyword('index') + op_('(') + name + op_(',') + number + op_(')')
+        index_statement = keyword('index') + op_('(') + onename + op_(',') + number + op_(')')
         deadkey = (keyword('deadkey') | keyword('dk')) + op_('(') + (number | name) + op_(')')
         context = context_statement | keyword('beep') | keyword('nul') | simple_func('use') | \
                     (index_statement >> AnyIndex) | string | (deadkey >> DeadKey) | \
@@ -350,7 +360,7 @@ class Parser(object):
         group  = (simple_func('group') >> self.set_group) + maybe(toktype('USINGKEYS')) + nl
         store = maybe(many(prefix)) + simple_func('store') + many(string | simple_func('outs') | \
                         (vkey >> VKey) | (deadkey >> DeadKey) | keyword('beep')) + nl
-        begin = keyword('begin') + name + op_('>') + simple_func('use') + nl
+        begin = keyword('begin') + onename + op_('>') + simple_func('use') + nl
         rule = maybe(many(prefix)) + maybe(many(match)) + maybe(toktype('PLUS') + \
                 ((vkey >> VKey) | string | (simple_func('any') >> AnyIndex))) + op_('>') + many(context) + nl
         matchrule = (keyword('match') | keyword('nomatch')) + op_('>') + many(context) + nl

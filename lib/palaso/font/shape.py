@@ -13,7 +13,7 @@ class Font(object) :
         self.rtl = rtl
 
 class GrFont(Font) :
-    def __init__(self, fname, size, rtl, feats = {}, script = 0, lang = 0) :
+    def __init__(self, fname, size = 0, rtl = 0, feats = {}, script = 0, lang = 0) :
         super(GrFont, self).__init__(fname, size, rtl)
         self.grface = gr.Face(fname)
         self.feats = self.grface.get_featureval(lang)
@@ -27,7 +27,7 @@ class GrFont(Font) :
             size = float(self.grface.get_upem())
         self.font = gr.Font(self.grface, size)
 
-    def measure(self, text, after) :
+    def measure(self, text, after = False) :
         """Returns a list of x positions for before/after the indexth character and
         a list of breakweights"""
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)

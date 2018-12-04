@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import argparse, codecs, unicodedata, re
+import argparse, codecs, unicodedata, re, os, itertools
 from palaso.kmn.parser import Parser, mapkey, Token, DeadKey, VKey, keyrowmap
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
@@ -121,13 +121,13 @@ attributeorders = ('before', 'from', 'after', 'iso', 'to', 'layer', 'display')
 #                'transforms', 'reorders', 'backspaces')
 
 class LDMLKeyboard(ETWriter):
-    def __init__(self, locale):
+    def __init__(self, locale, base=""):
         doc = et.fromstring("""<?xml version="1.0"?>
 <keyboard locale="{}">
 <version platform="1" number="1"/>
-<import path="langs/e/en/en-us-win/en-us-win.xml"/>
+<import path="{}"/>
 </keyboard>
-""".format(locale))
+""".format(locale, base))
         let = et.ElementTree()
         let._setroot(doc)
         ETWriter.__init__(self, doc, attributeOrder=dict((x, i+1) for i,x in enumerate(attributeorders)))
@@ -176,12 +176,17 @@ class LDMLKeyboard(ETWriter):
         if self.root.find('.//displayMap/display[@mapOutput='+pto+']') is None:
             et.SubElement(k, "display", attrib={'mapOutput': to, 'display': display})
 
+    def addDeadkeySettings(self):
+        et.SubElement(self.root, "settings", attrib={'fallback': 'omit', 'transformPartial': 'Hide'})
+
     def addTransform(self, t, rules, keyword="transform"):
         if t == keyword:
             ts = et.SubElement(self.root, keyword+"s")
         else:
             ts = et.SubElement(self.root, keyword+"s", attrib={'type': t})
         transforms = TransformElements()
+        before = []
+        end = []
         for k, v in sorted(rules.items(), key=lambda x:(-len(x[0]), x[0])):
             fr = unicode(k)
             to = unicode(v)
@@ -192,7 +197,8 @@ class LDMLKeyboard(ETWriter):
                     to = to[i:]
                     break
             else:
-                continue
+                if len(to):
+                    continue
             for i in range(1, min(len(to), len(fr))):
                 if fr[-i] != to[-i]:
                     if i > 1:
@@ -232,8 +238,8 @@ class LDMLKeyboard(ETWriter):
         i = et.SubElement(self.root, "import", attrib={'path': path})
 
 def readable(s):
-    return u"".join("\\u{:04X}".format(ord(x)) \
-            if unicodedata.category(x) in ("Cf", "WS", "Mc", "Mn") else x for x in unicode(s))
+    return u"".join("\\u{{{:04X}}}".format(ord(x)) \
+            if unicodedata.category(x)[0] in "CM" else x for x in unicode(s))
 
 class TransformElements:
     def __init__(self):
@@ -298,9 +304,8 @@ class OutputString:
     def __init__(self, toklist):
         self.str = u""
         self.error = 0
-        import pdb
         for t in toklist:
-            if isinstance(t, basestring):
+            if isinstance(t, str) or isinstance(t, basestring):
                 self.str += t
             elif isinstance(t, Token) and t.type == 'KEYWORD':
                 if t.value == 'beep':
@@ -317,7 +322,7 @@ def process_uses(p, name, *extras):
             make_transform(r, p, *extras)
         process_uses(p, t, *extras)
 
-def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None):
+def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, base=None):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
     p = Parser(lines, debug = (args.debug & 2), platform = platform)
@@ -332,7 +337,11 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None):
         error = False
         for rf in r.flatten(p.allStores):
             if rf.match is None: continue
-            k = mapkey(rf.match)
+            try:
+                k = mapkey(rf.match)
+            except KeyError:
+                print(u"Warning: Failed to map {}".format(rf.match))
+                continue
             if k[1] not in maps:
                 maps[k[1]] = {}
             maps[k[1]][k[0]] = OutputString(rf.output)
@@ -340,60 +349,146 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None):
         ldml.setname(p.allHeaders['&NAME'].seq[0])
     else:
         ldml.setname('Unknown')
-    for km in sorted(maps.keys()):
-        ldml.addKeyMap(maps[km], km)
 
+    if base is not None:
+        bmaps = overwrite_map(process_basefile(base), maps)
     simples = {}
     finals = {}
     backups = {}
+    deadkeys = {}
     uses = set()
     for r in p.allRules[p.begins['unicode']]:
-        make_transform(r, p, maps, simples, finals, backups)
-    process_uses(p, p.begins['unicode'], maps, simples, finals, backups)
+        make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups)
+    process_uses(p, p.begins['unicode'], maps, bmaps, deadkeys, simples, finals, backups)
+    for km in sorted(maps.keys()):
+        ldml.addKeyMap(maps[km], km)
+    if len(deadkeys):
+        ldml.addDeadkeySettings()
+        ldml.addTransform('simple', deadkeys)
+        nextsimple = 'simple2'
+    else:
+        nextsimple = 'simple'
     if len(simples):
-        ldml.addTransform('simple', simples)
+        ldml.addTransform(nextsimple, simples)
     if reorder:
         ldml.addImport('shared/reorders.xml')
     if reorderfile:
         ldml.addImport(reorderfile)
-    if len(finals):
+    if len(finals) or len(DeadKey.allkeys):
+        for d in DeadKey.allkeys:
+            finals[d.char] = OutputString([])
         ldml.addTransform('final', finals)
     if len(backups):
         ldml.addTransform('backspace', backups, keyword="backspace")
 
-def make_transform(r, p, maps, simples, finals, backups):
+def overwrite_map(main, other):
+    ''' unifies the two keymaps with preference for other, returning main '''
+    for k,v in other.items():
+        if k in main:
+            main[k].update(v)
+        else:
+            main[k] = v
+    return main
+
+def find_file(fpath, bases=[]):
+    ''' Scan all directories between here and project root (has .git) or /,
+        for the given path and return first matching complete path else None '''
+    for cur in ['.'] + bases:
+        lastabs = None
+        while os.path.abspath(cur) != lastabs:
+            lastabs = os.path.abspath(cur)
+            testpath = os.path.join(cur, fpath)
+            if os.path.exists(testpath):
+                return testpath
+            if os.path.exists(os.path.join(cur, '.git')):
+                break
+            cur = os.path.join('..', cur)
+    return None
+
+def parse_modifiers(modifiers):
+    '''Flatten a modifier list into a list of possible modifiers'''
+    for m in modifiers.lower().split():
+        resn = []
+        reso = []
+        for mod in m.lower().split('+'):
+            if mod.endswith("?"):
+                reso.append(mod)
+            else:
+                resn.append(mod)
+        yield sorted(resn)
+        for i in range(len(reso)):
+            for c in itertools.combinations(reso, i):
+                yield sorted(resn + list(c))
+
+def process_basefile(basef):
+    ''' recursively reads an ldml file building a keymap '''
+    keymap = {}
+    fname = find_file(basef)
+    if fname is None:
+        return {}
+    doc = et.parse(fname)
+    for c in doc.getroot():
+        if c.tag == 'keyMap':
+            if 'modifiers' in c.attrib:
+                modifiers = ["+".join(x) for x in parse_modifiers(c.get('modifiers'))]
+            else:
+                modifiers = [""]
+            for m in modifiers:
+                if m not in keymap:
+                    keymap[m] = {}
+            if 'fallback' in c.attrib:
+                fallbacks = ["+".join(x) for x in parse_modifiers(c.get('fallback'))]
+                for f in fallbacks:
+                    if f in keymap:
+                        for m in modifiers:
+                            keymap[m].update(keymap[f])
+            for cm in c:
+                if cm.tag == 'map':
+                    for m in modifiers:
+                        s = re.sub(r"\\u\{([0-9a-fA-F]+)\}|\\u([0-9A-Fa-f]{4,6})",
+                                   lambda a: chr(int(a.group(a.lastindex), 16)), cm.get('to'))
+                        keymap[m][cm.get('iso')] = OutputString([s])
+        elif c.tag == 'import':
+            overwrite_map(keymap, process_basefile(c.get('path')))
+    return keymap
+
+def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups):
     if not len(r.before):
         return
     isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
-    error = False
     for rf in r.flatten(p.allStores):
         bs = []
         for b in rf.before:
             bs.extend(b)
         btxt = u"".join(bs)
         otxt = OutputString(rf.output)
-        k = mapkey(rf.match)
+        error = otxt.error
+        try:
+            k = mapkey(rf.match)
+        except KeyError:
+            continue
         if k is not None:
             if k[0] == 'bksp':
-                backups[btxt] = otxt
+                backups[btxt] = OutputString(u"\uFDDF" + unicode(otxt)[1:]) if unicode(otxt).startswith(u"\u200B") else otxt
                 continue
             mp = maps[k[1]]
-            if k[0] not in mp:
+            if k[0] not in mp and (k[1] not in bmaps or k[0] not in bmaps[k[1]]):
                 mp[k[0]] = unichr(DeadKey.missing)
                 finals[unichr(DeadKey.missing)] = ""
                 DeadKey.missing += 1
-            m = mp[k[0]]
+            m = mp[k[0]] or bmaps[k[1]][k[0]]
             btxt += unicode(m)
-        if error:
-            otxt.error = True
         if btxt == unicode(otxt) and not error:
             continue
         if isdead:
-            if btxt not in simples:
-                simples[btxt] = unicode(otxt)
-        elif any(x not in unicode(otxt) for x in btxt): # skip reorderings
-            if btxt not in finals:
-                finals[btxt] = unicode(otxt)
+            if btxt not in deadkeys:
+                deadkeys[btxt] = otxt
+        elif any(x not in unicode(otxt) for x in btxt) and \
+             any(x not in unicode(otxt) for x in btxt.replace(u"\u200B", "")): # skip reorderings
+            if k is not None:
+                simples[btxt] = otxt
+            else:
+                finals[btxt] = otxt
 
 layermap = {"default": "", "shift": "shift", "leftctrl": "ctrlL", "rightctrl": "ctrlR",
             "ctrl": "ctrl", "leftalt": "altL", "rightalt": "altR", "lefctrl-rightalt": "altR+ctrlL",
@@ -490,6 +585,7 @@ parser.add_argument('-k','--kmn',help='Process kmn file')
 parser.add_argument('-l','--layout',help='Process layout .js file')
 parser.add_argument('-r','--reorder',action='store_true',help='Add reordering import')
 parser.add_argument('-R','--reorderfile',help='Specifies reorder file to import, can occur with -r for standard import')
+parser.add_argument('-b','--basefile',default='langs/e/en/en-us-win/en-us-win.xml',help='Base keyboard file')
 parser.add_argument('-L','--locale',default="und-Zyyy",help='Keyboard Locale identifier')
 parser.add_argument('-f','--form',default='phone',help='form factor platform [phone]')
 parser.add_argument('-u','--ui',default='touch',help='User Interface platform [touch]')
@@ -498,12 +594,13 @@ parser.add_argument('-F','--full',action="store_true",help="Output extra stuff")
 parser.add_argument('-z','--debug',type=int,default=0)
 args = parser.parse_args()
 
-ldml = LDMLKeyboard(args.locale)
+ldml = LDMLKeyboard(args.locale, args.basefile)
 
 platform = dict((x, getattr(args, x)) for x in ('form', 'ui', 'os'))
 
 if args.kmn:
-    process_kmn(ldml, args.kmn, platform=platform, reorder=args.reorder, reorderfile=args.reorderfile)
+    process_kmn(ldml, args.kmn, platform=platform, reorder=args.reorder,
+                reorderfile=args.reorderfile, base=args.basefile)
 
 if args.layout:
     process_layout(ldml, args.layout, platform=platform, extras=args.full)

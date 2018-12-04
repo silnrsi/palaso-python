@@ -11,11 +11,11 @@ if not hbnglib :
         hbng = None
 
 if not hbnglib and not hbng :
-    raise RuntimeError, "harfbuzz library not found"
+    raise RuntimeError("harfbuzz library not found")
 if not hbng :
     hbng = CDLL(hbnglib)
 if not hbng :
-    raise RuntimeError, "Failed to load harfbuzz: {0}".format(hbnglib)
+    raise RuntimeError("Failed to load harfbuzz: {0}".format(hbnglib))
 
 def fn(name, res, *params) :
     f = getattr(hbng, name)

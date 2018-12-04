@@ -29,12 +29,12 @@ import sys
 import unittest
 
 try:
-    from sldr.ldml_exemplars import UCD
-    import sldr.UnicodeSets
+    from palaso.sldr.ldml_exemplars import UCD
+    import palaso.sldr.UnicodeSets
 except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib', 'palaso')))
-    from sldr.ldml_exemplars import UCD
-    import sldr.UnicodeSets
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
+    from palaso.sldr.ldml_exemplars import UCD
+    import palaso.sldr.UnicodeSets
 
 
 class UnicodeSetsTests(unittest.TestCase):

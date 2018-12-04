@@ -26,7 +26,7 @@
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
 import os, re, csv
-from sldr.ldml import Ldml  ## need package name?????
+from six import with_metaclass
 
 class Singleton(type):
     _instances = {}
@@ -235,8 +235,7 @@ class LangTag(object) :
         return self
 
 
-class LangTags(dict):
-    __metaclass__ = Singleton
+class LangTags(with_metaclass(Singleton, dict)):
 
     def __init__(self, extrasfile=None, noalltags=False, alltags=None):
         super(LangTags, self).__init__()
@@ -250,7 +249,7 @@ class LangTags(dict):
     def readAlltags(self, fname=None):
         if fname is None:
             for p in [os.path.dirname(__file__)]:
-                fname = os.path.join(p, 'alltags.txt')
+                fname = os.path.join(p, 'sldr', 'alltags.txt')
                 if os.path.exists(fname):
                     break
             else:

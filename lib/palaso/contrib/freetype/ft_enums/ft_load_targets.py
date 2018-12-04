@@ -6,6 +6,7 @@
 #  Distributed under the terms of the new BSD license.
 #
 # -----------------------------------------------------------------------------
+from __future__ import absolute_imports
 """
 A list of values that are used to select a specific hinting algorithm to use
 by the hinter. You should OR one of these values to your 'load_flags' when
@@ -53,7 +54,7 @@ FT_LOAD_TARGET_LCD_V
   displays.
 """
 
-from ft_render_modes import *
+from .ft_render_modes import *
 
 
 def _FT_LOAD_TARGET_(x):
