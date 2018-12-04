@@ -176,6 +176,9 @@ class LDMLKeyboard(ETWriter):
         if self.root.find('.//displayMap/display[@mapOutput='+pto+']') is None:
             et.SubElement(k, "display", attrib={'mapOutput': to, 'display': display})
 
+    def addDeadkeySettings(self):
+        et.SubElement(self.root, "settings", attrib={'fallback': 'omit', 'transformPartial': 'Hide'})
+
     def addTransform(self, t, rules, keyword="transform"):
         if t == keyword:
             ts = et.SubElement(self.root, keyword+"s")
@@ -236,7 +239,7 @@ class LDMLKeyboard(ETWriter):
 
 def readable(s):
     return u"".join("\\u{{{:04X}}}".format(ord(x)) \
-            if unicodedata.category(x) in ("Cf", "WS", "Mc", "Mn") else x for x in unicode(s))
+            if unicodedata.category(x)[0] in "CM" else x for x in unicode(s))
 
 class TransformElements:
     def __init__(self):
@@ -346,20 +349,27 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, bas
         ldml.setname(p.allHeaders['&NAME'].seq[0])
     else:
         ldml.setname('Unknown')
-    for km in sorted(maps.keys()):
-        ldml.addKeyMap(maps[km], km)
 
     if base is not None:
-        maps = overwrite_map(process_basefile(base), maps)
+        bmaps = overwrite_map(process_basefile(base), maps)
     simples = {}
     finals = {}
     backups = {}
+    deadkeys = {}
     uses = set()
     for r in p.allRules[p.begins['unicode']]:
-        make_transform(r, p, maps, simples, finals, backups)
-    process_uses(p, p.begins['unicode'], maps, simples, finals, backups)
+        make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups)
+    process_uses(p, p.begins['unicode'], maps, bmaps, deadkeys, simples, finals, backups)
+    for km in sorted(maps.keys()):
+        ldml.addKeyMap(maps[km], km)
+    if len(deadkeys):
+        ldml.addDeadkeySettings()
+        ldml.addTransform('simple', deadkeys)
+        nextsimple = 'simple2'
+    else:
+        nextsimple = 'simple'
     if len(simples):
-        ldml.addTransform('simple', simples)
+        ldml.addTransform(nextsimple, simples)
     if reorder:
         ldml.addImport('shared/reorders.xml')
     if reorderfile:
@@ -442,7 +452,7 @@ def process_basefile(basef):
             overwrite_map(keymap, process_basefile(c.get('path')))
     return keymap
 
-def make_transform(r, p, maps, simples, finals, backups):
+def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups):
     if not len(r.before):
         return
     isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
@@ -459,22 +469,25 @@ def make_transform(r, p, maps, simples, finals, backups):
             continue
         if k is not None:
             if k[0] == 'bksp':
-                backups[btxt] = otxt
+                backups[btxt] = OutputString(u"\uFDDF" + unicode(otxt)[1:]) if unicode(otxt).startswith(u"\u200B") else otxt
                 continue
             mp = maps[k[1]]
-            if k[0] not in mp:
+            if k[0] not in mp and (k[1] not in bmaps or k[0] not in bmaps[k[1]]):
                 mp[k[0]] = unichr(DeadKey.missing)
                 finals[unichr(DeadKey.missing)] = ""
                 DeadKey.missing += 1
-            m = mp[k[0]]
+            m = mp[k[0]] or bmaps[k[1]][k[0]]
             btxt += unicode(m)
         if btxt == unicode(otxt) and not error:
             continue
         if isdead:
-            if btxt not in simples:
+            if btxt not in deadkeys:
+                deadkeys[btxt] = otxt
+        elif any(x not in unicode(otxt) for x in btxt) and \
+             any(x not in unicode(otxt) for x in btxt.replace(u"\u200B", "")): # skip reorderings
+            if k is not None:
                 simples[btxt] = otxt
-        elif any(x not in unicode(otxt) for x in btxt): # skip reorderings
-            if btxt not in finals:
+            else:
                 finals[btxt] = otxt
 
 layermap = {"default": "", "shift": "shift", "leftctrl": "ctrlL", "rightctrl": "ctrlR",
