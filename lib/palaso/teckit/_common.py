@@ -24,6 +24,11 @@
 from ctypes import *
 from itertools import chain,count
 
+try:
+    basestring
+except NameError:
+    basestring = str
+
 currentTECKitVersion = 0x00020004   # 16.16 version number
 
 
@@ -80,7 +85,7 @@ Form = ENUM('Unspecified',  # invalid as argument to TECkit_CreateConverter
     'UTF32BE','UTF32LE')
 
 
-class CompilationError(StandardError): pass
+class CompilationError(SyntaxError): pass
 class ConverterBusy(RuntimeError): pass
 class MappingVersionError(ValueError): pass
 class FullBuffer(Exception): pass
@@ -121,7 +126,7 @@ def FLAGS(ctype, *flags):
     
     class _BITS(Structure):
         _pack_ = 0
-        _fields_ = [(n, ctype, 1) if isinstance(n,basestring) else (names.next(),ctype,len(n)) for n in flags]
+        _fields_ = [(n, ctype, 1) if isinstance(n,basestring) else (next(names),ctype,len(n)) for n in flags]
     
     class _FLAGS(Union):
         _fields_    = [('bits', _BITS), ('value', ctype)]

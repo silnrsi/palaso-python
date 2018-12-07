@@ -9,9 +9,9 @@
 #   2009-06-10  tse     Initial version using the ctypes FFI
 #
 
-import _compiler as _tc
-from _compiler import getUnicodeName, getTECkitName, getUnicodeValue
-from engine import Mapping
+import palaso.teckit._compiler as _tc
+from palaso.teckit._compiler import getUnicodeName, getTECkitName, getUnicodeValue
+from palaso.teckit.engine import Mapping
 
 
 class CompilationError(_tc.CompilationError):

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import freetype as ft
+import palaso.contrib.freetype as ft
 import palaso.font.hbng as hbng
 import sys
 

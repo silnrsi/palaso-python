@@ -174,7 +174,7 @@ def _chars(rdata) :
     elif op == 'literal' :  # ('literal', char)
         yield rdata[1]
     else :
-        raise SyntaxError, "Unrecognised character group operator: " + op
+        raise SyntaxError("Unrecognised character group operator: " + op)
 
 def geom(a, x) :
     if a == 1 : return x
@@ -213,7 +213,7 @@ def _len(data) :
             elif inop == 'literal' :
                 res += 1
             else :
-                raise SyntaxError, "Unrecognised character group operator: " + op
+                raise SyntaxError("Unrecognised character group operator: " + op)
         return (res, 1)
     elif op == 'branch' :
         res = 0
@@ -243,8 +243,8 @@ def expand_sub(string, template, debug=0, mode='all') :
     pattern.mode = mode
     template = sre_parse.parse_template(template, pattern)
     if debug :
-        print pattern
-        print template
+        print(pattern)
+        print(template)
     for s in _iterate(pattern, pattern.data, MatchObj(pattern, "")) :
         s.patient = 0
         yield (s.string, sre_parse.expand_template(template, s))
@@ -277,7 +277,7 @@ if __name__ == "__main__" :
         (u'([\u1000-\u1003])([\u103C-\u103D]?)(\u102F|\u1030)([\u1000-\u1003]\u103A)', r'\1\2\4\3')
     ]
     for t in tests :
-        print "-" * 50
-        print (t[0] + "\t" + t[1]).encode('utf-8')
+        print("-" * 50)
+        print((t[0] + "\t" + t[1]).encode('utf-8'))
         for s in expand_sub(t[0], t[1]) :
-            print (s[0] + "\t" + s[1]).encode('utf-8')
+            print((s[0] + "\t" + s[1]).encode('utf-8'))

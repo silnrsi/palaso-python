@@ -22,15 +22,23 @@ __history__ = '''
 '''
 import collections
 import palaso.sfm as sfm
-from functools import partial
-from itertools import ifilter, imap, chain
+from functools import partial, reduce
+from itertools import chain
 from palaso.sfm import level
 
+try:
+    from itertools import ifilter, imap
+except ImportError:
+    ifilter = filter
+    imap = map
+
+try:
+    unicode
+except NameError:
+    unicode = str
 
 class schema(collections.namedtuple('schema','start fields')): pass
 _schema = schema
-
-
 
 def flag(v):
     '''
@@ -61,11 +69,12 @@ def unique(p):
     return lambda v: set(p(v))
 
 
-class ErrorLevel(int):
-    __slots__ = ('msg',)
+class ErrorLevel(object):
+    __slots__ = ('msg','level')
     def __new__(cls, level, msg):
-        el = super(ErrorLevel, cls).__new__(cls,level)
+        el = super(ErrorLevel, cls).__new__(cls)
         el.msg = msg
+        el.level = level
         return el
 
 NoteError = partial(ErrorLevel, level.Note)
@@ -73,7 +82,6 @@ MarkerError = partial(ErrorLevel, level.Marker)
 ContentError = partial(ErrorLevel, level.Content)
 StructureError = partial(ErrorLevel, level.Structure)
 UnrecoverableError = partial(ErrorLevel, level.Unrecoverable)
-
 
 
 class parser(sfm.parser):
@@ -136,8 +144,6 @@ class parser(sfm.parser):
     ...
     SyntaxError: <string>: line 1,1: Marker toc1 defintion missing: Name
     '''
-    
-    
     def __init__(self, source, schema, error_level=level.Content):
         if not isinstance(schema, _schema): 
             raise TypeError('arg 2 must a \'schema\' not {0!r}'.format(schema))
@@ -146,17 +152,16 @@ class parser(sfm.parser):
                     metas, error_level=error_level)
         self.__schema = schema
     
-    
     def __iter__(self):
         start,fields = self.__schema
-        proto = dict((k,dv) for k,(_,dv) in fields.iteritems())
+        proto = dict((k,dv) for k,(_,dv) in fields.items())
         default_field = (lambda x:x, None)
         def record(rec):
             rec_ = proto.copy()
             rec_.update(rec)
-            for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel),rec_.iteritems()):
+            for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
                 if err: 
-                    self._error(err, err.msg, rec, rec.name, fn)
+                    self._error(err.level, err.msg, rec, rec.name, fn)
                     rec_[fn] = None
             return rec_
         
@@ -164,12 +169,12 @@ class parser(sfm.parser):
             valuator = fields.get(m.name, default_field)
             try:
                 field = (m.name, valuator[0](m[0].rstrip() if m else ''))
-            except Exception, err:
+            except Exception as err:
                 self._error(level.Content, err.msg if hasattr(err,'msg') else unicode(err), m)
                 field = (m.name, valuator[1])
             if m.name == start:
                 if isinstance(field[1], ErrorLevel): 
-                    self._error(err, err.msg, m, m.name)
+                    self._error(err.level, err.msg, m, m.name)
                     field = (m.name, '')
                 db.append(sfm.element(field[1], m.pos, content=[field]))
             else:
@@ -180,5 +185,3 @@ class parser(sfm.parser):
         fs = ifilter(lambda v: isinstance(v, sfm.element), es)
         fgs = reduce(accum, fs, [sfm.element('header')])
         return chain((dict(fgs[0]),), imap(record, fgs[1:]))
-
-

@@ -26,11 +26,20 @@ __history__ = '''
 	20101109 - tse - Fix separator space being included when it shouldn't and
 		use the unique field types set object to improve performance.
 '''
-import collections, codecs, functools, operator, re, warnings, os
-from itertools import chain, groupby, ifilter, imap
+import collections, codecs, functools, operator, re, warnings, os, sys
+from itertools import chain, groupby
 from functools import partial
 
+try:
+    from itertools import imap, ifilter
+except ImportError:
+    imap = map
+    ifilter = filter
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 __all__ = ('usfm',                                           # Sub modules
            'position','element','text', 'level', 'parser',   # data types
@@ -38,12 +47,10 @@ __all__ = ('usfm',                                           # Sub modules
            'text_properties','pprint', 'copy')               # functions
 
 
-
 '''Immutable position data that attach to tokens'''
-class position(collections.namedtuple('position', 'line col')):
+class position(collections.namedtuple('position', ['line', 'col'])):
     def __str__(self):
         return 'line {0.line},{0.col}'.format(self)
-
 
 
 class element(list):
@@ -84,7 +91,6 @@ class element(list):
     """
     __slots__ = ('pos', 'name', 'args', 'parent', 'meta', 'annotations')
     
-    
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
         super(element,self).__init__(content)
         self.name = unicode(name) if name else None
@@ -93,7 +99,6 @@ class element(list):
         self.parent = parent
         self.meta = meta
         self.annotations = {}
-    
     
     def __repr__(self):
         args = [repr(self.name)] \
@@ -111,7 +116,6 @@ class element(list):
                                      or self.meta == rhs.meta) \
            and super(element,self).__eq__(rhs)
     
-    
     def __str__(self):
         marker = (u'\\' + ' '.join([self.name] + self.args)) if self.name else ''
         endmarker = self.meta.get('Endmarker',u'')
@@ -128,7 +132,6 @@ class element(list):
         if endmarker and 'implicit-closed' not in self.annotations:
             body += u'\\' + endmarker
         return sep.join([marker, body])
-
 
 
 class text(unicode):
@@ -179,11 +182,8 @@ class text(unicode):
     >>> t, t.pos
     (text(u'a few short words'), position(line=1, col=1))
     '''
-    
-    
     def __new__(cls, content, pos=position(1,1), parent=None):
         return super(text,cls).__new__(cls, content)
-    
     
     def __init__(self, content, pos=position(1,1), parent=None):
         self.pos = pos
@@ -195,7 +195,6 @@ class text(unicode):
         h = next(i)
         return text(u''.join(chain([h],i)), h.pos, h.parent)
     
-    
     def split(self, sep, maxsplit=-1):
         tail = self
         result = []
@@ -203,7 +202,7 @@ class text(unicode):
             e = tail.find(sep)
             if e == -1:
                 result.append(tail)
-                tail=text(u'',position(self.pos.line,self.pos.col+len(tail)), self.parent)
+                tail=text(u'',position(self.pos.line, self.pos.col+len(tail)), self.parent)
                 break
             result.append(tail[:e])
             tail = tail[e+len(sep):]
@@ -211,38 +210,31 @@ class text(unicode):
         if tail: result.append(tail)
         return result
     
-    
     def lstrip(self,*args,**kwds):
         l = len(self)
         s_ = super(text,self).lstrip(*args,**kwds)
         return text(s_, position(self.pos.line, self.pos.col + l-len(s_)), self.parent)
     
-    
     def rstrip(self,*args,**kwds):
-        s_ = super(text,self).rstrip(*args,**kwds)
+        s_ = super(text,self).rstrip(*args, **kwds)
         return text(s_, self.pos, self.parent)
     
-    
     def strip(self,*args,**kwds):
-        return self.lstrip(*args,**kwds).rstrip(*args,**kwds)
-    
+        return self.lstrip(*args, **kwds).rstrip(*args, **kwds)
     
     def __repr__(self):
         return u'text({0!s})'.format(super(text,self).__repr__())
     
-    
     def __add__(self, rhs):
-        return text(super(text,self).__add__(rhs),self.pos,self.parent)
+        return text(super(text,self).__add__(rhs), self.pos,self.parent)
     
-    
-    def __getslice__(self, i, j): return self.__getitem__(slice(i,j))
-    
+    def __getslice__(self, i, j): return self.__getitem__(slice(i, j))
     
     def __getitem__(self,i):
         return text(super(text,self).__getitem__(i), 
-                    position(self.pos.line, self.pos.col 
-                                + (i.start if isinstance(i,slice) else i)),self.parent)
-
+                    position(self.pos.line, self.pos.col \
+                                            + (i.start or 0 if isinstance(i, slice) else i)),
+                    self.parent)
 
 
 class _put_back_iter(collections.Iterator):
@@ -268,29 +260,26 @@ class _put_back_iter(collections.Iterator):
     ...
     StopIteration
     '''
-    
-    
     def __init__(self, iterable):
         self.__itr = iter(iterable)
         self.__pbq = []
-    
-    
+
+    def __next__(self):
+        return self.next()
+
     def next(self):
         if self.__pbq:
             try:    return self.__pbq.pop()
             except: raise StopIteration
         return next(self.__itr)
-    
-    
+
     def put_back(self, value):
         self.__pbq.append(value)
-    
-    
+
     def peek(self):
         if not self.__pbq:
             self.__pbq.append(next(self.__itr))
         return self.__pbq[-1]
-
 
 
 _default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None, 'StyleType':None}
@@ -445,17 +434,15 @@ class parser(collections.Iterable):
         # Compute end marker stylesheet definitions
         em_def = {'TextType':None, 'Endmarker':None}
         self.__sty = stylesheet.copy()
-        self.__sty.update(ifilter(operator.itemgetter(0), 
-                          imap(lambda (k,m): (m['Endmarker'],
-                                              dict(em_def, OccursUnder=set([k]))), 
-                               stylesheet.iteritems())))
+        self.__sty.update((m['Endmarker'], dict(em_def, OccursUnder=set([k]))) 
+                               for k, m in stylesheet.items() if m['Endmarker'])
     
     
     def _error(self, severity, msg, ev, *args, **kwds):
         if severity >= 0  and severity >= self._error_level:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
                                                                                                *args,**kwds).encode('utf_8')
-            raise SyntaxError, msg
+            raise SyntaxError(msg)
         elif severity < 0 and severity < self._error_level: 
             pass
         else:

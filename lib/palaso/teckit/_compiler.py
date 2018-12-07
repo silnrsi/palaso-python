@@ -24,7 +24,7 @@
 
 from ctypes import *
 from ctypes.util import find_library
-from _common import *
+from palaso.teckit._common import *
 import platform
 
 

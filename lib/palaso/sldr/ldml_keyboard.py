@@ -88,7 +88,7 @@ class Keyboard(object):
         '''Process a sequence of keystrokes expressed textually into a list
             of contexts giving the output after each keystroke'''
         self.initstring()
-        keys = re.findall(ur'\[\s*(.*?)\s*\]', txt)
+        keys = re.findall(r'\[\s*(.*?)\s*\]', txt)
         res = []
         for k in keys:
             words = k.split()

@@ -4,7 +4,7 @@ import xml.sax
 
 class TestCollation(unittest.TestCase) :
     def sortldml(self, ldml, infile, alt='', depth=15) :
-        inf = codecs.open(os.path.join('base', infile), "r", "utf-8")
+        inf = codecs.open(os.path.join(os.path.dirname(__file__), 'base', infile), "r", "utf-8")
         indata = inf.readlines()
         inf.close()
         handler = palaso.collation.tailor.LDMLHandler()
@@ -12,7 +12,7 @@ class TestCollation(unittest.TestCase) :
         ldmlparser.setContentHandler(handler)
         ldmlparser.setFeature(xml.sax.handler.feature_namespaces, 1)
         ldmlparser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
-        ldmlparser.parse(os.path.join('data', ldml))
+        ldmlparser.parse(os.path.join(os.path.dirname(__file__), 'data', ldml))
         collation = handler.collations[0]
         for c in handler.collations :
             if c.type == alt :

@@ -3,7 +3,7 @@ from ctypes.util import *
 import sys, os
 
 def getversion(f) :
-    m = re.search(ur'\d+', f)
+    m = re.search(r'\d+', f)
     if m :
         return int(f[m.start():m.end()], 10)
     else :
@@ -135,6 +135,10 @@ class icu(object) :
     UCharIteratorReserved = CFUNCTYPE(c_int32, c_void_p, c_int32)
     UCharIteratorGetState = CFUNCTYPE(c_uint32, c_void_p)
     UCharIteratorSetState = CFUNCTYPE(None, c_void_p, c_uint32, POINTER(c_int))
+
+    # uscript.h
+    UScriptCodeP = POINTER(c_int)
+    UScriptCode = c_int
 
 
     def __load_lib__(self, path=None, version=0) :
@@ -618,6 +622,19 @@ icu.__icufns__ = {
     'ucnvsel_selectForString' : (icu.UEnumerationP, (icu.UConverterSelectorP, icu.UCharP, c_int32, icu.UErrorCodeP)),
     'ucnvsel_selectForUTF8' : (icu.UEnumerationP, (icu.UConverterSelectorP, c_char_p, c_int32, icu.UErrorCodeP)),
 
+    # uscript.h
+    'uscript_getCode' : (c_int32, (c_char_p, icu.UScriptCodeP, c_int32, icu.UErrorCodeP)),
+    'uscript_getName' : (c_char_p, (icu.UScriptCode, )),
+    'uscript_getShortName' : (c_char_p, (icu.UScriptCode, )),
+    'uscript_getScript' : (icu.UScriptCode, (c_int32, icu.UErrorCodeP)),
+    'uscript_hasScript' : (c_bool, (c_int32, icu.UScriptCode)),
+    'uscript_getScriptExtensions' : (c_int32, (c_int32, icu.UScriptCodeP, c_int32, icu.UErrorCodeP)),
+    'uscript_getSampleString' : (c_int32, (icu.UScriptCode, icu.UCharP, c_int32, icu.UErrorCodeP)),
+    'uscript_getUsage' : (c_int32, (icu.UScriptCode, )),
+    'uscript_isRightToLeft' : (c_bool, (icu.UScriptCode, )),
+    'uscript_breaksBetweenLetters': (c_bool, (icu.UScriptCode, )),
+    'uscript_isCased': (c_bool, (icu.UScriptCode, )),
+
     # uset.h
     'uset_openEmpty' : (icu.USetP, (None, )),
     'uset_open' : (icu.USetP, (icu.UChar32, icu.UChar32)),
@@ -719,6 +736,6 @@ if __name__ == '__main__' :
     st = c_char * 20
     s = st()
     i.u_versionToString(v, s)
-    print "Found ICU version: " + s.value
+    print("Found ICU version: " + s.value)
 else:
     sys.modules[__name__] = icu()

@@ -1,8 +1,9 @@
+from __future__ import absolute_import
 import codecs
-import engine
+import palaso.teckit.engine
 import glob
 import os.path
-from _engine import Option
+from palaso.teckit._engine import Option
 
 __all__ = ['engine','compiler']
 
@@ -63,7 +64,7 @@ class Codec(codecs.Codec):
             res = conv.convert(data, finished=final, 
                                options=Option.DontUseReplacementChar)
             return (res,len(res))
-        except UnicodeEncodeError, uerr:
+        except UnicodeEncodeError as uerr:
             rep,rp = codecs.lookup_error(errors)(uerr)
             try:
                 prefix = conv.convert(uerr.object[:uerr.start] + rep, finished=final, 
@@ -72,7 +73,7 @@ class Codec(codecs.Codec):
                 raise UnicodeEncodeError(*(uerr.args[:4] + ('cannot convert replacement %r to target encoding' % rep,)))
             suffix = Codec.convert(conv, data[rp:], final, errors)
             return (prefix+suffix[0],rp+suffix[1])
-        except UnicodeDecodeError, uerr:
+        except UnicodeDecodeError as uerr:
             rep,rp = codecs.lookup_error(errors)(uerr)
             prefix = conv.convert(uerr.object[:uerr.start], finished=final, 
                                   options=Option.DontUseReplacementChar)

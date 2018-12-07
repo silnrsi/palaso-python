@@ -1,13 +1,13 @@
-"""Module to interact with PyICU"""
+"""Module to interact with palaso.icu"""
 
-import PyICU, operator, struct, re, palaso.reggen, palaso.contexts
+import palaso.icu, operator, struct, re, palaso.reggen, palaso.contexts
 
 def sorted(tailor, strs, level=15, preproc=(), mode = -1) :
     """sorts a list of strings against the given tailoring and level, returning the resultant sorted list.
 Level = 0 - PRIMARY, 1 - SECONDARY, 2 - TERTIARY, 3 - QUARTENARY, 15 - IDENTICAL. Defaults to IDENTICAL
 """
     procreg = [(re.compile(p[0]), p[1]) for p in preproc]
-    collator = PyICU.RuleBasedCollator(tailor, level, mode)
+    collator = palaso.icu.RuleBasedCollator(tailor, level, mode)
     results = [(_sortkey(collator, procreg, s), s) for s in strs]
     results.sort(cmp = lambda a, b: a.compareTo(b), key=operator.itemgetter(0))
     return [s[1] for s in results]

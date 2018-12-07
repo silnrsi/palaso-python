@@ -1,13 +1,24 @@
-from contextlib import contextmanager, nested
+from contextlib import contextmanager
 import sys, codecs
 import errno
 import sre_parse
 
-def defaultapp() :
-    """Sets up common default contexts used at the application level. Includes:
-        * console
-        * relaxedsubs"""
-    return nested(utf8out(), console(), relaxedsubs())
+try:
+    from contextlib import ExitStack
+except ImportError:
+    from contextlib import nested
+    def defaultapp():
+        return nested(utf8out(), console(), relaxedsubs())
+else:
+    def defaultapp() :
+        """Sets up common default contexts used at the application level. Includes:
+            * console
+            * relaxedsubs"""
+        with ExitStack() as stack:
+            stack.enter_context(utf8out())
+            stack.enter_context(console())
+            stack.enter_context(relaxedsubs())
+            yield
 
 @contextmanager
 def console(ctrlc=sys.exit) :

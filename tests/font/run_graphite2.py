@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 from palaso.font.graphite import Face, Font, Segment
+import os
 
-face = Face("Padauk.ttf")
+face = Face(os.path.join(os.path.dirname(__file__), "Padauk.ttf"))
 feats = face.get_featureval(0)
 for r in face.featureRefs :
     name = r.name(0x0409)

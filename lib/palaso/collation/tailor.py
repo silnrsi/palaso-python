@@ -146,7 +146,7 @@ class Collation :
                 # add map for &output=input
                 self.addIdentity(s, b)
                 if debug :
-                    print ("%s -> %s" % (b, s)).encode("utf-8")
+                    print("%s -> %s" % (b, s)).encode("utf-8")
 
         # go through the rules collecting sequences which are collation elements
         # convert &abc < x -> &a < x/bc type thing everywhere
@@ -305,7 +305,7 @@ def longestReplace(s, d) :
 
 if __name__ == "__main__" :
     filename = sys.argv[1]
-    print filename
+    print(filename)
     handler = LDMLHandler()
     parser = xml.sax.make_parser()
     parser.setContentHandler(handler)
@@ -314,10 +314,10 @@ if __name__ == "__main__" :
     parser.parse(filename)
     outsax = XMLGenerator()
     for c in handler.collations :
-        print "---------- %s ----------" % (c.type)
+        print("---------- %s ----------" % (c.type))
         if len(c.reorders) > 0 :
             c.flattenOrders()
-        print c.asICU().encode('utf-8')
+        print(c.asICU().encode('utf-8'))
 
     handler.asLDML(outsax)
 

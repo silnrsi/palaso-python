@@ -25,7 +25,7 @@
 
 from ctypes import *
 from ctypes.util import find_library
-from _common import *
+from palaso.teckit._common import *
 from itertools import chain, count
 import platform, warnings
 
@@ -67,7 +67,7 @@ Form = ENUM(Form,
 #
 #	end of text value for TECkit_DataSource functions to return
 #
-EndOfText = 0xffffffffL
+EndOfText = 0xffffffff
 
 
 # ctypes errcheck function ensure nothing is wrong with the ConvertXXX of Flush calls.

@@ -1,6 +1,6 @@
 import unittest, os.path, glob
 import doctest 
-from palaso.teckit import engine
+from palaso.teckit import engine
 
 #class TestConverter:
 #    def setUp(self):

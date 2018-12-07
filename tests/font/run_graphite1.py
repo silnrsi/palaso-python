@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 from palaso.font.graphite import Face, Font, Segment
-import sys
+import sys, os
 
-face = Face("Padauk.ttf")
+face = Face(os.path.join(os.path.dirname(__file__), "Padauk-Regular.ttf"))
 font = Font(face, 12 * 96 / 72.0)
 seg = Segment(font, face, 0, sys.argv[1], 0)
 for s in seg.slots :

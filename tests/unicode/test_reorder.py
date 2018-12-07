@@ -6,22 +6,22 @@ from palaso.unicode.reorder import ReOrder, CharCode
 class TestLana(unittest.TestCase):
 
     def setUp(self):
-        subj = ur"\u1A60[\u1A20-\u1A49]"
+        subj = u"\u1A60[\u1A20-\u1A49]"
         self.reorder = ReOrder([
-            (subj, CharCode(10, 0, 0, False), ur"\u1A49[\u1A62\u1A65-\u1A7C]*"),
-            (ur"[\u1A55\u1A56]", CharCode(20, 0, 0, False)),
-            (ur"[\u1A6E\u1A6F\u1A70\u1A71\u1A72]", CharCode(30, 0, 0, False)),
-            (ur"[\u1A69\u1A6A\u1A6C]", CharCode(35, 0, 0, False)),
-            (ur"[\u1A62\u1A65\u1A66\u1A67\u1A68\u1A6B\u1A73]", CharCode(40, 0, 0, False)),
-            (ur"[\u1A75\u1A76\u1A77\u1A78\u1A79]", CharCode(50, 0, 0, False)),
+            (subj, CharCode(10, 0, 0, False), u"\u1A49[\u1A62\u1A65-\u1A7C]*"),
+            (u"[\u1A55\u1A56]", CharCode(20, 0, 0, False)),
+            (u"[\u1A6E\u1A6F\u1A70\u1A71\u1A72]", CharCode(30, 0, 0, False)),
+            (u"[\u1A69\u1A6A\u1A6C]", CharCode(35, 0, 0, False)),
+            (u"[\u1A62\u1A65\u1A66\u1A67\u1A68\u1A6B\u1A73]", CharCode(40, 0, 0, False)),
+            (u"[\u1A75\u1A76\u1A77\u1A78\u1A79]", CharCode(50, 0, 0, False)),
             (subj, CharCode(80, 0, 0, False)),
-            (ur"[\u1A5C\u1A5D\u1A5E]", CharCode(80, 0, 0, False)),
-            (ur"[\u1A63\u1A64]\u1A74?", CharCode(60, 0, 0, False)),
-            (ur"\u1A61", CharCode(65, 0, 0, False)),
-            (ur"[\u1A6D\u1A57\u1A58]", CharCode(85, 0, 0, False)),
-            (ur"[\u1A7A\u1A7C]", CharCode(90, 0, 0, False)),
-            (ur"\u1A7F", CharCode(95, 0, 0, False)),
-            (ur"\u1A7B", CharCode(100, 0, 0, False))])
+            (u"[\u1A5C\u1A5D\u1A5E]", CharCode(80, 0, 0, False)),
+            (u"[\u1A63\u1A64]\u1A74?", CharCode(60, 0, 0, False)),
+            (u"\u1A61", CharCode(65, 0, 0, False)),
+            (u"[\u1A6D\u1A57\u1A58]", CharCode(85, 0, 0, False)),
+            (u"[\u1A7A\u1A7C]", CharCode(90, 0, 0, False)),
+            (u"\u1A7F", CharCode(95, 0, 0, False)),
+            (u"\u1A7B", CharCode(100, 0, 0, False))])
 
 def create_tests():
     fns = []

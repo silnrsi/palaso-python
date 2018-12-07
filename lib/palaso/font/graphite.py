@@ -21,6 +21,7 @@ import ctypes
 import ctypes.util
 import errno
 import os
+import sys
 from ctypes import (byref,
                     c_char, c_char_p,
                     c_double, c_float,
@@ -31,6 +32,8 @@ from ctypes import (byref,
                     c_void_p,
                     CFUNCTYPE, POINTER, Structure)
 
+if sys.version_info.major < 3:
+    FileNotFoundError = IOError
 
 libpath = os.environ.get('PYGRAPHITE2_LIBRARY_PATH',
                          ctypes.util.find_library("graphite2"))

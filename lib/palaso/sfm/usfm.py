@@ -21,13 +21,18 @@ __history__ = '''
 		changes.
 '''
 import bz2, contextlib, operator, os, re, site
-import cPickle as pickle
+import pickle
 import palaso.sfm.style as style
 import palaso.sfm as sfm
 from palaso.sfm import level
-from itertools import chain, ifilter, imap
-from functools import partial
+from itertools import chain
+from functools import partial, reduce
 
+try:
+    from itertools import ifilter, imap
+except ImportError:
+    ifilter = filter
+    imap = map
 
 
 _PALASO_DATA = os.path.join(

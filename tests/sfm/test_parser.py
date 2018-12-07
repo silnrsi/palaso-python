@@ -9,6 +9,11 @@ import codecs, itertools, operator, warnings
 import palaso.sfm as sfm
 from palaso.sfm import usfm, text, handler
 
+try:
+    from itertools import imap
+except ImportError:
+    imap = map
+
 def elem(name, *content):
     name, args = (name[0],list(name[1:])) if type(name) == tuple else (name, [])
     e = sfm.element(name, args=args, meta=usfm.default_stylesheet.get(name,{}))
@@ -27,7 +32,7 @@ def flatten(doc):
         yield e
         if isinstance(e, sfm.element):
             for c in flatten(e): yield c
-    return itertools.chain.from_iterable(itertools.imap(_g, doc))
+    return itertools.chain.from_iterable(imap(_g, doc))
 
 def _test_round_trip_parse(self, source, parser, *args, **kwds):
 #    src_name = getattr(source,'name',None)

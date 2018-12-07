@@ -10,12 +10,12 @@
 #
 from __future__ import with_statement
 
-import _engine
+import palaso.teckit._engine
 import codecs, sys
 
-from _engine import getVersion, memoize
-from _engine import Option
-from _engine import \
+from palaso.teckit._engine import getVersion, memoize
+from palaso.teckit._engine import Option
+from palaso.teckit._engine import \
     CompilationError, ConverterBusy, MappingVersionError, \
     FullBuffer, EmptyBuffer, UnmappedChar, flags, Form
 
@@ -87,7 +87,7 @@ class Converter(object):
         source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
         target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
         self._converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self._buffer    = _engine.create_string_buffer(80*4L)
+        self._buffer    = _engine.create_string_buffer(80*4)
     
     
     def __del__(self):
@@ -130,7 +130,7 @@ class Converter(object):
         _engine.resetConverter(self._converter)
     
     
-    def _handle_unmapped_char(self, input, context, (cons, outs, lhc)):
+    def _handle_unmapped_char(self, input, context, cons, outs, lhc):
         # This looks like a nasty hack because it is. Sorry
         _engine.resetConverter(self._converter)
         name = (self.lhsName + '<->' + self.rhsName).lower()
@@ -167,11 +167,11 @@ class Converter(object):
                                                          data, len(data), 
                                                          buf, len(buf), 
                                                          options)
-            except FullBuffer, (cons,outs,lhc): pass
-            except EmptyBuffer, (cons,outs,lhc):
+            except FullBuffer as e: pass
+            except EmptyBuffer as e:
                 if finished: 
                     raise self._unicode_error('expected more data.')
-            except UnmappedChar, err:
+            except UnmappedChar as err:
                 self._handle_unmapped_char(input, 'convert', err)
             
             res += self._coerce_to_target(str(buf[:outs]))
@@ -192,9 +192,9 @@ class Converter(object):
                                             buf, len(buf), 
                                             options)
                 return res + self._coerce_to_target(str(buf[:outs]))
-            except FullBuffer, outs:
+            except FullBuffer as outs:
                 res += self._coerce_to_target(str(buf[:outs]))
-            except UnmappedChar, err:
+            except UnmappedChar as err:
                 self._handle_unmapped_char(input, 'flush', err)
 
 

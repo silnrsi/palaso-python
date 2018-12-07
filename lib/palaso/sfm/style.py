@@ -14,10 +14,13 @@ __history__ = '''
 import re
 import palaso.sfm.records as records
 from palaso.sfm.records import sequence,flag,unique,level
-from records import StructureError, UnrecoverableError 
-from itertools import imap
+from palaso.sfm.records import StructureError, UnrecoverableError 
 from functools import partial
 
+try:
+    from itertools import imap
+except ImportError:
+    imap = map
 
 
 _fields = {'Marker'         : (str,             UnrecoverableError('Start of record marker: {0} missing')),
@@ -44,11 +47,7 @@ _fields = {'Marker'         : (str,             UnrecoverableError('Start of rec
            'Color'          : (int,             0)
            }
 
-
-
 _comment = re.compile(r'\s*#.*$')
-
-
 
 def _munge_record(r):
     tag = r.pop('Marker').lstrip()
@@ -64,7 +63,7 @@ def parse(source, error_level=level.Content):
     >>> from pprint import pprint
     >>> pprint(parse("""
     ... \Marker toc1
-    ... \Name toc1 - File - Long Table of Contents Text
+    ... \\Name toc1 - File - Long Table of Contents Text
     ... \Description Long table of contents text
     ... \OccursUnder h h1 h2 h3 
     ... \Rank 1
@@ -98,7 +97,7 @@ def parse(source, error_level=level.Content):
               'Underline': False}}
     >>> pprint(parse("""
     ... \Marker dummy1
-    ... \Name dummy1 - File - dummy marker definition
+    ... \\Name dummy1 - File - dummy marker definition
     ... \Description A marker used for demos
     ... \OccursUnder id NEST
     ... \TextType Other
@@ -127,7 +126,7 @@ def parse(source, error_level=level.Content):
                 'Underline': False}}
     >>> pprint(parse("""
     ... \Marker error
-    ... \Name error - File - cause a marker definition parse error
+    ... \\Name error - File - cause a marker definition parse error
     ... \Description A marker to demostrate error reporting
     ... \Bold
     ... \Color 12345""".splitlines(True)))

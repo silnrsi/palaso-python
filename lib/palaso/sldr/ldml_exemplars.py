@@ -36,10 +36,10 @@ from icu import Normalizer2, UNormalizationMode2, UnicodeString
 from collections import Counter
 
 try:
-    import sldr.UnicodeSets
+    import palaso.sldr.UnicodeSets
 except ImportError:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'sldr', 'python', 'lib')))
-    import sldr.UnicodeSets
+    import palaso.sldr.UnicodeSets
 
 
 def main():
