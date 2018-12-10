@@ -77,7 +77,7 @@ fn('hb_script_to_iso15924_tag', c_uint32, c_int)
 fn('hb_script_get_horizontal_direction', c_int, c_int)
 try :
     fn('hb_version_string', c_char_p)
-    version_string = hbng.hb_version_string()
+    version_string = hbng.hb_version_string().decode("utf_8")
 except :
     version_string = ""    
 
@@ -255,12 +255,12 @@ class Buffer(object) :
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
         if script and script[3]=='2' :
-            tag = hbng.hb_tag_from_string(script)
+            tag = hbng.hb_tag_from_string(script.encode("utf_8"))
             script = hbng.hb_ot_tag_to_script(tag) or -1
         else :
-            script = hbng.hb_script_from_string(script) or -1
+            script = hbng.hb_script_from_string(script.encode("utf_8")) or -1
         thislang = lang or 'dflt'
-        lang = hbng.hb_language_from_string(thislang, len(thislang))
+        lang = hbng.hb_language_from_string(thislang.encode("utf_8"), len(thislang))
         if 'rtl' in kwds :
             hbng.hb_buffer_set_direction(self.buffer, 5)
         else :
@@ -296,7 +296,7 @@ class Buffer(object) :
             lenfeats = 0
         if shapers :
             shaperstype = c_char_p * (len(shapers) + 1)
-            parms = shapers[:] + [None]
+            parms = [x.encode('utf_8') for x in shapers] + [None]
             shapersinfo = shaperstype(*parms)
         else :
             shapersinfo = None
@@ -308,7 +308,7 @@ class Buffer(object) :
         infos = hbng.hb_buffer_get_glyph_infos(self.buffer, byref(length))
         poses = hbng.hb_buffer_get_glyph_positions(self.buffer, byref(length))
         res = []
-        for i in xrange(length.value) :
+        for i in range(length.value) :
             res.append(Glyph(infos[i], poses[i]))
         return res
 

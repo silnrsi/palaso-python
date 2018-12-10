@@ -2,10 +2,10 @@
 
 import codecs
 from palaso.font.shape import make_shaper
-from optparse import OptionParser
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
-import sys, os, shutil, re, json
+import sys, os, shutil, re, argparse
+import json
 import json.encoder
 from xml.etree.ElementTree import parse
 
@@ -85,8 +85,8 @@ class HTMLLog(object) :
 """)
         _strs = []
         for i in range(len(fpaths)) :
-            _strs.append(map(lambda x:x.format(fpaths[i], i+1, args.label[i], inputs[i]), temps))
-        strs = map(lambda x:"".join(x), zip(*_strs))
+            _strs.append([x.format(fpaths[i], i+1, args.label[i], inputs[i]) for x in temps])
+        strs = ["".join(x) for x in zip(*_strs)]
         
         self.out.write("""<html><head>
 <meta charset="UTF8"/>
@@ -142,20 +142,20 @@ class HTMLLog(object) :
             for t in (l[i], r[i]) :
                 u.append("<span class='{}'>{}</span>{}".format(c, ftostr(t), s))
             res.append(u)
-        return map(lambda x: "".join(x), zip(*res))
+        return ["".join(x) for x in zip(*res)]
 
     def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
-        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(map(lambda x:x[0], bases)), label))
+        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(x[0] for x in bases), label))
         if len(gglyphs) < 2 :
-            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join(map(lambda x:"{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])), gglyphs[0]))))
+            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
             self.out.write("    </tr>\n")
             return
 
         def getname(t) :
             return str(t[0])
         for l in range(1, len(gglyphs)) :
-            s = SequenceMatcher(None, map(getname, gglyphs[0]), map(getname, gglyphs[l]))
+            s = SequenceMatcher(None, [getname(x) for x in gglyphs[0]], [getname(x) for x in gglyphs[l]])
             info = []
             lprev = (0, 0, 0)
             rprev = (0, 0, 0)
@@ -278,31 +278,29 @@ texttypes = {
     'xml' : FtmlReader
 }
 
-parser = OptionParser(usage = '''%prog [options] infont1 infont2
+parser = argparse.ArgumentParser(usage = '''%prog [options] infont1 infont2
 
 If the first font is above the output file in the filesystem hierarchy, it may not load.
 On firefox, ensure that the configuration option security.fileuri.strict_origin_policy
 is set to false to allow locally loaded html files to access fonts anywhere on the
 local filesystem. Alternatively use --copy to copy the font and reference that.''')
-parser.add_option("-t","--text",help="text file to test each line from")
-parser.add_option("-o","--output",help="file to log results to")
-parser.add_option("-f","--feat",action="append",help="id=value pairs, may be repeated")
-parser.add_option("-e","--engine",action="append",help="renderer(s) to use (ot,*gr,hb,icu). Repeatable")
-parser.add_option("-l","--lang",help="language to tag text with")
-parser.add_option("-s","--script",action="append",help="script of text")
-parser.add_option("-r","--rtl",action="store_true",help="right to left")
-parser.add_option("-k","--keep",action="store_true",help="keep going, don't return error count")
-parser.add_option("-p","--split",action="store_true",help="Split on spaces")
-parser.add_option("-L","--label",action="append",help="report font labels")
-parser.add_option("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
-parser.add_option("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
-parser.add_option("--outputtype",help="Type of output file [*html, json]")
-parser.add_option("--texttype",help="Type of text input file else taken from text file extension")
-(opts, args) = parser.parse_args()
+parser.add_argument("infonts",nargs="+",help="Input fonts")
+parser.add_argument("-t","--text",help="text file to test each line from")
+parser.add_argument("-o","--output",help="file to log results to")
+parser.add_argument("-f","--feat",action="append",help="id=value pairs, may be repeated")
+parser.add_argument("-e","--engine",action="append",help="renderer(s) to use (ot,*gr,hb,icu). Repeatable")
+parser.add_argument("-l","--lang",help="language to tag text with")
+parser.add_argument("-s","--script",action="append",help="script of text")
+parser.add_argument("-r","--rtl",action="store_true",help="right to left")
+parser.add_argument("-k","--keep",action="store_true",help="keep going, don't return error count")
+parser.add_argument("-p","--split",action="store_true",help="Split on spaces")
+parser.add_argument("-L","--label",action="append",help="report font labels")
+parser.add_argument("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
+parser.add_argument("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
+parser.add_argument("--outputtype",help="Type of output file [*html, json]")
+parser.add_argument("--texttype",help="Type of text input file else taken from text file extension")
+opts = parser.parse_args()
 
-if not len(args) :
-    parser.print_help()
-    sys.exit(1)
 if not opts.lang : opts.lang = 0
 if opts.script is None : opts.script = []
 if not len(opts.script) : opts.script.append(0)
@@ -314,7 +312,7 @@ else :
 #    outfile = codecs.EncodedFile(sys.stdout, "unicode_internal", file_encoding="utf_8")
     outfile = codecs.getwriter("utf_8")(sys.stdout)
 
-if not opts.label : opts.label = map(lambda x: "Input font{}".format(x+1), range(len(args)))
+if not opts.label : opts.label = ["Input font{}".format(x+1) for x in range(len(opts.infonts))]
 if not opts.outputtype : opts.outputtype = 'html'
 if not opts.texttype :
     (_, ext) = os.path.splitext(opts.text) if opts.text is not None else ('', '.txt')
@@ -330,22 +328,22 @@ if opts.feat :
 
 origargs = []
 if opts.copy and opts.output :
-    for i in range(len(args)) :
-        origargs.append(args[i])
-        args[i] = docopy(args[i], opts, i)
+    for i in range(len(opts.infonts)) :
+        origargs.append(opts.infonts[i])
+        opts.infonts[i] = docopy(opts.infonts[i], opts, i)
 else :
-    origargs = args
-fpaths = map(lambda x:os.path.relpath(x, start=(os.path.dirname(opts.output) if opts.output else '.')), args)
+    origargs = opts.infonts
+fpaths = [os.path.relpath(x, start=(os.path.dirname(opts.output) if opts.output else '.')) for x in opts.infonts]
 
 fonts = []
 tts = []
-for i in range(len(args)) :
+for i in range(len(opts.infonts)) :
     while len(opts.engine) <= i :
         opts.engine.append(opts.engine[-1])
     while len(opts.script) <= i :
         opts.script.append(opts.script[-1])
-    fonts.append(make_shaper(opts.engine[i], args[i], 0, opts.rtl, feats, opts.script[i], opts.lang))
-    tts.append(TTFont(args[i]))
+    fonts.append(make_shaper(opts.engine[i], opts.infonts[i], 0, opts.rtl, feats, opts.script[i], opts.lang))
+    tts.append(TTFont(opts.infonts[i].encode('utf_8')))
 reader = texttypes[opts.texttype](opts.text, spliton)
 
 count = 0
@@ -357,17 +355,20 @@ for label, words in reader :
     wcount = 0
     for s in words :
         wcount += 1
-        gls = [map(lambda x: name(tts[0], x), fonts[0].glyphs(s, includewidth = True))]
-        if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
+        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth = True)]]
+        if gls[-1][-1][0] is None:
+            gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
         for i in range(1, len(fonts)) :
-            gls.append(map(lambda x: name(tts[i], x), fonts[i].glyphs(s, includewidth = True)))
-            if gls[-1][-1][0] is None : gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
-            if gls[-1] != gls[0] : logme = True
+            gls.append([name(tts[i], x) for x in fonts[i].glyphs(s, includewidth = True)])
+            if gls[-1][-1][0] is None:
+                gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
+            if gls[-1] != gls[0]:
+                logme = True
         if logme :
             if log is None :
-                log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, args)
-            bases = map(lambda x: (cmaplookup(tts[0], x), (0,0)), s)
+                log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts)
+            bases = [(cmaplookup(tts[0], x), (0,0)) for x in s]
             log.logentry(label, count, wcount, s, gls, bases)
             errors += 1
 if log is not None : log.logend()

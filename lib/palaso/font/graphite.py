@@ -365,13 +365,14 @@ class Slot(object):
 
 
 class Segment(object):
+    seg = None
     def __init__(self, font, face,
                  scriptid, string, rtl,
                  length=None, feats=None):
         if not length:
             length = len(string)
-        if isinstance(scriptid, bytes):
-            scriptid = gr2.gr_str_to_tag(scriptid)
+        if isinstance(scriptid, (str, bytes)):
+            scriptid = gr2.gr_str_to_tag(scriptid.encode("utf_8"))
         self.seg = gr2.gr_make_seg(font and font.font,
                                    face.face,
                                    scriptid,
@@ -380,7 +381,8 @@ class Segment(object):
                                    string.encode('utf_8'), length, rtl)
 
     def __del__(self, __gr2=gr2):
-        __gr2.gr_seg_destroy(self.seg)
+        if self.seg is not None:
+            __gr2.gr_seg_destroy(self.seg)
 
     @property
     def advance(self):

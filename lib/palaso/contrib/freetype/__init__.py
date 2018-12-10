@@ -1040,7 +1040,7 @@ class Face( object ):
         face = FT_Face( )
         self._FT_Face = None
         #error = FT_New_Face( library, filename, 0, byref(face) )
-        u_filename = c_char_p(filename)
+        u_filename = c_char_p(filename.encode("utf_8"))
         error = FT_New_Face( library, u_filename, index, byref(face) )
         if error: raise FT_Exception( error )
         self._filename = filename
