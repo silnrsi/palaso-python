@@ -10,7 +10,7 @@
 #
 from __future__ import with_statement
 
-import palaso.teckit._engine
+import palaso.teckit._engine as _engine
 import codecs, sys
 
 from palaso.teckit._engine import getVersion, memoize
@@ -30,7 +30,7 @@ class Mapping(str):
 
     @memoize   
     def __getattr__(self, name):
-        from _engine import getMappingName
+        from palaso.teckit._engine import getMappingName
         try:
             nid = getattr(_engine.NameID,name)
             nlen = getMappingName(self, len(self), nid)

@@ -6,7 +6,7 @@ from palaso.teckit.compiler import compile, translate, CompilationError
 from palaso.teckit.engine   import Converter, Form, Mapping
 
 def resource(name):
-    return os.path.join('data', name)
+    return os.path.join(os.path.dirname(__file__), 'data', name)
 
 def open_resource(name):
     with open(resource(name),'rb') as f:
