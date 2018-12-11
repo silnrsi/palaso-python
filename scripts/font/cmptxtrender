@@ -278,9 +278,8 @@ texttypes = {
     'xml' : FtmlReader
 }
 
-parser = argparse.ArgumentParser(usage = '''%prog [options] infont1 infont2
-
-If the first font is above the output file in the filesystem hierarchy, it may not load.
+parser = argparse.ArgumentParser(description='''If the first font is above the output
+file in the filesystem hierarchy, it may not load.
 On firefox, ensure that the configuration option security.fileuri.strict_origin_policy
 is set to false to allow locally loaded html files to access fonts anywhere on the
 local filesystem. Alternatively use --copy to copy the font and reference that.''')
