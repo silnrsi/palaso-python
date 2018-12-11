@@ -50,7 +50,7 @@ def translate(txt):
     
     if compile_errors: raise CompilationError(compile_errors)
         
-    xml_doc = str(tbl[:tbl_len])
+    xml_doc = bytes(tbl[:tbl_len])
     _tc.disposeCompiled(tbl)
     return xml_doc
 

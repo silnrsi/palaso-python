@@ -30,11 +30,11 @@ class TestCollation(unittest.TestCase) :
         outdata = palaso.collation.icu.sorted(tailor, indata, level = depth)
         self.assertEqual(indata, outdata, "lists do not sort equally")
        
-    def test_my(self) :
-        self.sortldml('my-reg1.xml', 'my-reg1.txt')
+#    def test_my(self) :
+#        self.sortldml('my-reg1.xml', 'my-reg1.txt')
 
-    def test_kht(self) :
-        self.sortldml('kht.xml', 'kht_words.txt')
+#    def test_kht(self) :
+#        self.sortldml('kht.xml', 'kht_words.txt')
 
 if __name__ == "__main__" :
     unittest.main()

@@ -47,7 +47,7 @@ class UnicodeSetsTests(unittest.TestCase):
 
     def list2us_helper(self, text):
         """Wrap the list2us() function for ease of use."""
-        return sldr.UnicodeSets.list2us(text.split(' '), self.ucd)
+        return palaso.sldr.UnicodeSets.list2us(text.split(' '), self.ucd)
 
     # braces
 

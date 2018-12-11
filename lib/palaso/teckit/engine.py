@@ -8,9 +8,9 @@
 # History:
 #   2009-06-10  tse     Initial version using the ctypes FFI
 #
-from __future__ import with_statement
+from __future__ import with_statement, absolute_import
 
-import palaso.teckit._engine as _engine
+from palaso.teckit import _engine
 import codecs, sys
 
 from palaso.teckit._engine import getVersion, memoize
@@ -20,7 +20,7 @@ from palaso.teckit._engine import \
     FullBuffer, EmptyBuffer, UnmappedChar, flags, Form
 
 
-class Mapping(str):
+class Mapping(bytes):
     def __new__(cls, path):
         with open(path, 'rb') as mf:
             return super(Mapping,cls).__new__(cls,mf.read())

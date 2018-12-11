@@ -441,13 +441,13 @@ class parser(collections.Iterable):
     def _error(self, severity, msg, ev, *args, **kwds):
         if severity >= 0  and severity >= self._error_level:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
-                                                                                               *args,**kwds).encode('utf_8')
+                                                                                               *args,**kwds)
             raise SyntaxError(msg)
         elif severity < 0 and severity < self._error_level: 
             pass
         else:
             msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
-                                                                                               *args,**kwds).encode('utf_8')
+                                                                                               *args,**kwds)
             warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
     

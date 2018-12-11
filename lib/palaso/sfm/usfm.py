@@ -34,6 +34,10 @@ except ImportError:
     ifilter = filter
     imap = map
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 _PALASO_DATA = os.path.join(
         os.path.expanduser(os.path.dirname(os.path.normpath(site.USER_SITE))),
