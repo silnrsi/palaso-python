@@ -256,7 +256,7 @@ class ExemplarsTests(unittest.TestCase):
 
     def test_japanese_katakana(self):
         """Characters with Word_Break property Katakana are letters."""
-        self.exemplars.process(u'\u307b\u309b')
+        self.exemplars.process(u'\u307b\u307b \u307b\u309b')
         self.exemplars.analyze()
         self.assertEqual(u'\u307b \u309b', self.exemplars.main)
 
@@ -483,7 +483,7 @@ class ExemplarsTests(unittest.TestCase):
 
         The character U+1CD1 has a script value of Inherited, but it is a mark, so allow it.
         """
-        self.exemplars.process(u'\u0915\u1cd1')
+        self.exemplars.process(u'\u0915 \u0915\u1cd1')
         self.exemplars.analyze()
         self.assertEqual(u'\u0915 \u1cd1', self.exemplars.main)
 
@@ -554,7 +554,8 @@ class ExemplarsTests(unittest.TestCase):
                                u'e\u0301 e\u0300 e\u0304 '
                                u'i\u0301 i\u0300 i\u0304 '
                                u'o\u0301 o\u0300 o\u0304 '
-                               u'u\u0301 u\u0300 u\u0304 ')
+                               u'u\u0301 u\u0300 u\u0304 '
+                               u'aeiou')
         self.exemplars.analyze()
         self.assertEqual(u'a e i o u \u0300 \u0301 \u0304', self.exemplars.main)
 
@@ -590,9 +591,9 @@ class ExemplarsTests(unittest.TestCase):
 
     def test_oriya_zwnj(self):
         """ZWNJ breaks a cluster, but is part of the cluster."""
-        self.exemplars.process(u'\u0b15\u0b4d\u200c\u0b24')
+        self.exemplars.process(u'\u0b15\u0b4d\u200c\u0b24 \u0b24')
         self.exemplars.analyze()
-        self.assertEqual(u'\u0b15\u0b4d\u200c \u0b24', self.exemplars.graphemes)
+        self.assertEqual(u'\u0b24 \u0b15\u0b4d\u200c', self.exemplars.graphemes)
 
     def test_oriya_zwj(self):
         """ZWJ does not break a cluster.
@@ -600,9 +601,9 @@ class ExemplarsTests(unittest.TestCase):
         Ideally, only one cluster would result,
         but we do not look at the whole Indic syllable structure.
         """
-        self.exemplars.process(u'\u0b15\u200d\u0b4d\u0b24')
+        self.exemplars.process(u'\u0b15\u200d\u0b4d\u0b24 \u0b24')
         self.exemplars.analyze()
-        self.assertEqual(u'\u0b15\u200d\u0b4d \u0b24', self.exemplars.graphemes)
+        self.assertEqual(u'\u0b24 \u0b15\u200d\u0b4d', self.exemplars.graphemes)
 
     def test_myanmar_vs(self):
         """Variation Selectors do not break a cluster."""
