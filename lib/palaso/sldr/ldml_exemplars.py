@@ -379,7 +379,7 @@ class Exemplars(object):
         if self.unittest:
             list_exemplars = ldml_exemplars.split()
         else:
-            list_exemplars = sldr.UnicodeSets.us2list(ldml_exemplars)
+            list_exemplars = palaso.sldr.UnicodeSets.us2list(ldml_exemplars)
         exemplars = set()
         for exemplar in list_exemplars:
             exemplar = self.ucd.normalize('NFD', exemplar)
@@ -414,7 +414,7 @@ class Exemplars(object):
         if self.unittest:
             return ' '.join(list_nfc_exemplars_main_script)
         else:
-            return sldr.UnicodeSets.list2us(list_nfc_exemplars_main_script, self.ucd)
+            return palaso.sldr.UnicodeSets.list2us(list_nfc_exemplars_main_script, self.ucd)
 
     def analyze(self):
         """Analyze the found exemplars and classify them."""
