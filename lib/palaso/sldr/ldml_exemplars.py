@@ -293,6 +293,7 @@ class Exemplars(object):
         self._digits = set()
         self._graphemes = list()
         self._frequency = list()
+        self._raw_clusters = Counter()
 
         # Internal parameters.
         self.clusters = Counter()
@@ -365,6 +366,10 @@ class Exemplars(object):
             script_name = Script.getShortName(script)
             return script_name
 
+    def _get_raw_clusters(self):
+        """Return the clusters and their frequency of occurrence before analysis."""
+        return self._raw_clusters
+
     main = property(_get_main, _set_main)
     auxiliary = property(_get_auxiliary, _set_auxiliary)
     index = property(_get_index, _set_index)
@@ -373,6 +378,7 @@ class Exemplars(object):
     graphemes = property(_get_graphemes)
     frequency = property(_get_frequency)
     script = property(_get_script)
+    raw_clusters = property(_get_raw_clusters)
 
     def ldml_read(self, ldml_exemplars):
         """Read exemplars from a string from a LDML formatted file."""
@@ -458,6 +464,7 @@ class Exemplars(object):
         for exemplar, count in self.clusters.most_common():
             self._graphemes.append(exemplar.text)
             self._frequency.append(u'{}:{}'.format(exemplar.text, count))
+        self._raw_clusters = Counter(self.clusters)
 
     def count_marks(self):
         """Count how many different bases a mark occurs on."""
