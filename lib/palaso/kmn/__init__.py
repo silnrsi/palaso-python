@@ -418,7 +418,7 @@ def char_keysym(char) :
     return "[" + res + "]"
         
 def chars_scancodes(syms) :
-    return itertools.chain(*(keysym_scancodes(char_keysym(s)) for s in re.split(ur'(\\.|\[[^\]]*\]|.)', syms)[1::2]))
+    return itertools.chain(*(keysym_scancodes(char_keysym(s)) for s in re.split(r'(\\.|\[[^\]]*\]|.)', syms)[1::2]))
 
 def keysym_scancodes(sym) :
     resdown = []
