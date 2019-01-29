@@ -10,6 +10,7 @@ try:
     ext =[ Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"]) ] 
     cmd = {'build_ext': build_ext}
 except ImportError:
+    print("No Pyrex!")
     ext = []
     cmd = {}
 

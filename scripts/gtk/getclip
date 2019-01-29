@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 import gtk
 import pprint
@@ -11,12 +11,12 @@ if (len(sys.argv) > 1 and sys.argv[1] == "-p") :
     pprint.pprint(text)
 elif (len(sys.argv) > 1 and sys.argv[1] == "-s") :
     for s in text :
-        print "%04X" % (ord(s)),
+        print("%04X" % (ord(s))),
 elif len(sys.argv) > 1 and sys.argv[1] == '-e' :
     p = Popen(sys.argv[2:], stdout=PIPE, stdin=PIPE)
     res = p.communicate(text)
     clipboard.set_text(res[0])
     clipboard.store()
 else :
-    print text
+    print(text)
 

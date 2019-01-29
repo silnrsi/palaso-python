@@ -192,6 +192,8 @@ class ETWriter(object):
         return newcurr
 
     def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None):
+        ''' Find a node in a path and create any intermediate nodes, including the final, necessary
+            Returns a list of nodes found, or created, even if only 1.'''
         if path.startswith("/"):
             raise SyntaxError
         steps = []
@@ -480,6 +482,7 @@ class Ldml(ETWriter):
         return res
 
     def addnode(self, parent, tag, attrib={}, alt=None, **attribs):
+        ''' Adds a node, keeping the best alternate at the front '''
         attrib = dict((k,v) for k,v in attrib.items() if v) # filter @x=""
         attrib.update(attribs)
         tag = self._reverselocalns(tag)
@@ -572,6 +575,7 @@ class Ldml(ETWriter):
         return new
 
     def change_draft(self, node, draft, alt=None):
+        ''' Change the draft on a node, moving it in the alts hierarchy if necessary. '''
         alt = self.alt(alt)
         best = self._find_best(node, draftratings.get(draft, len(draftratings)), alt=alt)
         node.set('draft', draft)
@@ -598,14 +602,14 @@ class Ldml(ETWriter):
         path = re.sub(r"([a-z0-9]+):", nstons, path)
         return elem.find(path)
 
-    def get_parent_locales(self, name):
+    def get_parent_locales(self, thislangtag):
         if not hasattr(self, 'parentLocales'):
             self.__class__.ReadSupplementalData()
         fall = self.root.find('fallback')
         if fall is not None:
             return fall.split()
-        elif name in self.parentLocales:
-            return self.parentLocales[name]
+        elif thislangtag in self.parentLocales:
+            return self.parentLocales[thislangtag]
         else:
             return []
 
@@ -839,7 +843,7 @@ class Ldml(ETWriter):
             return res
         
     def difference(self, other, this=None):
-        """Strip out everything that is in other, from self, so long as the values are the same."""
+        """Strip out from self, everything that is in other, if the values are the same."""
         if this == None: this = self.root
         other = getattr(other, 'root', other)
         # if empty elements, test .text and all the attributes
