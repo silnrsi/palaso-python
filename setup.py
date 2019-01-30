@@ -4,11 +4,16 @@ from setuptools import setup
 from glob import glob
 import platform, sys
 
+packages=['palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 
+          'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib',
+          'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums',
+          'palaso.contrib.funcparserlib', 'palaso.unicode', 'palaso.sldr']
 try:
     from Pyrex.Distutils.extension import Extension
     from Pyrex.Distutils import build_ext
     ext =[ Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"], libraries=["kmfl", "kmflcomp"]) ] 
     cmd = {'build_ext': build_ext}
+    packages.insert(0, '')
 except ImportError:
     print("No Pyrex!")
     ext = []
@@ -21,10 +26,7 @@ setup(name='palaso',
       maintainer='Tim Eves',
       maintainer_email='tim_eves@sil.org',
       url='http://github.com/silnrsi/palaso-python',
-      packages=['', 'palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 
-                'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib',
-                'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums',
-                'palaso.contrib.funcparserlib', 'palaso.unicode', 'palaso.sldr'],
+      packages=packages,
       ext_modules = ext,
       cmdclass = cmd,
       scripts=list(filter(lambda x : x.rfind(".") == -1, glob('scripts/*/*'))),
