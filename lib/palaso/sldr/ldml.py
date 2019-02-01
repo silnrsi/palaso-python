@@ -1149,16 +1149,9 @@ class Ldml(ETWriter):
 
     def add_silidentity(self, **kws):
         """Inserts attributes in identity/special/sil:identity"""
-        i = self.root.find('identity')
-        if i is not None:
-            s = i.find('special/{'+self.silns+'}identity')
-            if s is None:
-                se = et.SubElement(i, 'special')
-                if 'sil' not in self.namespaces:
-                    self.namespaces[self.silns] = 'sil'
-                s = et.SubElement(se, '{'+self.silns+'}identity')
-            for k, v in kws.items():
-                s.set(k, v)
+        s = self.ensure_path('identity/special/sil:identity')[0]
+        for k, v in kws.items():
+            s.set(k, v)
 
     def flag_nonroots(self):
         """Add @sil:modified="true" to key elements"""
