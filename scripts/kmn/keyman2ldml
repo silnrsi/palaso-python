@@ -177,7 +177,8 @@ class LDMLKeyboard(ETWriter):
             et.SubElement(k, "display", attrib={'mapOutput': to, 'display': display})
 
     def addDeadkeySettings(self):
-        et.SubElement(self.root, "settings", attrib={'fallback': 'omit', 'transformPartial': 'Hide'})
+        #et.SubElement(self.root, "settings", attrib={'fallback': 'omit', 'transformPartial': 'hide'})
+        pass
 
     def addTransform(self, t, rules, keyword="transform"):
         if t == keyword:
@@ -190,16 +191,19 @@ class LDMLKeyboard(ETWriter):
         for k, v in sorted(rules.items(), key=lambda x:(-len(x[0]), x[0])):
             fr = unicode(k)
             to = unicode(v)
-            for i in range(min(len(to), len(fr))):
+            c = min(len(to), len(fr))
+            for i in range(c):
                 if fr[i] != to[i]:
                     before = fr[:i]
                     fr = fr[i:]
                     to = to[i:]
                     break
             else:
-                if len(to):
-                    continue
-            for i in range(1, min(len(to), len(fr))):
+                before = fr[:c]
+                fr = fr[c:]
+                to = to[c:]
+            c = min(len(to), len(fr))
+            for i in range(1, c):
                 if fr[-i] != to[-i]:
                     if i > 1:
                         end = fr[1-i:]
@@ -219,7 +223,10 @@ class LDMLKeyboard(ETWriter):
             #a['test_to'] = self._readable(v)
             if getattr(v, 'error', False):
                 a['error'] = "fail"
+            if hasattr(v, 'comment'):
+                a['comment'] = v.comment
             transforms.addElement(**a)
+        transforms.contextPriority()
         for v in transforms.asReadable():
             et.SubElement(ts, keyword, attrib=v)
 
@@ -238,18 +245,54 @@ class LDMLKeyboard(ETWriter):
         i = et.SubElement(self.root, "import", attrib={'path': path})
 
 def readable(s):
+    s1 = re.sub(r"([\[\].+?*&^$\\{}|\(\)])", r"\\\1", unicode(s))
     return u"".join("\\u{{{:04X}}}".format(ord(x)) \
-            if unicodedata.category(x)[0] in "CM" else x for x in unicode(s))
+            if unicodedata.category(x)[0] in "CM" else x for x in unicode(s1))
+
+def iterSetList(l):
+    if len(l) == 1:
+        for p in l[0]:
+            yield p
+        return
+    for e in l[-1]:
+        for p in iterSetList(l[:-1]):
+            yield p + e
+
+def setlistmatch(this, other, rev=False):
+    t = len(this)
+    d = len(other) - t
+    if d < 0:
+        return False
+    if rev:
+        r = range(t-1, -1, -1)
+    else:
+        r = range(t)
+    for i in r:
+        o = i + d if rev else i
+        if isinstance(this[i], set):
+            if isinstance(other[o], set):
+                if not len(this[i] & other[o]):
+                    return False
+            elif not other[o] in this[i]:
+                return False
+        elif isinstance(other[o], set):
+            if not this[i] in other[o]:
+                return False
+        elif this[i] != other[o]:
+            return False
+    return True
 
 class TransformElements:
     def __init__(self):
         self.elements = {}
 
     def addElement(self, **kw):
-        test = "|".join("|".join(x) for x in sorted((k, v) for k,v in kw.items() if k != 'before' and k != 'after'))
-        if test in self.elements:
-            e = self.elements[test]
+        #test = "|".join("|".join(x) for x in sorted((k, v) for k,v in kw.items() if k != 'before' and k != 'after'))
+        test = kw['from']
+        for e in self.elements.setdefault(test, []):
             count = 0
+            if e['to'] != kw['to']:
+                continue
             for k in ('before', 'after'):
                 if (k in kw) != (k in e):
                     break
@@ -262,11 +305,11 @@ class TransformElements:
                 return
             elif count == 0:
                 return
-        self.elements[test] = kw
+        self.elements[test].append(kw)
 
     def countDiffs(self, new, old):
         if len(new) != len(old):
-            return False
+            return max(len(new), len(old))
         count = 0
         for i,o in enumerate(old):
             if isinstance(o, basestring):
@@ -284,32 +327,84 @@ class TransformElements:
                 o.add(new[i])
         return old
 
+    def contextPriority(self):
+        for k, v in self.elements.items():
+            for r in v:
+                if 'before' not in r:
+                    continue
+                #if r['from'][-1] == u"\u17BB":
+                #    import pdb; pdb.set_trace()
+                for i in range(len(r['before'])):
+                    matched = False
+                    for s in iterSetList(r['before'][-i-1:]):
+                        other = self.matches(s+r['from'], r['before'][:-i-1], r.get('after', []))
+                        if other is not None and s + r['to'] != other['to']:
+                            kw = {'from': s+r['from'], 'to': s+r['to'], 'before': r['before'][:-i-1]}
+                            if 'after' in r:
+                                kw['after'] = r['after']
+                            if 'comment' in r:
+                                kw['comment'] = "From " + r['comment']
+                            self.addElement(**kw)
+                            matched = True
+#                    if not matched:
+#                        break
+
+    def matches(self, fr, before, after):
+        for v in self.elements.get(fr, []):
+            if not setlistmatch(after, v.get('after', [])):
+                continue
+            if setlistmatch(before, v.get('before', []), rev=True):
+                return v
+        return None
+            
     def asReadable(self):
-        for v in (dict(v) for v in sorted(self.elements.values(), key=lambda x:([(-len(x[y]),x[y]) if y in x else (0, "") for y in ('from', 'before', 'after', 'to')],x))):
-            for k,b in v.items():
-                if k in ('before', 'after'):
-                    res = u""
-                    for l in b:
-                        if len(l) > 1:
-                            res += "[" + u"".join(readable(x) for x in sorted(l)) + "]"
-                        else:
-                            res += readable(list(l)[0])
+        for k, l in sorted(self.elements.items()):
+            for v in l:
+                if not len(v['from']) and not len(v['to']) and 'before' in v:
+                    l = v['before'][-1]
+                    v['before'] = v['before'][:-1]
+                    if len(l) == 0:
+                        pass
+                    elif len(l) == 1:
+                        v['from'] = list(l)[0]
+                    else:
+                        v['from'] = l
+                    v['to'] = v['from']
+                    if not len(v['before']):
+                        del v['before']
+                for k,b in v.items():
+                    if k in ('before', 'after'):
+                        res = u""
+                        for l in b:
+                            if len(l) > 1:
+                                res += "[" + u"".join(readable(x) for x in sorted(l)) + "]"
+                            else:
+                                res += readable(list(l)[0])
+                    elif k != 'from' or not len(v[k]) or not isinstance(v[k], set):
+                        res = readable(b)
+                    else:
+                        res = b
+                    v[k] = res
+                if len(v['from']) and isinstance(v['from'], set):
+                    l = v['from']
+                    for f in l:
+                        v['from'] = readable(f)
+                        v['to'] = v['from']
+                        yield v
                 else:
-                    res = readable(b)
-                v[k] = res
-            yield v
+                    yield v
         
 
 class OutputString:
     def __init__(self, toklist):
         self.str = u""
-        self.error = 0
+        self.error = False
         for t in toklist:
             if isinstance(t, str) or isinstance(t, basestring):
                 self.str += t
             elif isinstance(t, Token) and t.type == 'KEYWORD':
                 if t.value == 'beep':
-                    self.error = 1
+                    self.error = True
             else:
                 pdb.set_trace()
 
@@ -322,7 +417,7 @@ def process_uses(p, name, *extras):
             make_transform(r, p, *extras)
         process_uses(p, t, *extras)
 
-def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, base=None):
+def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, base=None, name=None):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
     p = Parser(lines, debug = (args.debug & 2), platform = platform)
@@ -345,7 +440,9 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, bas
             if k[1] not in maps:
                 maps[k[1]] = {}
             maps[k[1]][k[0]] = OutputString(rf.output)
-    if '&NAME' in p.allHeaders:
+    if name is not None:
+        ldml.setname(name)
+    elif '&NAME' in p.allHeaders:
         ldml.setname(p.allHeaders['&NAME'].seq[0])
     else:
         ldml.setname('Unknown')
@@ -375,7 +472,7 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, bas
     if reorderfile:
         ldml.addImport(reorderfile)
     if len(finals) or len(DeadKey.allkeys):
-        for d in DeadKey.allkeys:
+        for d in DeadKey.allkeys.values():
             finals[d.char] = OutputString([])
         ldml.addTransform('final', finals)
     if len(backups):
@@ -462,6 +559,8 @@ def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups):
             bs.extend(b)
         btxt = u"".join(bs)
         otxt = OutputString(rf.output)
+        if args.debug & 4:
+            otxt.comment = str(r)
         error = otxt.error
         try:
             k = mapkey(rf.match)
@@ -476,18 +575,18 @@ def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups):
                 mp[k[0]] = unichr(DeadKey.missing)
                 finals[unichr(DeadKey.missing)] = ""
                 DeadKey.missing += 1
-            m = mp[k[0]] or bmaps[k[1]][k[0]]
+            m = mp.get(k[0], bmaps[k[1]][k[0]])
             btxt += unicode(m)
-        if btxt == unicode(otxt) and not error:
-            continue
-        if isdead:
-            if btxt not in deadkeys:
-                deadkeys[btxt] = otxt
-        elif any(x not in unicode(otxt) for x in btxt) and \
-             any(x not in unicode(otxt) for x in btxt.replace(u"\u200B", "")): # skip reorderings
+        #if isdead:
+        #    if btxt not in deadkeys:
+        #        deadkeys[btxt] = otxt
+        if (any(x not in unicode(otxt) for x in btxt) and \
+              any(x not in unicode(otxt) for x in btxt.replace(u"\u200B", ""))) or \
+             unicode(otxt) == unicode(btxt): # skip reorderings
             if k is not None:
-                simples[btxt] = otxt
-            else:
+                if btxt not in simples:
+                    simples[btxt] = otxt
+            elif btxt not in finals:
                 finals[btxt] = otxt
 
 layermap = {"default": "", "shift": "shift", "leftctrl": "ctrlL", "rightctrl": "ctrlR",
@@ -585,8 +684,10 @@ parser.add_argument('-k','--kmn',help='Process kmn file')
 parser.add_argument('-l','--layout',help='Process layout .js file')
 parser.add_argument('-r','--reorder',action='store_true',help='Add reordering import')
 parser.add_argument('-R','--reorderfile',help='Specifies reorder file to import, can occur with -r for standard import')
+parser.add_argument('-i','--imprt',help='File to import at end of file')
 parser.add_argument('-b','--basefile',default='langs/e/en/en-us-win/en-us-win.xml',help='Base keyboard file')
 parser.add_argument('-L','--locale',default="und-Zyyy",help='Keyboard Locale identifier')
+parser.add_argument('-N','--name',help="Keyboard name")
 parser.add_argument('-f','--form',default='phone',help='form factor platform [phone]')
 parser.add_argument('-u','--ui',default='touch',help='User Interface platform [touch]')
 parser.add_argument('-O','--os',default='windows',help='Operating Systems platform [windows]')
@@ -600,10 +701,13 @@ platform = dict((x, getattr(args, x)) for x in ('form', 'ui', 'os'))
 
 if args.kmn:
     process_kmn(ldml, args.kmn, platform=platform, reorder=args.reorder,
-                reorderfile=args.reorderfile, base=args.basefile)
+                reorderfile=args.reorderfile, base=args.basefile, name=args.name)
 
 if args.layout:
     process_layout(ldml, args.layout, platform=platform, extras=args.full)
+
+if args.imprt is not None:
+    ldml.addImport(args.imprt)
 
 with codecs.open(args.outfile, "w", encoding="utf-8") as f:
     ldml.serialize_xml(f.write, doctype='<!DOCTYPE keyboard SYSTEM "../dtd/ldmlKeyboard.dtd">')

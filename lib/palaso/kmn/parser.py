@@ -19,7 +19,7 @@ keyrowmap = {
 
 keymap = dict([(k, ("{}{:02d}".format(rk[-1], i+1), rk.startswith("_"))) 
                 for rk, r in keyrowmap.items() for i, k in enumerate(r)])
-keymap.update({ "|" : ("B00", True), "\\" : ("B00", False), " ": ("A03", True),
+keymap.update({ "|" : ("B00", True), "\\" : ("B00", False), " ": ("A03", False),
                 "`" : ("E00", False), "~" : ("E00", True)})
 
 def mapkey(tok):
@@ -119,7 +119,7 @@ class AnyIndex(object):
 
 class DeadKey(object):
     missing = 0xFDD2
-    allkeys = []
+    allkeys = {}
 
     @classmethod
     def increment(cls):
@@ -127,11 +127,16 @@ class DeadKey(object):
         if cls.missing == 0xFDE0:
             cls.missing = 0xEFFF0
 
-    def __init__(self, toklist):
-        self.number = toklist[1]
-        self.char = unichr(self.missing)
-        self.allkeys.append(self)
-        self.increment()
+    def __new__(cls, toklist):
+        number = toklist[1]
+        if number in cls.allkeys:
+            return cls.allkeys[number]
+        res = super(DeadKey, cls).__new__(cls)
+        res.number = number
+        res.char = unichr(cls.missing)
+        cls.allkeys[number] = res
+        cls.increment()
+        return res
 
 specialkeys = {
     "quote": "C11", "bkquote": "E00", "comma": "B08", "bksp": "bksp",

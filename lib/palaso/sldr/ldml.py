@@ -132,6 +132,10 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
+    def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
+        with codecs.open(fname, "w", encoding="utf-8") as outf:
+            self.serialize_xml(outf.write, base=base, indent=indent, topns=topns, namespaces=namespaces)
+
     def add_namespace(self, q, ns):
         if ns in self.namespaces: return self.namespaces[ns]
         self.namespaces[ns] = q
@@ -140,7 +144,7 @@ class ETWriter(object):
     def addnode(self, parent, tag, **kw):
         return et.SubElement(parent, tag, **kw)
 
-    def unify_path(self, path, base=None, draft=None, alt=None, matchdraft=None):
+    def unify_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
         '''Path contains a list of tags or (tag, attrs) to search in succession'''
         if base is None:
             base = self.root
@@ -188,10 +192,16 @@ class ETWriter(object):
                 if draft is not None:
                     attrs['draft'] = draft
                 se = self.addnode(job, tag, attrib=attrs, alt=alt)
+                if before is not None:
+                    for j, e in enumerate(job):
+                        if e.tag == before:
+                            job.remove(se)
+                            job.insert(j, se)
+                            break
                 newcurr.append(se)
         return newcurr
 
-    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None):
+    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
         ''' Find a node in a path and create any intermediate nodes, including the final, necessary
             Returns a list of nodes found, or created, even if only 1.'''
         if path.startswith("/"):
@@ -211,7 +221,7 @@ class ETWriter(object):
                 if k.startswith("@") and v[0] in '"\'':
                     attrs[k[1:]] = v[1:-1]
             steps.append((tag, attrs))
-        return self.unify_path(steps, base=base, draft=draft, alt=alt, matchdraft=matchdraft)
+        return self.unify_path(steps, base=base, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
 
     def _reverselocalns(self, tag):
         '''Convert ns:tag -> {fullns}tag'''
@@ -585,10 +595,10 @@ class Ldml(ETWriter):
             alt = best
         return self._promote(node, node.alternates[best], alt=alt)
 
-    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None):
+    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
         draft = self.use_draft if draft is None else draft
         return super(Ldml, self).ensure_path(path, base=base,
-                        draft=draft, alt=alt, matchdraft=matchdraft)
+                        draft=draft, alt=alt, matchdraft=matchdraft, before=before)
 
     def find(self, path, elem=None):
         def nstons(m):
