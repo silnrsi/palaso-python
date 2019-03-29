@@ -337,7 +337,7 @@ class Parser(object):
         keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
         op = lambda s: a(Token('OP', s)) >> tokval
         op_ = lambda s: skip(op(s))
-        onename = many(toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')) >> sumstr
+        onename = many(toktype('NAME') | toktype('KEYWORD') | toktype('HEADER') | toktype('NUMBER')) >> sumstr
         name = toktype('NAME') | toktype('KEYWORD') | toktype('HEADER')
         number = toktype('NUMBER') >> get_num
         get_string = lambda v: v[1:-1]
