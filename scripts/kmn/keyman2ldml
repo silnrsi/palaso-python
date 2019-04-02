@@ -44,7 +44,7 @@ class ETWriter(object):
             return (tag, None, None)
 
     def _protect(self, txt, base=_attribprotect):
-        return re.sub(ur'['+ur"".join(base.keys())+ur"]", lambda m: base[m.group(0)], txt)
+        return re.sub(r'['+r"".join(base.keys())+r"]", lambda m: base[m.group(0)], txt)
 
     def _nsprotectattribs(self, attribs, localattribs, namespaces):
         if attribs is not None:
@@ -202,18 +202,18 @@ class LDMLKeyboard(ETWriter):
                 before = fr[:c]
                 fr = fr[c:]
                 to = to[c:]
-            c = min(len(to), len(fr))
-            for i in range(1, c):
-                if fr[-i] != to[-i]:
-                    if i > 1:
-                        end = fr[1-i:]
-                        fr = fr[:1-i]
-                        to = to[:1-i]
-                    else:
-                        end = ""
-                    break
-            else:
-                end = ""
+#            c = min(len(to), len(fr))
+#            for i in range(1, c+1):
+#                if fr[-i] != to[-i]:
+#                    if i > 1:
+#                        end = fr[1-i:]
+#                        fr = fr[:1-i]
+#                        to = to[:1-i]
+#                    else:
+#                        end = ""
+#                    break
+#            else:
+            end = ""
             a = {}
             if len(before): a['before'] = before
             a['from'] = fr
@@ -298,6 +298,8 @@ class TransformElements:
         to = kw['to']
         fr = kw['from']
         test = u"{}|{}".format(fr, to)
+        if to == fr:    # special high priority insertion
+            self.elements.setdefault(test, []).append(kw)
         for l in self.froms.get(fr, []):
             for e in self.elements[l]:
                 count = 0
@@ -314,7 +316,7 @@ class TransformElements:
                         e[k] = self.mergeTransform(e[k], kw[k])
                         self.tos.setdefault(to, []).append(l)
                     return
-                elif count == 0:
+                elif count == 0 and e['from'] == fr:
                     return
         for l in self.tos.get(to, []):
             for e in self.elements[l]:
@@ -324,9 +326,10 @@ class TransformElements:
                     if (k in kw) != (k in e): break
                     if k not in kw: continue
                     if self.countDiffs(kw[k], e[k]): break
-                e['from'] = self.mergeTransform(e['from'], fr)
-                self.froms.setdefault(fr, []).append(l)
-                return
+                else:
+                    e['from'] = self.mergeTransform(e['from'], fr)
+                    self.froms.setdefault(fr, []).append(l)
+                    return
         self.elements.setdefault(test, []).append(kw)
         self.froms.setdefault(fr, []).append(test)
         self.tos.setdefault(to, []).append(test)
@@ -363,7 +366,7 @@ class TransformElements:
                     for s in iterSetList(r['before'][-i-1:]):
                         if any(isinstance(x, set) for x in r['from']):
                             continue
-                        other = self.matches(s+r['from'], r['before'][:-i-1], r.get('after', []))
+                        other = self.matches(s+u"".join(r['from']), r['before'][:-i-1], r.get('after', []))
                         if other is not None and s + r['to'] != other['to']:
                             kw = {'from': s+r['from'], 'to': s+r['to'], 'before': r['before'][:-i-1]}
                             if 'after' in r:
@@ -611,8 +614,11 @@ def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups, prebas
             continue
         if k is not None:
             if k[0] == 'bksp':
-                btxt = btxt.replace(args.charreorder, u"\uFDDF")
-                backups[btxt] = otxt.replace(args.charreorder, u"\uFDDF")
+                if args.charreorder:
+                    btxt = btxt.replace(args.charreorder, u"\uFDDF")
+                    backups[btxt] = otxt.replace(args.charreorder, u"\uFDDF")
+                else:
+                    backups[btxt] = otxt
                 continue
             mp = maps[k[1]]
             if k[0] not in mp and (k[1] not in bmaps or k[0] not in bmaps[k[1]]):
@@ -630,7 +636,7 @@ def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups, prebas
                 and len(btxt) > 2 and unicode(otxt)[-1] == btxt[1] and unicode(otxt) != btxt:
             continue
         if (any(x not in unicode(otxt) for x in btxt) and \
-              any(x not in unicode(otxt) for x in btxt.replace(args.charreorder, ""))) or \
+              any(x not in unicode(otxt) for x in (btxt.replace(args.charreorder, "") if args.charreorder else btxt))) or \
              unicode(otxt) == unicode(btxt): # skip reorderings
             if k is not None:
                 if btxt not in simples:
