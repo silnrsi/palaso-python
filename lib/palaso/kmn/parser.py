@@ -39,7 +39,7 @@ class Rule(object):
                 if p is None:
                     p = [None, None]
                     break
-                elif p[0] == '+':
+                elif p[0] == '+' and i > 0:
                     break
             except AttributeError: pass
             except TypeError: pass

@@ -437,7 +437,7 @@ class OutputString:
                 if t.value == 'beep':
                     self.error = True
             else:
-                pdb.set_trace()
+                import pdb; pdb.set_trace()
 
     def replace(self, instr, repstr):
         if instr is None:
