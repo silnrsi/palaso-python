@@ -261,7 +261,7 @@ class LangTags(with_metaclass(Singleton, dict)):
         if fname is not None:
             fname = [fname]
         else:
-            fname = [os.path.dirname(__file__)]
+            fname = [os.path.join(os.path.dirname(__file__), 'sldr', 'alltags.txt')]
         for p in fname:
             try:
                 with open(p) as fh:
