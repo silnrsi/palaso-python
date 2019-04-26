@@ -258,28 +258,30 @@ class LangTags(with_metaclass(Singleton, dict)):
             self.readSupplementalData()
 
     def readAlltags(self, fname=None):
-        if fname is None:
-            for p in [os.path.dirname(__file__)]:
-                fname = os.path.join(p, 'sldr', 'alltags.txt')
-                if os.path.exists(fname):
-                    break
-            else:
-                return False
-        with open(fname) as fh:
-            for l in fh.readlines():
-                tags = [x[1:] if x.startswith("*") else x for x in l.strip().split() if x != "="]
-                temp = {}
-                t = tags.pop()
-                ltag = LangTag(tag=t)
-                self[t] = ltag
-                for t in tags:
-                    lt = LangTag(tag=t)
-                    if ltag.lang == lt.lang:
-                        if lt.script is None and lt.region is None:
-                            lt.hideboth = True
-                        ltag.merge_equivalent(lt)
-                    self[t] = ltag
-        return True
+        if fname is not None:
+            fname = [fname]
+        else:
+            fname = [os.path.dirname(__file__)]
+        for p in fname:
+            try:
+                with open(p) as fh:
+                    for l in fh.readlines():
+                        tags = [x[1:] if x.startswith("*") else x for x in l.strip().split() if x != "="]
+                        temp = {}
+                        t = tags.pop()
+                        ltag = LangTag(tag=t)
+                        self[t] = ltag
+                        for t in tags:
+                            lt = LangTag(tag=t)
+                            if ltag.lang == lt.lang:
+                                if lt.script is None and lt.region is None:
+                                    lt.hideboth = True
+                                ltag.merge_equivalent(lt)
+                            self[t] = ltag
+                return True
+            except IOError:
+                continue
+        return False
 
     def readLikelySubtags(self, fname = None) :
         """Reads the likely subtag mappings"""
