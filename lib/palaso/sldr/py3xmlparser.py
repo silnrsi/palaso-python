@@ -4,7 +4,7 @@
 # and so we can't set a comment handler on the c implementation
 
 from xml.parsers import expat
-from xml.etree.ElementTree import Element
+from xml.etree.ElementTree import Element, ParseError
 
 class TreeBuilder:
     """Generic element structure builder.

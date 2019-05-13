@@ -28,8 +28,15 @@ from xml.etree import ElementPath as ep
 import re, os, codecs
 import xml.parsers.expat
 from functools import reduce
-from six import string_types
+#from six import string_types
 from .py3xmlparser import XMLParser, TreeBuilder
+
+try:
+    basestring
+    string_types = basestring
+except NameError:
+    string_types = str
+
 
 _elementprotect = {
     '&': '&amp;',
@@ -50,7 +57,7 @@ class ETWriter(object):
         if namespaces is not None:
             self.namespaces = namespaces
         if self.namespaces is None:
-            self.namespaces = {}
+            self.namespaces = {'http://www.w3.org/XML/1998/namespaces': 'xml'}
         self.attributeOrder = attributeOrder
         self.takesCData = takesCData
 
@@ -62,7 +69,7 @@ class ETWriter(object):
                 return ('{}:{}'.format(qname, localname), qname, ns)
             else:
                 self.nscount += 1
-                return (localname, 'ns_' + str(self.nscount), ns)
+                return (localname, 'ns' + str(self.nscount), ns)
         else:
             return (tag, None, None)
 
@@ -89,6 +96,7 @@ class ETWriter(object):
         if base is None:
             base = self.root
             write('<?xml version="1.0" encoding="utf-8"?>\n')
+            namespaces['http://www.w3.org/XML/1998/namespace'] = 'xml'
         (tag, q, ns) = self._localisens(base.tag)
         localattribs = {}
         if ns and ns not in namespaces:
@@ -403,13 +411,22 @@ class Ldml(ETWriter):
         """Reads LDML DTD to get element and attribute orders"""
         if fname is None:
             fname = os.path.join(os.path.dirname(__file__), 'ldml.dtd')
-        elementCount = [0]
+        cls.elementCount = 0
         cls.attributeOrder = {}
         cls.elementOrder = {}
         attribCount = {}
+        cls.maxEls = 0
+        def procmodel(name, nodes, cls, elementCount):
+            for n in nodes:
+                if n[2] is not None:
+                    elementCount += 1
+                    cls.elementOrder.setdefault(name, {})[n[2]] = elementCount
+                if len(n[3]):
+                    elementCount = procmodel(name, n[3], cls, elementCount)
+            return elementCount
         def elementDecl(name, model):
-            elementCount[0] += 1
-            cls.elementOrder[name] = elementCount[0]
+            elementCount = procmodel(name, model[3], cls, 0)
+            cls.maxEls = max(cls.maxEls, elementCount + 1)
             cls.attributeOrder[name] = {}
             attribCount[name] = 0
         def attlistDecl(elname, attname, xmltype, default, required):
@@ -422,13 +439,12 @@ class Ldml(ETWriter):
             ldmltext = "".join(f.readlines())
         parsetext = "<?xml version='1.0'?>\n<!DOCTYPE LDML [\n" + ldmltext + "]>\n"
         parser.Parse(parsetext)
-        cls.maxEls = elementCount[0] + 1
         cls.maxAts = max(attribCount.values()) + 1
 
     def __init__(self, fname, usedrafts=True):
         if not hasattr(self, 'elementOrder'):
             self.__class__.ReadMetadata()
-        self.namespaces = {}
+        self.namespaces = {'http://www.w3.org/XML/1998/namespace': 'xml'}
         self.namespaces[self.silns] = 'sil'
         self.useDrafts = usedrafts
         curr = None
@@ -637,31 +653,13 @@ class Ldml(ETWriter):
                 return cmp(getorder(x), getorder(y)) or cmp(x, y)
             def keyel(x):
                 xl = self._sortedattrs(x)
-                res = [self.elementOrder.get(x.tag, self.maxEls), x.tag]
+                res = [self.elementOrder.get(base.tag, {}).get(x.tag, self.maxEls), x.tag]
                 for k, a in ((l, x.get(l)) for l in xl):
                     if k == 'id' and all(q in _digits for q in a):
                         res += (k, float(a))
                     else:
                         res += (k, a)
                 return res
-            def cmpel(x, y):   # order by elementOrder and within that attributes in attributeOrder
-                res = cmp(self.elementOrder.get(x.tag, self.maxEls), self.elementOrder.get(y.tag, self.maxEls) or cmp(x.tag, y.tag))
-                if res != 0: return res
-                xl = self._sortedattrs(x)
-                yl = self._sortedattrs(y)
-                for i in range(len(xl)):
-                    if i >= len(yl): return -1
-                    res = cmp(xl[i], yl[i])
-                    if res != 0: return res
-                    a = x.get(xl[i])
-                    b = y.get(yl[i])
-                    if xl[i] == 'id' and all(q in _digits for q in a) and all(q in _digits for q in b):
-                        res = cmp(float(a), float(b))
-                    else:
-                        res = cmp(a, b)
-                    if res != 0: return res
-                if len(yl) > len(xl): return 1
-                return 0
             children = sorted(base, key=keyel)              # if base.tag not in self.blocks else list(base)
             base[:] = children
         if base.text:
@@ -727,7 +725,7 @@ class Ldml(ETWriter):
         if self.useDrafts:
             n = base if base is not None else self.root
             draft = n.get('draft', '')
-            if draft and (len(n) or draft == self.default_draft):
+            if draft and (len(n) or draft == self.default_draft) and n.tag != "{" + self.silns + "}identity":
                 del n.attrib['draft']
             offset = 0
             alt = n.get('alt', '')
