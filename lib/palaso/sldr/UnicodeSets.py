@@ -25,8 +25,12 @@
 
 # Py2 and Py3 compatibility
 from builtins import chr
-
+import unicodedata
 import re
+
+try: unicode
+except NameError:
+    unicode = str
 
 hexescre = re.compile(r"(?:\\(?:ux)\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})|\\U([0-9a-fA-F]{8})|\\x([0-9a-fA-F]{2}))")
 hexgre = re.compile(r"\\u\{([0-9a-fA-F]+)\}")
@@ -138,7 +142,8 @@ class UnicodeSetSequence(list):
 
 class UnicodeSet(set):
     '''A UnicodeSet is a simple set of characters also a negative attribute'''
-    def __init__(self):
+    def __init__(self, *a, **kw):
+        super(UnicodeSet, self).__init__(*a, **kw)
         self.negative = False
         self.isclass = False
         self.startgroup = False
@@ -186,7 +191,7 @@ def struni(s, groups=None):
     return s
 
 
-def parse(s):
+def parse(s, normal=None):
     '''Returns a sequence of UnicodeSet'''
     # convert escapes
     s = hexescre.sub(lambda m:escapechar(chr(int(m.group(m.lastindex), 16))), s)
@@ -205,6 +210,8 @@ def parse(s):
             res.groups.append((currgroup, len(res)))
         if len(nextitem):
             res.append(nextitem)
+    if normal is not None:
+        res = [UnicodeSet(set(unicodedata.normalize(normal, unicode(c)) for c in x)) for x in res]
     return res
 
 
