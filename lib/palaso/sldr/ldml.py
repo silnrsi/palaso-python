@@ -105,6 +105,7 @@ class ETWriter(object):
         if topns:
             if base == self.root:
                 for n,q in self.namespaces.items():
+                    if q == "xml": continue
                     localattribs['xmlns:'+q] = n
                     namespaces[n] = q
         else:
