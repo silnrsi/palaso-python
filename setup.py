@@ -36,7 +36,8 @@ setup(name='palaso',
       package_data={'palaso.sfm':['usfm.sty'], 'palaso.kmn':['keyboard.svg'], 
                     'palaso.collation' : ['sort_trainer.glade'],
                     'palaso.sldr': ['allkeys.txt', 'language-subtag-registry.txt',
-                                    'likelySubtags.xml', 'supplementalData.xml',
+                                    'ldml.dtd', 'likelySubtags.xml',
+                                    'supplementalData.xml',
                                     'supplementalMetadata.xml']}
      )
 
