@@ -146,7 +146,7 @@ class HTMLLog(object) :
 
     def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
-        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string.encode('utf-8'), langstr, u"<br/>".join(x[0] for x in bases), label))
+        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(x[0] for x in bases), label))
         if len(gglyphs) < 2 :
             self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
             self.out.write("    </tr>\n")
