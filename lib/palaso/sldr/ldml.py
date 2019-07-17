@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -322,6 +323,7 @@ class _minhash(object):
 class Ldml(ETWriter):
     takesCData = set(('cr',))
     silns = "urn://www.sil.org/ldml/0.1"
+    inheritattr = '{urn://www.sil.org/ldml/0.1}inherit'
     use_draft = None
 
     @classmethod
@@ -500,8 +502,12 @@ class Ldml(ETWriter):
         self.normalise(self.root, usedrafts=usedrafts)
 
     def copynode(self, n, parent=None):
-        res = n.copy()
-        for a in ('contentHash', 'attrHash', 'comments', 'commentsafter', 'parent', 'document'):
+        '''Recursively copy the node optionally assigning a new parent'''
+        res = n.__class__(n.tag, n.attrib)
+        for c in n:
+            res.append(self.copynode(c, res))
+        for a in ('text', 'tail', 'alternates', 'contentHash', 'attrHash', 'comments',
+                  'commentsafter', 'parent', 'document', 'hasinherit'):
             if hasattr(n, a):
                 setattr(res, a, getattr(n, a, None))
         if parent is not None:
@@ -695,20 +701,29 @@ class Ldml(ETWriter):
             self.default_draft = 'unconfirmed'
             self.uid = None
 
-    def _calc_hashes(self, base, usedrafts=False):
-        base.contentHash = _minhash(nominhash = True)
-        for b in base:
-            base.contentHash.merge(b.contentHash)
-        if base.text: base.contentHash.update(*(base.text.split("\n")))
+    def _distattributes(self, tag, usedrafts):
         distkeys = set(self.keys)
-        if base.tag in self.nonkeyContexts:
-            distkeys -= self.nonkeyContexts[base.tag]
-        if base.tag in self.keyContexts:
-            distkeys |= self.keyContexts[base.tag]
+        if tag in self.nonkeyContexts:
+            distkeys -= self.nonkeyContexts[tag]
+        if tag in self.keyContexts:
+            distkeys |= self.keyContexts[tag]
         if usedrafts:
             distkeys.discard('draft')
+        return distkeys
+
+    def _calc_hashes(self, base, usedrafts=False):
+        base.contentHash = _minhash(nominhash = True)
+        base.hasinherit = 0
+        for b in base:
+            base.contentHash.merge(b.contentHash)
+            if b.hasinherit:
+                base.hasinherit = True
+        if base.text: base.contentHash.update(*(base.text.split("\n")))
+        distkeys = self._distattributes(base.tag, usedrafts)
         base.attrHash = _minhash(nominhash = True)
         base.attrHash.update(base.tag)                      # keying hash has tag
+        if not base.hasinherit and base.get(self.inheritattr, "") != "":
+            base.hasinherit = True
         for k, v in sorted(base.items()):                      # any consistent order is fine
             if usedrafts and k == 'alt' and v.find("proposed") != -1:
                 val = re.sub(r"-?proposed.*$", "", v)
@@ -716,9 +731,21 @@ class Ldml(ETWriter):
                     base.attrHash.update(k, val)
             elif k in distkeys:
                 base.attrHash.update(k, v)        # keying hash has key attributes
-            elif not usedrafts or (k != 'draft' and k != 'alt' and k != '{'+self.silns+'}alias'):
+            elif not usedrafts or (k not in ('draft', 'alt', '{'+self.silns+'}alias', self.inheritattr)):
                 base.contentHash.update(k, v)     # content hash has non key attributes
         base.contentHash.merge(base.attrHash)               #   and keying hash
+
+    def as_xpath(self, n, usedrafts=False):
+        distkeys = self._distattributes(n.tag, usedrafts)
+        p = getattr(n, 'parent', None)
+        if p is None:
+            return ""
+        res = self.as_xpath(p, usedrafts=usedrafts)
+        if len(res):
+            res += "/" 
+        tests = [(k, v) for k, v in n.attrib.items() if k in distkeys]
+        res += n.tag + "".join('[@{}="{}"]'.format(*x) for x in tests)
+        return res
 
     def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}):
         if self.uid is not None:
@@ -749,7 +776,19 @@ class Ldml(ETWriter):
         if ldraft is not None: return draftratings.get(ldraft, 5)
         return draftratings.get(default, self.default_draft)
 
-    def overlay(self, other, usedrafts=False, this=None):
+    def mark_uparrows(self, this=None):
+        if this is None: this = self.root
+        for t in this:
+            if t.text == u"↑↑↑":
+                t.set(self.inheritattr, u"↑↑↑")
+            elif len(t):
+                self.mark_uparrows(t)
+            if hasattr(t, 'alternates'):
+                for k, v in t.alternates.items():
+                    if v.text == u"↑↑↑":
+                        v.set(self.inheritattr, u"↑↑↑")
+
+    def overlay(self, other, usedrafts=False, this=None, depth=0):
         """Add missing information in self from other. Honours @draft attributes"""
         if this == None: this = self.root
         other = getattr(other, 'root', other)
@@ -758,19 +797,17 @@ class Ldml(ETWriter):
             if o.tag == '{'+self.silns+'}external-resources':
                 self._overlay_external_resources(o, this, usedrafts)
             else:
-                self._overlay_child(o, this, usedrafts)
+                self._overlay_child(o, this, usedrafts, depth)
 
-    def _overlay_child(self, o, this, usedrafts):
+    def _overlay_child(self, o, this, usedrafts, depth):
         addme = True
-        for t in filter(lambda x: x.attrHash == o.attrHash, this):
+        for i, t in filter(lambda x: x[1].attrHash == o.attrHash, enumerate(this)):
             addme = False
             if o.contentHash != t.contentHash:
                 if o.tag not in self.blocks:
-                    self.overlay(o, usedrafts=usedrafts, this=t)
+                    self.overlay(o, usedrafts=usedrafts, this=t, depth=depth)
                 elif usedrafts:
                     self._merge_leaf(other, t, o)
-                if t.text == u"↑↑↑" and o.text != "":
-                    t.text = o.text
             break  # only do one alignment
         if addme and (o.tag != "alias" or not len(this)):  # alias in effect turns it into blocking
             this.append(o)
@@ -845,6 +882,21 @@ class Ldml(ETWriter):
             return True
         return False
 
+    def resolve_uparrows(self, other=None, this=None):
+        if this is None: this = self.root
+        if other is None: other = other.root
+        if this.text == u"↑↑↑":
+            p = self.as_xpath(this, usedrafts = self.useDrafts)
+            try:
+                n = other.find(p, elem=other.root)
+            except SyntaxError:
+                raise SyntaxError("Invalid path: %s" % p)
+            if n is not None and n.text != "":
+                this.text = n.text
+        else:
+            for c in this:
+                self.resolve_uparrows(other, c)
+
     def alt(self, *a):
         proposed = a[0] if len(a) > 0 and a[0] else 'proposed'
         res = ((a[1] + "-") if len(a) > 1 and a[1] else "") + proposed
@@ -864,15 +916,36 @@ class Ldml(ETWriter):
             for t in filter(lambda x: x.attrHash == o.attrHash, this):
                 if o.contentHash == t.contentHash or (o.tag not in self.blocks and self.difference(o, this=t)):
                     if hasattr(t, 'alternates') and hasattr(o, 'alternates'):
-                        for (k, v) in o.alternates:
+                        for (k, v) in o.alternates.items():
                             if k in t.alternates and v.contentHash == t.alternates[k].contentHash:
                                 del t.alternates[k]
                         if len(t.alternates) == 0:
-                            this.remove(t)
+                            self._remove_with_inherits(this, t)
                     else:
-                        this.remove(t)
+                        self._remove_with_inherits(this, t)
                 break
+        for t in this:
+            replace = t.get(self.inheritattr, None)
+            if replace is not None:
+                t.text = replace
+                del t.attrib[self.inheritattr]
+            if hasattr(t, 'alternates'):
+                for k, v in t.alternates.items():
+                    replace = v.get(self.inheritattr, None)
+                    if replace is not None:
+                        v.text = replace
+                        del v.attrib[self.inheritattr]
         return not len(this) and (not this.text or this.text == other.text)
+
+    def _remove_with_inherits(self, parent, t):
+        if not t.hasinherit:
+            parent.remove(t)
+            return
+        for c in list(t):
+            self._remove_with_inherits(t, c)
+        if t.get(self.inheritattr) == u"↑↑↑":
+            t.text = u"↑↑↑"
+            del t.attrib[self.inheritattr]
 
     def _align(self, this, other, base):
         """Internal method to merge() that aligns elements in base and other to this and
@@ -1184,7 +1257,8 @@ def _prepare_parent(next, token):
     return select
 ep.ops['..'] = _prepare_parent
 
-def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False, skipstubs=False, fname=None, flattencollation=False):
+def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
+                  skipstubs=False, fname=None, flattencollation=False, resolveAlias=False):
     """ Flattens an ldml file by filling in missing details from the fallback chain.
         If rev true, then do the opposite and unflatten a flat LDML file by removing
         everything that is the same in the fallback chain.
@@ -1233,20 +1307,30 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False, sk
                     break
             if not dome: return None
         dome = True
-        for f in fallbacks:    # apply each fallback
+        parent_locales = []
+        for i, f in enumerate(fallbacks):    # apply each fallback
             while len(f):
                 o = getldml(f, dirs)
                 if o is not None:
-                    if rev == 'r':
-                        l.difference(o)
-                        dome = False
-                        break   # only need one for unflatten
-                    else:
-                        if f == 'root':
-                            l.flag_nonroots()
-                        l.overlay(o)
+                    parent_locales.append((o, f))
                 f = trimtag(f)
-            if not dome: break
+        
+        if rev == 'r' and len(parent_locales):
+            l.difference(parent_locales[0][0])
+        else:
+            l.mark_uparrows()
+            for i, o in enumerate(parent_locales):
+                if o[1] == 'root':
+                    l.flag_nonroots()
+                l.overlay(o[0], depth = i)
+            l.normalise()
+            if resolveAlias:
+                l.resolve_aliases()
+                for o in parent_locales:
+                    o[0].resolve_aliases()
+            for i, o in enumerate(parent_locales):
+                l.resolve_uparrows(o[0])
+
     if skipstubs and len(l.root) == 1 and l.root[0].tag == 'identity': return None
     if autoidentity:
         i = l.root.find('identity')
