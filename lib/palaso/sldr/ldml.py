@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -442,7 +443,7 @@ class Ldml(ETWriter):
         parser.Parse(parsetext)
         cls.maxAts = max(attribCount.values()) + 1
 
-    def __init__(self, fname, usedrafts=True):
+    def __init__(self, fname, usedrafts=True, uparrows=False):
         if not hasattr(self, 'elementOrder'):
             self.__class__.ReadMetadata()
         self.namespaces = {'http://www.w3.org/XML/1998/namespace': 'xml'}
@@ -495,6 +496,13 @@ class Ldml(ETWriter):
                     elem[-1].commentsafter = comments
                     comments = []
                 curr = getattr(elem, 'parent', None)
+                if not uparrows:
+                    if elem.text == u"↑↑↑" or \
+                                (getattr(elem, 'hasdeletedchild', False) and len(elem) == 0):
+                        curr.remove(elem)
+                        curr.hasdeletedchild = True
+                    elif curr is not None:
+                        curr.hasdeletedchild = False
         fh.close()
         self.analyse()
         self.normalise(self.root, usedrafts=usedrafts)
@@ -1184,7 +1192,8 @@ def _prepare_parent(next, token):
     return select
 ep.ops['..'] = _prepare_parent
 
-def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False, skipstubs=False, fname=None, flattencollation=False):
+def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
+                  skipstubs=False, fname=None, flattencollation=False, resolveAlias=False):
     """ Flattens an ldml file by filling in missing details from the fallback chain.
         If rev true, then do the opposite and unflatten a flat LDML file by removing
         everything that is the same in the fallback chain.
@@ -1247,6 +1256,8 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False, sk
                         l.overlay(o)
                 f = trimtag(f)
             if not dome: break
+    if resolveAlias:
+        l.resolve_aliases()
     if skipstubs and len(l.root) == 1 and l.root[0].tag == 'identity': return None
     if autoidentity:
         i = l.root.find('identity')
