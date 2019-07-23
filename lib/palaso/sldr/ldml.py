@@ -703,6 +703,16 @@ class Ldml(ETWriter):
             self.default_draft = 'unconfirmed'
             self.uid = None
 
+    def _distattributes(self, tag, usedrafts):
+        distkeys = set(self.keys)
+        if tag in self.nonkeyContexts:
+            distkeys -= self.nonkeyContexts[tag]
+        if tag in self.keyContexts:
+            distkeys |= self.keyContexts[tag]
+        if usedrafts:
+            distkeys.discard('draft')
+        return distkeys
+
     def _calc_hashes(self, base, usedrafts=False):
         base.contentHash = _minhash(nominhash = True)
         for b in base:
@@ -727,6 +737,18 @@ class Ldml(ETWriter):
             elif not usedrafts or (k != 'draft' and k != 'alt' and k != '{'+self.silns+'}alias'):
                 base.contentHash.update(k, v)     # content hash has non key attributes
         base.contentHash.merge(base.attrHash)               #   and keying hash
+
+    def as_xpath(self, n, usedrafts=False):
+        distkeys = self._distattributes(n.tag, usedrafts)
+        p = getattr(n, 'parent', None)
+        if p is None:
+            return ""
+        res = self.as_xpath(p, usedrafts=usedrafts)
+        if len(res):
+            res += "/" 
+        tests = [(k, n.get(k)) for k in self._sortedattrs(n) if k in distkeys]
+        res += n.tag + u"".join(u'[@{}="{}"]'.format(*x) for x in tests)
+        return res
 
     def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}):
         if self.uid is not None:
@@ -1192,6 +1214,16 @@ def _prepare_parent(next, token):
     return select
 ep.ops['..'] = _prepare_parent
 
+def getldml(lname, dirs):
+    for d in dirs:
+        f = os.path.join(d, lname + '.xml')
+        if os.path.exists(f):
+            return Ldml(f)
+        f = os.path.join(d, lname[0].lower(), lname + '.xml')
+        if os.path.exists(f):
+            return Ldml(f)
+    return None
+
 def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
                   skipstubs=False, fname=None, flattencollation=False, resolveAlias=False):
     """ Flattens an ldml file by filling in missing details from the fallback chain.
@@ -1207,16 +1239,6 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
             return ''
         else:
             return s[:r]
-
-    def getldml(lname, dirs):
-        for d in dirs:
-            f = os.path.join(d, lname + '.xml')
-            if os.path.exists(f):
-                return Ldml(f)
-            f = os.path.join(d, lname[0].lower(), lname + '.xml')
-            if os.path.exists(f):
-                return Ldml(f)
-        return None
 
     if isinstance(lname, Ldml):
         l = lname
