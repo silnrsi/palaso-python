@@ -38,6 +38,7 @@ setup(name='palaso',
                     'palaso.sldr': ['allkeys.txt', 'language-subtag-registry.txt',
                                     'ldml.dtd', 'likelySubtags.xml',
                                     'supplementalData.xml',
-                                    'supplementalMetadata.xml']}
+                                    'supplementalMetadata.xml'],
+                    'palaso': ['langtags.json']}
      )
 
