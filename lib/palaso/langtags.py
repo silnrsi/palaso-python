@@ -192,7 +192,7 @@ class LangTag(object) :
                 extras.extend(sorted(self.extensions[ns]))
         res = ["-".join([x for x in [self.lang] + s + extras if x is not None]) for s in srs]
         for b in self.base:
-            if b in history:
+            if b in history or b == self:
                 continue
             if len(res) == 1:
                 res = res + res
@@ -399,6 +399,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                 diff.update(merge)
         for a in diff:
             self[a] = tag
+        return tag
 
     def generate_alltags(self) :
         res = []

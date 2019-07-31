@@ -1214,14 +1214,14 @@ def _prepare_parent(next, token):
     return select
 ep.ops['..'] = _prepare_parent
 
-def getldml(lname, dirs):
+def getldml(lname, dirs, **kw):
     for d in dirs:
         f = os.path.join(d, lname + '.xml')
         if os.path.exists(f):
-            return Ldml(f)
+            return Ldml(f, **kw)
         f = os.path.join(d, lname[0].lower(), lname + '.xml')
         if os.path.exists(f):
-            return Ldml(f)
+            return Ldml(f, **kw)
     return None
 
 def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
