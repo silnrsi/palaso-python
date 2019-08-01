@@ -37,6 +37,14 @@ import json, os
 from six import with_metaclass
 from collections import namedtuple
 
+class _Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        fname = kwargs.get('fname', None)
+        if fname not in cls._instances:
+            cls._instances[fname] = super(_Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[fname]
+
 class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns'])):
     def __str__(self):
         res = [self.lang or ""]
@@ -107,11 +115,8 @@ def langtag(s):
     return LangTag(lang, script, region, (variants if len(variants) else None),
                     (extensions if len(extensions) else None))
     
-class LangTags:
+class LangTags(with_metaclass(_Singleton)):
     '''Collection of TagSets'''
-    _readjson = False
-    _tags = {}
-    _info = {}
 
     def ReadJson(self, fname=None):
         self._readjson = True
@@ -125,8 +130,9 @@ class LangTags:
 
     def __init__(self, fname=None):
         '''fname is an optional langtags.json file'''
-        if not self._readjson:
-            self.ReadJson(fname=fname)
+        self._tags = {}
+        self._info = {}
+        self.ReadJson(fname=fname)
 
     def addSet(self, d):
         '''Adds a TagSet to this collection'''
