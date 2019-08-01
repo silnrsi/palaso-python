@@ -3,10 +3,10 @@
 
 SYNOPSIS:
 
-from palaso.langtag import LangTags, LangTag
+from palaso.langtag import LangTags, langtag
 lts = LangTags()
 l = LangTags['en-Latn']
-otherl = LangTag('en-Latn')
+otherl = langtag('en-Latn')
 '''
 
 # Redistribution and use in source and binary forms, with or without
@@ -155,7 +155,7 @@ class LangTags:
             aLangTags[s]'''
         if s in self._tags:
             return self._tags[s]
-        l = LangTag(s)
+        l = langtag(s)
         if l.variants is not None:
             gvar = self._info.get('globalvar', {}).get('variants', [])
             res = self._getwithvars(l, gvar)
@@ -190,9 +190,9 @@ class TagSet:
             setattr(self, k, v)
         for k in ('tag', 'full'):
             v = getattr(self, k, "")
-            l = LangTag(v)
+            l = langtag(v)
             setattr(self, k, l)
-        self.tags = [LangTag(s) for s in self.tags]
+        self.tags = [langtag(s) for s in self.tags]
 
     def __str__(self):
         '''Returns tag as a str'''
