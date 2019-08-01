@@ -1,4 +1,14 @@
 #!/usr/bin/python
+'''Langtags processing module
+
+SYNOPSIS:
+
+from palaso.langtag import LangTags, LangTag
+lts = LangTags()
+l = LangTags['en-Latn']
+otherl = LangTag('en-Latn')
+'''
+
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -27,7 +37,7 @@ import json, os
 from six import with_metaclass
 from collections import namedtuple
 
-class _LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns'])):
+class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns'])):
     def __str__(self):
         res = [self.lang or ""]
         if self.script:
@@ -44,8 +54,9 @@ class _LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'n
     def __hash__(self):
         return hash(str(self))
 
-def LangTag(s):
-    '''Parses string to make a LangTag named tuple'''
+def langtag(s):
+    '''Parses string to make a LangTag named tuple with properties: lang, script,
+       region, variants, ns'''
     params = {}
     bits = str(s).replace('_', '-').split('-')
     curr = 0
@@ -61,23 +72,23 @@ def LangTag(s):
             lang += bits[curr] + "-"
             curr += 1
         lang = lang[:-1]
-    if curr >= len(bits) : return _LangTag(lang, None, None, None, None)
+    if curr >= len(bits) : return LangTag(lang, None, None, None, None)
     script = None
     if len(bits[curr]) == 4 :
         script = bits[curr].title()
         curr += 1
-    if curr >= len(bits) : return _LangTag(lang, script, None, None, None)
+    if curr >= len(bits) : return LangTag(lang, script, None, None, None)
     region = None
     if 1 < len(bits[curr]) < 4 :
         region = bits[curr].upper()
         curr += 1
-    if curr >= len(bits): return _LangTag(lang, script, region, None, None)
+    if curr >= len(bits): return LangTag(lang, script, region, None, None)
     if len(bits[curr]) == 4 and script is None:
         lang += "-"+region
         script = bits[curr]
         region = None
         curr += 1
-        if curr >= len(bits): return _LangTag(lang, script, region, None, None)
+        if curr >= len(bits): return LangTag(lang, script, region, None, None)
         if 1 < len(bits[curr]) < 4:
             region = bits[curr]
             curr += 1
@@ -93,7 +104,7 @@ def LangTag(s):
         else :
             extensions[ns].append(bits[curr].lower())
         curr += 1
-    return _LangTag(lang, script, region, (variants if len(variants) else None),
+    return LangTag(lang, script, region, (variants if len(variants) else None),
                     (extensions if len(extensions) else None))
     
 class LangTags:
@@ -113,6 +124,7 @@ class LangTags:
                     continue
 
     def __init__(self, fname=None):
+        '''fname is an optional langtags.json file'''
         if not self._readjson:
             self.ReadJson(fname=fname)
 
@@ -132,14 +144,15 @@ class LangTags:
             lv = l._replace(variants=t)
             res = self._tags.get(str(lv), None)
             if res is not None:
-                tsv = res.make_variant([v for v in l.variants if v in vs])
+                tsv = res._make_variant([v for v in l.variants if v in vs])
                 for l in tsv.allTags():
                     self._tags[l] = tsv
                 return tsv
         return None
 
     def __getitem__(self, s):
-        '''Looks up a langtag string returning a TagSet or raising KeyError'''
+        '''Looks up a langtag string returning a TagSet or raising KeyError. As in
+            aLangTags[s]'''
         if s in self._tags:
             return self._tags[s]
         l = LangTag(s)
@@ -167,7 +180,8 @@ class LangTags:
 
 class TagSet:
     '''Represents tag set from the json file with same attributes as fields
-       .tag = shortest/preferred tag, .full = maximal tag'''
+       .tag = shortest/preferred tag, .full = maximal tag. Looks like a
+        LangTag of the .tag'''
     def __init__(self, **kw):
         self.tags = []
         self.regions = []
@@ -181,16 +195,43 @@ class TagSet:
         self.tags = [LangTag(s) for s in self.tags]
 
     def __str__(self):
+        '''Returns tag as a str'''
         return str(self.tag or self.full)
 
     def __hash__(self):
         return hash(self.tag) + hash(self.full)
+
+    @property
+    def lang(self):
+        '''tag.lang'''
+        return self.tag.lang
+
+    @property
+    def script(self):
+        '''tag.script'''
+        return self.tag.script
+
+    @property
+    def region(self):
+        '''tag.region'''
+        return self.tag.region
+
+    @property
+    def variants(self):
+        '''tag.variants'''
+        return self.tag.variants
+
+    @property
+    def ns(self):
+        '''tag.ns'''
+        return self.tag.ns
 
     def _isin(self, l):
         s = str(l)
         return s == str(self.tag) or s == str(self.full) or s in map(str, self.tags)
 
     def matches(self, l):
+        '''Is LangTag l one that this tagset matches?'''
         if self._isin(l):
             return True
         if l.region and l.region in self.regions:
@@ -200,11 +241,13 @@ class TagSet:
         return False
  
     def allTags(self):
+        '''Returns a list of all the LangTags in this set'''
         res = [self.tag, self.full]
         res.extend(self.tags)
         return res
 
-    def make_variant(self, vs):
+    def _make_variant(self, vs):
+        '''Return a tagset represented by all the tags adding the variants vs'''
         d = dict([(k, getattr(self, k, None)) for k in self._allkeys])
         for k in ('tag', 'full'):
             if k in d:
