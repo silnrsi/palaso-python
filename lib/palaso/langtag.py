@@ -38,6 +38,7 @@ from six import with_metaclass
 from collections import namedtuple
 
 class _Singleton(type):
+    '''Manage singletons by fname parameter'''
     _instances = {}
     def __call__(cls, *args, **kwargs):
         fname = kwargs.get('fname', None)
@@ -47,6 +48,7 @@ class _Singleton(type):
 
 class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns'])):
     def __str__(self):
+        '''Returns a parsable (by langtag) representation of the language tag.'''
         res = [self.lang or ""]
         if self.script:
             res.append(self.script)
@@ -63,7 +65,7 @@ class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns
         return hash(str(self))
 
     def matched(self, l):
-        '''Is this langtag matched by l in that l may be less specified than this'''
+        '''Is this langtag matched by l in that l may be less specified than this?'''
         for i in range(len(self)):
             if l[i] is None:
                 continue
@@ -74,10 +76,12 @@ class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns
 
 def langtag(s):
     '''Parses string to make a LangTag named tuple with properties: lang, script,
-       region, variants, ns'''
+       region, variants, ns. Extlangs result in ext-lang in lang property.'''
     params = {}
     bits = str(s).replace('_', '-').split('-')
     curr = 0
+
+    # lang component
     lang = None
     if 1 < len(bits[curr]) < 4 :
         lang = bits[curr].lower()
@@ -91,16 +95,22 @@ def langtag(s):
             curr += 1
         lang = lang[:-1]
     if curr >= len(bits) : return LangTag(lang, None, None, None, None)
+
+    # script component
     script = None
     if len(bits[curr]) == 4 :
         script = bits[curr].title()
         curr += 1
     if curr >= len(bits) : return LangTag(lang, script, None, None, None)
+
+    # region component
     region = None
     if 1 < len(bits[curr]) < 4 :
         region = bits[curr].upper()
         curr += 1
     if curr >= len(bits): return LangTag(lang, script, region, None, None)
+
+    # extlang spotting
     if len(bits[curr]) == 4 and script is None:
         lang += "-"+region
         script = bits[curr]
@@ -110,6 +120,8 @@ def langtag(s):
         if 1 < len(bits[curr]) < 4:
             region = bits[curr]
             curr += 1
+
+    # variants and extensions
     ns = ''
     extensions = {}
     variants = []
@@ -124,7 +136,8 @@ def langtag(s):
         curr += 1
     return LangTag(lang, script, region, (variants if len(variants) else None),
                     (extensions if len(extensions) else None))
-    
+
+
 class LangTags(with_metaclass(_Singleton)):
     '''Collection of TagSets'''
 
@@ -150,9 +163,15 @@ class LangTags(with_metaclass(_Singleton)):
             for l in s.allTags():
                 self._tags[str(l)] = s
 
+    def values(self):
+        '''Return a list of all the tagsets in this LangTags'''
+        return self._tags.values()
+
     def _getwithvars(self, l, vs):
+        '''Given a langtag and list of variants, create a new tagset corresponding
+            to the variant list if not already covered by this tagset'''
         t = [v for v in l.variants if v not in vs]
-        if len(t) != len(v):
+        if len(t) != len(vs):
             lv = l._replace(variants=t)
             res = self._tags.get(str(lv), None)
             if res is not None:
@@ -162,12 +181,9 @@ class LangTags(with_metaclass(_Singleton)):
                 return tsv
         return None
 
-    def values(self):
-        return self._tags.values()
-
     def __getitem__(self, s):
         '''Looks up a langtag string returning a TagSet or raising KeyError. As in
-            aLangTags[s]'''
+            aLangTags[s].'''
         if s in self._tags:
             return self._tags[s]
         l = langtag(s)
@@ -193,11 +209,13 @@ class LangTags(with_metaclass(_Singleton)):
                     return res
         raise KeyError(s)
 
+
 class TagSet:
     '''Represents tag set from the json file with same attributes as fields
        .tag = shortest/preferred tag, .full = maximal tag.'''
 
     def __init__(self, **kw):
+        '''Create a TagSet and fill in its data properties'''
         self.tags = []
         self.regions = []
         self._allkeys = kw.keys()
@@ -217,6 +235,9 @@ class TagSet:
         return hash(self.tag) + hash(self.full)
 
     def asdict(self, format=None, **kw):
+        '''Returns all data properties as a dict. Set format to process each element.
+            Other kw values are used to initialise the dictionary with default values
+            for missing properties.'''
         for k in self._allkeys:
             v = getattr(self, k)
             if format is not None:
@@ -228,6 +249,7 @@ class TagSet:
         return kw
 
     def _isin(self, l):
+        '''Is the given langtag specified as one of the tags in this set'''
         s = str(l)
         return s == str(self.tag) or s == str(self.full) or s in map(str, self.tags)
 
@@ -244,7 +266,7 @@ class TagSet:
 
     def matched(self, l):
         '''Returns whether this tagset is matched by l, given l may be less
-            specified than this tagset'''
+            specified than this tagset.'''
         return self.full.matched(l)
 
     def allTags(self):
@@ -256,7 +278,7 @@ class TagSet:
         return res
 
     def _make_variant(self, vs):
-        '''Return a copy tagset changing all tags to add the variants vs'''
+        '''Return a copy tagset changing all tags to add the variants vs.'''
         d = dict([(k, getattr(self, k, None)) for k in self._allkeys])
         for k in ('tag', 'full'):
             if k in d:
@@ -265,9 +287,8 @@ class TagSet:
         d['tags'] = [t._replace(variants=sorted((t.variants or []) + vs)) for t in d['tags']]
         return TagSet(**d)
 
+
 if __name__ == "__main__":
     lts = LangTags()
-    print(lts['en-Latn-fonipa'])
-    print(lts['aal-NG-fonipa-simple'])
-
-
+    print(lts['en-Latn-fonipa-simple'])
+    print(lts['aal-NG'])
