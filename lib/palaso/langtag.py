@@ -62,6 +62,16 @@ class LangTag(namedtuple('LangTag', ['lang', 'script', 'region', 'variants', 'ns
     def __hash__(self):
         return hash(str(self))
 
+    def matched(self, l):
+        '''Is this langtag matched by l in that l may be less specified than this'''
+        for i in range(len(self)):
+            if l[i] is None:
+                continue
+            if self[i] != l[i]:
+                return False
+        return True
+
+
 def langtag(s):
     '''Parses string to make a LangTag named tuple with properties: lang, script,
        region, variants, ns'''
@@ -118,8 +128,10 @@ def langtag(s):
 class LangTags(with_metaclass(_Singleton)):
     '''Collection of TagSets'''
 
-    def ReadJson(self, fname=None):
-        self._readjson = True
+    def __init__(self, fname=None):
+        '''fname is an optional langtags.json file'''
+        self._tags = {}
+        self._info = {}
         if fname is None:
             fname = os.path.join(os.path.dirname(__file__), 'langtags.json')
         with open(fname, "r") as inf:
@@ -127,12 +139,6 @@ class LangTags(with_metaclass(_Singleton)):
             for d in data:
                 if not hasattr(d, 'tag'):
                     continue
-
-    def __init__(self, fname=None):
-        '''fname is an optional langtags.json file'''
-        self._tags = {}
-        self._info = {}
-        self.ReadJson(fname=fname)
 
     def addSet(self, d):
         '''Adds a TagSet to this collection'''
@@ -155,6 +161,9 @@ class LangTags(with_metaclass(_Singleton)):
                     self._tags[l] = tsv
                 return tsv
         return None
+
+    def values(self):
+        return self._tags.values()
 
     def __getitem__(self, s):
         '''Looks up a langtag string returning a TagSet or raising KeyError. As in
@@ -186,8 +195,8 @@ class LangTags(with_metaclass(_Singleton)):
 
 class TagSet:
     '''Represents tag set from the json file with same attributes as fields
-       .tag = shortest/preferred tag, .full = maximal tag. Looks like a
-        LangTag of the .tag'''
+       .tag = shortest/preferred tag, .full = maximal tag.'''
+
     def __init__(self, **kw):
         self.tags = []
         self.regions = []
@@ -207,37 +216,24 @@ class TagSet:
     def __hash__(self):
         return hash(self.tag) + hash(self.full)
 
-    @property
-    def lang(self):
-        '''tag.lang'''
-        return self.tag.lang
-
-    @property
-    def script(self):
-        '''tag.script'''
-        return self.tag.script
-
-    @property
-    def region(self):
-        '''tag.region'''
-        return self.tag.region
-
-    @property
-    def variants(self):
-        '''tag.variants'''
-        return self.tag.variants
-
-    @property
-    def ns(self):
-        '''tag.ns'''
-        return self.tag.ns
+    def asdict(self, format=None, **kw):
+        for k in self._allkeys:
+            v = getattr(self, k)
+            if format is not None:
+                if isinstance(v, list):
+                    v = list(map(format, v))
+                else:
+                    v = format(v)
+            kw[k] = v
+        return kw
 
     def _isin(self, l):
         s = str(l)
         return s == str(self.tag) or s == str(self.full) or s in map(str, self.tags)
 
-    def matches(self, l):
-        '''Is LangTag l one that this tagset matches?'''
+    def contains(self, l):
+        '''Is LangTag l one that this tagset contains? This includes the extra
+            regions supported.'''
         if self._isin(l):
             return True
         if l.region and l.region in self.regions:
@@ -245,15 +241,22 @@ class TagSet:
             if self._isin(nr):
                 return True
         return False
- 
+
+    def matched(self, l):
+        '''Returns whether this tagset is matched by l, given l may be less
+            specified than this tagset'''
+        return self.full.matched(l)
+
     def allTags(self):
-        '''Returns a list of all the LangTags in this set'''
+        '''Returns a list of all the LangTags in this set. Not necessarily every
+            tag that matches. But all the tags excluding those with regions in
+            the .regions list of extra regions matched by this TagSet.'''
         res = [self.tag, self.full]
         res.extend(self.tags)
         return res
 
     def _make_variant(self, vs):
-        '''Return a tagset represented by all the tags adding the variants vs'''
+        '''Return a copy tagset changing all tags to add the variants vs'''
         d = dict([(k, getattr(self, k, None)) for k in self._allkeys])
         for k in ('tag', 'full'):
             if k in d:
@@ -264,7 +267,7 @@ class TagSet:
 
 if __name__ == "__main__":
     lts = LangTags()
-    print lts['en-Latn-fonipa']
-    print lts['aal-NG-fonipa-simple']
+    print(lts['en-Latn-fonipa'])
+    print(lts['aal-NG-fonipa-simple'])
 
 
