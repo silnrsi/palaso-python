@@ -20,7 +20,13 @@ keyrowmap = {
 keymap = dict([(k, ("{}{:02d}".format(rk[-1], i+1), rk.startswith("_"))) 
                 for rk, r in keyrowmap.items() for i, k in enumerate(r)])
 keymap.update({ "|" : ("B00", True), "\\" : ("B00", False), " ": ("A03", False),
-                "`" : ("E00", False), "~" : ("E00", True)})
+                "`" : ("E00", False), "~" : ("E00", True),
+                'npplus': ("E51", False), 'npslash': ("E52", False), 'npstar': ('E53', False),
+                'npminus': ("E54", False), 'np7': ("D51", False), 'np8': ("D52", False),
+                'np9': ("D53", False), 'npplus': ("D54", False), 'np4': ("C51", False),
+                'np5': ("C52", False), 'np6': ("C53", False), 'np1': ("B51", False),
+                'np2': ("B52", False), 'np3': ("B53", False), 'npenter': ("B54", False),
+                'np0': ("A52", False), 'npperiod': ("A53", False)})
 
 def mapkey(tok):
     if tok is None:
@@ -118,14 +124,22 @@ class AnyIndex(object):
             return "index(" + self.name + ", " + str(self.index) + ")"
 
 class DeadKey(object):
-    missing = 0xFDD2
+    missing = 0xE000
     allkeys = {}
+    excludes = set()
+
+    @classmethod
+    def set_excludes(cls, exclset):
+        cls.excludes = exclset
 
     @classmethod
     def increment(cls):
-        cls.missing += 1
-        if cls.missing == 0xFDE0:
-            cls.missing = 0xEFFF0
+        while True:
+            cls.missing += 1
+            if cls.missing == 0xF900:
+                cls.missing = 0xF0000
+            if unichr(cls.missing) not in cls.excludes:
+                break
 
     def __new__(cls, toklist):
         number = toklist[1]

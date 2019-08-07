@@ -436,14 +436,7 @@ class OutputString:
     def __eq__(self, other):
         return self.str == unicode(other)
 
-def process_uses(p, name, *extras):
-    for t in p.uses.get(name, set()):
-        for r in p.allRules[t]:
-            make_transform(r, p, *extras)
-        process_uses(p, t, *extras)
-
-def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, base=None, name=None):
-    prebases = {}
+def load_kmn(kmnfile, platform):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
         lines = "".join(f.readlines())
     p = Parser(lines, debug = (args.debug & 2), platform = platform)
@@ -451,6 +444,26 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, bas
         print(pformat(p.tree))
     for s in p.allStores.values():
         s.flatten()
+    return p
+
+def preprocess_kmn(p):
+    allchars = set()
+    for u in p.begins.values():
+        for r in p.allRules[u]:
+            for rf in r.flatten(p.allStores):
+                outs = OutputString(rf.output)
+                for c in unicode(outs):
+                    allchars.add(c)
+    return allchars
+
+def process_uses(p, name, *extras):
+    for t in p.uses.get(name, set()):
+        for r in p.allRules[t]:
+            make_transform(r, p, *extras)
+        process_uses(p, t, *extras)
+
+def process_kmn(ldml, p, reorder=False, reorderfile=None, base=None, name=None):
+    prebases = {}
     maps = { "" : {}, "shift" : {} }
     simples = {}
     for r in p.allRules[p.begins['unicode']]:
@@ -467,7 +480,8 @@ def process_kmn(ldml, kmnfile, platform={}, reorder=False, reorderfile=None, bas
             if k[1] not in maps:
                 maps[k[1]] = {}
             outs = OutputString(rf.output).replace(args.charreorder, "")
-            if len(unicode(outs)) and any((outs == x for y in maps.values() for x in y.values())):
+            if len(unicode(outs)) and any(outs == x and (k[0] != w or k[1] != y) \
+                                        for y in maps.values() for w,x in y.items()):
                 s = unichr(DeadKey.missing)
                 DeadKey.increment()
                 simples[s] = outs
@@ -639,10 +653,27 @@ nonoutputkeys = set(("lshift", "rshift", "shift", "lcontrol", "lctrl", "rcontrol
                     "numerals", "shifted", "upper", "lower", "symbols", "bksp", "numlock",
                     "lopt", "ropt", "opt", "enter", "space"))
 sparekeyCount = 1
-def process_layout(ldml, jsfile, platform = {}, extras=False):
-    layertype = platform['form']
+def load_layout(jsfile):
     with codecs.open(jsfile, "r", encoding="utf-8") as f:
         linfo = json.load(f)
+    return linfo
+
+def preprocess_layout(linfo):
+    allchars = set()
+    for types in linfo.values():
+        if "layer" not in types:
+            continue
+        for layer in types["layer"]:
+            for r in layer["row"]:
+                for c in r.get("text", ""):
+                    allchars.add(c)
+                for s in r.get("sk", []):
+                    for c in s.get("text", ""):
+                        allchars.add(c)
+    return allchars
+
+def process_layout(ldml, linfo, platform = {}, extras=False):
+    layertype = platform['form']
     if layertype not in linfo:
         layertype = linfo.keys()[0]
     layers = dict((l["id"], i) for i, l in enumerate(linfo[layertype]["layer"]))
@@ -746,11 +777,19 @@ if args.charreorder is not None:
     args.charreorder = unichr(int(args.charreorder, 16))
 
 if args.kmn:
-    process_kmn(ldml, args.kmn, platform=platform, reorder=args.reorder,
+    p = load_kmn(args.kmn, platform)
+    allchars = preprocess_kmn(p)
+if args.layout:
+    linfo = load_layout(args.layout)
+    allchars.update(preprocess_layout(linfo))
+DeadKey.set_excludes(allchars)
+
+if args.kmn:
+    process_kmn(ldml, p, reorder=args.reorder,
                 reorderfile=args.reorderfile, base=args.basefile, name=args.name)
 
 if args.layout:
-    process_layout(ldml, args.layout, platform=platform, extras=args.full)
+    process_layout(ldml, linfo, platform=platform, extras=args.full)
 
 if args.imprt is not None:
     ldml.addImport(args.imprt)
