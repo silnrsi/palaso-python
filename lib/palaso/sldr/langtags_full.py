@@ -170,6 +170,8 @@ class LangTag(object) :
             self.hideregion = tag.hideregion
         if not self.hideboth:
             self.hideboth = tag.hideboth
+        if not len(getattr(self, 'desc', [])) and len(getattr(tag, 'desc', [])):
+            self.desc = tag.desc
         return True
 
     def allforms(self, history=[]) :
