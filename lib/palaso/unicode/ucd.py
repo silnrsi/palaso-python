@@ -1,47 +1,59 @@
 #!/usr/bin/python3
 
+"""ucd
+
+This module contains the basic ucd information for every character in Unicode.
+
+SYNOPSIS:
+
+    from palaso.unicode.ucd import UCD
+    ucd = UCD()
+    print(ucd.get(0x0041, 'scx'))
+"""
+
 import array, pickle
 import xml.etree.ElementTree as et
 import os, bz2, zipfile
 
 
-_binfields = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF CWL CWT CWU
+# Unicode data xml attributes
+_binfieldnames = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF CWL CWT CWU
     Dash Dep DI Dia Ext Gr_Base Gr_Ext Gr_Link Hex Hyphen IDC Ideo IDS IDSB
     IDST Join_C LOE Lower Math NChar OAlpha ODI OGr_Ext OIDC OIDS OLower OMath
     OUpper Pat_Syn Pat_WS PCM QMark Radical RI SD STerm Term UIdeo Upper VS
     WSpace XIDC XIDS XO_NFC XO_NFD XO_NFKC XO_NFKD"""
-binmap = dict((x, i) for i, x in enumerate(_binfields.split()))
-_enumfields = """age blk sc scx bc bpt ccc dt ea gc GCB hst InPC InSC jg jt lb
+_binmap = dict((x, i) for i, x in enumerate(_binfieldnames.split()))
+_enumfieldnames = """age blk sc scx bc bpt ccc dt ea gc GCB hst InPC InSC jg jt lb
     NFC_QC NFD_QC NFKC_QC NFKD_QC nt SB vo WB"""
-_cpfields = """cf dm FC_NFKC lc NFKC_CF scf slc stc suc tc uc bmg bpb"""
-cpfields = set(_cpfields.split())
+_cpfieldnames = """cf dm FC_NFKC lc NFKC_CF scf slc stc suc tc uc bmg bpb"""
+_cpfields = set(_cpfieldnames.split())
+_fields = ['_b0', 'age', 'name', 'JSN', 'gc', 'ccc', 'dt', 'dm', 'nt', 'nv',
+           'bc', 'bpt', 'bpb', 'bmg', 'suc', 'slc', 'stc', 'uc', 'lc', 'tc',
+           'scf', 'cf', 'jt', 'jg', 'ea', 'lb', 'sc', 'scx', 'NFKC_CF', 'FC_NFKC', 'InSC',
+           'InPC', 'vo', 'blk']
+_fieldmap = dict((x, i) for i, x in enumerate(_fields))
 
 class Codepoint(tuple):
-    _fields = ['_b0', 'age', 'name', 'JSN', 'gc', 'ccc', 'dt', 'dm', 'nt', 'nv',
-               'bc', 'bpt', 'bpb', 'bmg', 'suc', 'slc', 'stc', 'uc', 'lc', 'tc',
-               'scf', 'cf', 'jt', 'jg', 'ea', 'lb', 'sc', 'scx', 'NFKC_CF', 'FC_NFKC', 'InSC',
-               'InPC', 'vo', 'blk']
-    fieldmap = dict((x, i) for i, x in enumerate(_fields))
-
+    """Represents the complete information for a particular codepoint"""
     def __new__(cls, *a, **kw):
-        if len(a) == 1 and len(a[0]) == len(cls._fields):
+        if len(a) == 1 and len(a[0]) == len(_fields):
             return tuple.__new__(cls, a[0])
         if len(kw):
-            a = [0] * len(cls._fields)
+            a = [0] * len(_fields)
             for k, v in kw.items():
-                if k in binmap and v == "Y":
-                    #i = cls.fieldmap['_b'+str(binmap[k][0])]
-                    i = cls.fieldmap['_b0']
-                    a[i] = a[i] + (1 << binmap[k])
-                elif k in cls.fieldmap:
-                    a[cls.fieldmap[k]] = v
+                if k in _binmap and v == "Y":
+                    #i = _fieldmap['_b'+str(_binmap[k][0])]
+                    i = _fieldmap['_b0']
+                    a[i] = a[i] + (1 << _binmap[k])
+                elif k in _fieldmap:
+                    a[_fieldmap[k]] = v
         return tuple.__new__(cls, a)
 
     def __getitem__(self, key):
-        if key in self.fieldmap:
-            return super(Codepoint, self).__getitem__(self.fieldmap[key])
-        elif key in binmap:
-            return (super(Codepoint, self).__getitem__('_b'+str(binmap[k][0])) >> binmap[k][1]) & 1
+        if key in _fieldmap:
+            return super(Codepoint, self).__getitem__(_fieldmap[key])
+        elif key in _binmap:
+            return (super(Codepoint, self).__getitem__('_b'+str(_binmap[k][0])) >> _binmap[k][1]) & 1
         else:
             return None
 
@@ -91,7 +103,7 @@ class UCD:
                 for n, v in enums.items():
                     if n in d:
                         d[n] = v[d[n]]
-                for n in cpfields:
+                for n in _cpfields:
                     if d[n] == "#":
                         d[n] = ""
                     d[n] = "".join(chr(int(x, 16)) for x in d[n].split())
@@ -120,6 +132,8 @@ class UCD:
         return enums
 
     def get(self, cp, key):
+        """ Looks up a codepoint and returns the value for a given key. This
+            includes mapping enums back to their strings"""
         if cp >= len(self.dat) or self.dat[cp] == []:
             return None
         v = self.dat[cp][key]
