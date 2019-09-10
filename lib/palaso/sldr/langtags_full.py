@@ -96,6 +96,9 @@ class LangTag(object) :
     def __hash__(self) :
         return hash(str(self))
 
+    def __lt__(self, other):
+        return repr(self) < repr(other)
+
     def parse(self, x) :
         ''' cheap and nasty langtag parser '''
         params = {}
