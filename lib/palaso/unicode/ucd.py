@@ -15,7 +15,6 @@ import array, pickle
 import xml.etree.ElementTree as et
 import os, bz2, zipfile
 
-
 # Unicode data xml attributes
 _binfieldnames = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF CWL CWT CWU
     Dash Dep DI Dia Ext Gr_Base Gr_Ext Gr_Link Hex Hyphen IDC Ideo IDS IDSB
@@ -24,10 +23,10 @@ _binfieldnames = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF
     WSpace XIDC XIDS XO_NFC XO_NFD XO_NFKC XO_NFKD"""
 _binmap = dict((x, i) for i, x in enumerate(_binfieldnames.split()))
 _enumfieldnames = """age blk sc scx bc bpt ccc dt ea gc GCB hst InPC InSC jg jt lb
-    NFC_QC NFD_QC NFKC_QC NFKD_QC nt SB vo WB"""
+    NFC_QC NFD_QC NFKC_QC NFKD_QC nt SB vo WB nv JSN"""
 _cpfieldnames = """cf dm FC_NFKC lc NFKC_CF scf slc stc suc tc uc bmg bpb"""
 _cpfields = set(_cpfieldnames.split())
-_fields = ['_b0', 'age', 'name', 'JSN', 'gc', 'ccc', 'dt', 'dm', 'nt', 'nv',
+_fields = ['_b0', 'age', 'na', 'JSN', 'gc', 'ccc', 'dt', 'dm', 'nt', 'nv',
            'bc', 'bpt', 'bpb', 'bmg', 'suc', 'slc', 'stc', 'uc', 'lc', 'tc',
            'scf', 'cf', 'jt', 'jg', 'ea', 'lb', 'sc', 'scx', 'NFKC_CF', 'FC_NFKC', 'InSC',
            'InPC', 'vo', 'blk']
@@ -43,8 +42,7 @@ class Codepoint(tuple):
             for k, v in kw.items():
                 if k in _binmap and v == "Y":
                     #i = _fieldmap['_b'+str(_binmap[k][0])]
-                    i = _fieldmap['_b0']
-                    a[i] = a[i] + (1 << _binmap[k])
+                    a[_fieldmap['_b0']] += (1 << _binmap[k])
                 elif k in _fieldmap:
                     a[_fieldmap[k]] = v
         return tuple.__new__(cls, a)
@@ -57,25 +55,26 @@ class Codepoint(tuple):
         else:
             return None
 
+
 class UCD(list):
 
     _singleton = None
-    def __new__(cls, filename=None):
+    def __new__(cls, localfile=None):
         if cls._singleton is not None:
             return cls._singleton
         else:
             cls._singleton = list.__new__(cls)
-        if filename is None:
+        if localfile is None:
             localfile = os.path.join(os.path.dirname(__file__), "ucdata_pickle.bz2")
-        else:
-            localfile = filename
-        if localfile.endswith(".bz2") and os.path.exists(localfile):
+        if not os.path.exists(localfile):
+            return cls._singleton
+        if localfile.endswith(".bz2"):
             with bz2.open(localfile, "rb") as inf:
                 return pickle.load(inf)
         elif localfile.endswith(".pickle"):
             with open(localfile, "rb") as inf:
                 return pickle.load(inf)
-        if localfile.endswith(".xml"):
+        elif localfile.endswith(".xml"):
             with open(localfile) as inf:
                 return cls._singleton._loadxml(inf)
         elif localfile.endswith('.zip'):
@@ -84,7 +83,7 @@ class UCD(list):
                 with z.open(firstf) as inf:
                     return cls._singleton._loadxml(inf)
 
-    def __init__(self, filename=None):
+    def __init__(self, localfile=None):
         pass
 
     def _loadxml(self, fh):
@@ -99,13 +98,13 @@ class UCD(list):
                 elif 'first-cp' in d:
                     firstcp = d.pop('first-cp')
                     lastcp = d.pop('last-cp')
-                for n, v in enums.items():
-                    if n in d:
-                        d[n] = v[d[n]]
                 for n in _cpfields:
                     if d[n] == "#":
                         d[n] = ""
                     d[n] = "".join(chr(int(x, 16)) for x in d[n].split())
+                for n, v in enums.items():
+                    if n in d:
+                        d[n] = v[d[n]]
                 dat = Codepoint(**d)
                 firsti = int(firstcp, 16)
                 lasti = int(lastcp, 16)
