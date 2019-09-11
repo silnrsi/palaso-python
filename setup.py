@@ -7,8 +7,7 @@ import platform, sys
 packages=['palaso', 'palaso.collation', 'palaso.kmn', 'palaso.sfm', 
           'palaso.teckit', 'palaso.text', 'palaso.font', 'palaso.contrib',
           'palaso.contrib.freetype', 'palaso.contrib.freetype.ft_enums',
-          'palaso.contrib.funcparserlib', 'palaso.unicode', 'palaso.sldr',
-          'palaso.unicode']
+          'palaso.contrib.funcparserlib', 'palaso.unicode', 'palaso.sldr']
 try:
     from Pyrex.Distutils.extension import Extension
     from Pyrex.Distutils import build_ext
