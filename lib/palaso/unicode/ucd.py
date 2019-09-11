@@ -7,8 +7,8 @@ This module contains the basic ucd information for every character in Unicode.
 SYNOPSIS:
 
     from palaso.unicode.ucd import UCD
-    ucd = UCD()
-    print(ucd.get(0x0041, 'scx'))
+    ucdata = UCD()
+    print(ucdata.get(0x0041, 'scx'))
 """
 
 import array, pickle
@@ -57,14 +57,14 @@ class Codepoint(tuple):
         else:
             return None
 
-class UCD:
+class UCD(list):
 
     _singleton = None
     def __new__(cls, filename=None):
         if cls._singleton is not None:
             return cls._singleton
         else:
-            cls._singleton = object.__new__(cls)
+            cls._singleton = list.__new__(cls)
         if filename is None:
             localfile = os.path.join(os.path.dirname(__file__), "ucdata_pickle.bz2")
         else:
@@ -86,10 +86,9 @@ class UCD:
 
     def __init__(self, filename=None):
         pass
-        
+
     def _loadxml(self, fh):
         enums = self._preproc(fh)
-        self.dat = []
         fh.seek(0)
         for (ev, e) in et.iterparse(fh, events=['start']):
             if ev == 'start' and e.tag.endswith('char'):
@@ -110,15 +109,15 @@ class UCD:
                 dat = Codepoint(**d)
                 firsti = int(firstcp, 16)
                 lasti = int(lastcp, 16)
-                if lasti >= len(self.dat):
-                    self.dat.extend([0] * (lasti - len(self.dat) + 1))
+                if lasti >= len(self):
+                    self.extend([None] * (lasti - len(self) + 1))
                 for i in range(firsti, lasti+1):
-                    self.dat[i] = dat
+                    self[i] = dat
         return self
 
     def _preproc(self, filename):
         enums = {}
-        for e in _enumfields.split():
+        for e in _enumfieldnames.split():
             enums[e] = {}
         for (ev, e) in et.iterparse(filename, events=['start']):
             if e.tag.endswith('char'):
@@ -134,9 +133,11 @@ class UCD:
     def get(self, cp, key):
         """ Looks up a codepoint and returns the value for a given key. This
             includes mapping enums back to their strings"""
-        if cp >= len(self.dat) or self.dat[cp] == []:
-            return None
-        v = self.dat[cp][key]
+        v = self[cp]
+        return self.enumstr(key, v[key]) if v is not None else None
+
+    def enumstr(self, key, v):
+        """ Returns the string for an enum value given enum name and value """
         if key in self.enums:
             m = self.enums[key]
             return m[v] if v < len(m) else v
