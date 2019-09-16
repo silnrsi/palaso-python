@@ -6,15 +6,15 @@ This module contains the basic ucd information for every character in Unicode.
 
 SYNOPSIS:
 
-    from palaso.unicode.ucd import UCD
-    ucdata = UCD()
-    print(ucdata.get(0x0041, 'scx'))
+    from palaso.unicode.ucd import get_ucd
+    print(get_ucd(0x0041, 'scx'))
 """
 
 import array, pickle
 import xml.etree.ElementTree as et
 import os, bz2, zipfile
 
+__all__ = ['get_ucd']
 # Unicode data xml attributes
 _binfieldnames = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF CWL CWT CWU
     Dash Dep DI Dia Ext Gr_Base Gr_Ext Gr_Link Hex Hyphen IDC Ideo IDS IDSB
@@ -32,7 +32,7 @@ _fields = ['_b0', 'age', 'na', 'JSN', 'gc', 'ccc', 'dt', 'dm', 'nt', 'nv',
            'InPC', 'vo', 'blk']
 _fieldmap = dict((x, i) for i, x in enumerate(_fields))
 
-class Codepoint(tuple):
+class _Codepoint(tuple):
     """Represents the complete information for a particular codepoint"""
     def __new__(cls, *a, **kw):
         if len(a) == 1 and len(a[0]) == len(_fields):
@@ -49,15 +49,14 @@ class Codepoint(tuple):
 
     def __getitem__(self, key):
         if key in _fieldmap:
-            return super(Codepoint, self).__getitem__(_fieldmap[key])
+            return super(_Codepoint, self).__getitem__(_fieldmap[key])
         elif key in _binmap:
-            return (super(Codepoint, self).__getitem__('_b'+str(_binmap[k][0])) >> _binmap[k][1]) & 1
+            return (super(_Codepoint, self).__getitem__(_fieldmap['_b0']) >> _binmap[key]) & 1
         else:
-            return None
+            raise KeyError("Unknown key: {}".format(key))
 
 
 class UCD(list):
-
     _singleton = None
     def __new__(cls, localfile=None):
         if cls._singleton is not None:
@@ -105,7 +104,7 @@ class UCD(list):
                 for n, v in enums.items():
                     if n in d:
                         d[n] = v[d[n]]
-                dat = Codepoint(**d)
+                dat = _Codepoint(**d)
                 firsti = int(firstcp, 16)
                 lasti = int(lastcp, 16)
                 if lasti >= len(self):
@@ -133,7 +132,11 @@ class UCD(list):
         """ Looks up a codepoint and returns the value for a given key. This
             includes mapping enums back to their strings"""
         v = self[cp]
-        return self.enumstr(key, v[key]) if v is not None else None
+        if v is None:
+            raise KeyError("Undefined codepoint {:04X}".format(cp))
+        if key == "na":
+            return v[key].replace("#", "{:04X}".format(cp))
+        return self.enumstr(key, v[key])
 
     def enumstr(self, key, v):
         """ Returns the string for an enum value given enum name and value """
@@ -142,15 +145,32 @@ class UCD(list):
             return m[v] if v < len(m) else v
         return v
 
+local_ucd = None
+def get_ucd(cp, key):
+    global local_ucd
+    if local_ucd is None:
+        local_ucd = UCD()
+    return local_ucd.get(cp, key)
 
 if __name__ == '__main__':
     import sys, pickle
-    from palaso.unicode.ucd import UCD
+    from palaso.unicode.ucd import UCD, get_ucd
                 
-    if len(sys.argv) < 3:
-        ucdata = UCD()
-        print(ucdata.get(0x0041, "sc"))
+    if len(sys.argv) < 2:
+        print(get_ucd(0x0041, "sc"))
+        print(get_ucd(0x3400, "na"))
     else:
-        ucdata = UCD(filename=sys.argv[1])
-        with open(sys.argv[2], "wb") as outf:
+        try:
+            cp = int(sys.argv[1], 16)
+        except ValueError:
+            cp = None
+        if cp is not None:
+            print(get_ucd(cp, sys.argv[2]))
+        else:
+            ucdata = UCD(localfile=sys.argv[1])
+            if sys.argv[2].endswith(".bz2"):
+                outf = bz2.open(sys.argv[2], "wb")
+            else:
+                outf = open(sys.argv[2], "wb")
             pickle.dump(ucdata, outf)
+            outf.close()
