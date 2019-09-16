@@ -48,10 +48,10 @@ class _Codepoint(tuple):
         return tuple.__new__(cls, a)
 
     def __getitem__(self, key):
-        if key in _fieldmap:
+        if key in _fieldmap and key != "_b0":
             return super(_Codepoint, self).__getitem__(_fieldmap[key])
         elif key in _binmap:
-            return (super(_Codepoint, self).__getitem__(_fieldmap['_b0']) >> _binmap[key]) & 1
+            return True if (super(_Codepoint, self).__getitem__(_fieldmap['_b0']) >> _binmap[key]) & 1 else False
         else:
             raise KeyError("Unknown key: {}".format(key))
 
