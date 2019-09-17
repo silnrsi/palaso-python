@@ -8,6 +8,13 @@ SYNOPSIS:
 
     from palaso.unicode.ucd import get_ucd
     print(get_ucd(0x0041, 'scx'))
+
+If you want to use your own data file (perhaps the module data is stale) the use
+the object interface:
+
+    from palaso.unicode.ucd import UCD
+    myucd = UCD(localfile="ucd.nounihan.flat.zip")
+    print(myucd.get(0x0041, 'scx'))
 """
 
 import array, pickle
@@ -57,33 +64,38 @@ class _Codepoint(tuple):
 
 
 class UCD(list):
-    _singleton = None
+    _singletemp = None
     def __new__(cls, localfile=None):
-        if cls._singleton is not None:
-            return cls._singleton
+        if cls._singletemp is not None:
+            return cls._singletemp
         else:
-            cls._singleton = list.__new__(cls)
+            cls._singletemp = list.__new__(cls)
         if localfile is None:
             localfile = os.path.join(os.path.dirname(__file__), "ucdata_pickle.bz2")
         if not os.path.exists(localfile):
-            return cls._singleton
-        if localfile.endswith(".bz2"):
+            res = cls._singletemp
+        elif localfile.endswith(".bz2"):
             with bz2.open(localfile, "rb") as inf:
-                return pickle.load(inf)
+                res = pickle.load(inf)
         elif localfile.endswith(".pickle"):
             with open(localfile, "rb") as inf:
-                return pickle.load(inf)
+                res = pickle.load(inf)
+        else:
+            res = cls._singletemp
+        cls._singletemp = None
+        return res
+
+    def __init__(self, localfile=None):
+        if localfile is None:
+            return
         elif localfile.endswith(".xml"):
             with open(localfile) as inf:
-                return cls._singleton._loadxml(inf)
+                self._loadxml(inf)
         elif localfile.endswith('.zip'):
             with zipfile.ZipFile(localfile, 'r') as z:
                 firstf = z.namelist()[0]
                 with z.open(firstf) as inf:
-                    return cls._singleton._loadxml(inf)
-
-    def __init__(self, localfile=None):
-        pass
+                    self._loadxml(inf)
 
     def _loadxml(self, fh):
         enums = self._preproc(fh)
