@@ -1,4 +1,4 @@
-python-palaso (0.7.5+dev0-4) bionic; urgency=medium
+python-palaso (1:0.7.5) bionic; urgency=medium
 
   * Make debian dir generate both python2 and ptyhon3 packages from single 
     source.

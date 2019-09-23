@@ -11,7 +11,7 @@ Homepage: http://github.com/silnrsi/palaso-python
 
 Package: python-palaso-core
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-core (>= 0.7.5)
+Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-core (>= 1:0.7.5)
 Provides: ${python:Provides}
 Description: Payap Language Software general python modules
  Various general purpose Python modules used by other palaso packages.
@@ -20,7 +20,7 @@ Description: Payap Language Software general python modules
 
 Package: python-palaso-font
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-font (>= 0.7.5), fonttools, libgraphite2-3, fontforge-nox | fontforge, python-fontforge, python-palaso-core
+Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-font (>= 1:0.7.5), fonttools, libgraphite2-3, python-fontforge, python-palaso-core
 Provides: ${python:Provides}
 Description: Payap Language Software python font support
  Python scripts and modules for interacting with fonts, including graphite,
@@ -30,7 +30,7 @@ Description: Payap Language Software python font support
 
 Package: python-palaso-kbd
 Architecture: any
-Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}, python3-palaso-kbd (>= 0.7.5), libkmfl0, libkmflcomp0, python-palaso-core 
+Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}, python3-palaso-kbd (>= 1:0.7.5), libkmfl0, libkmflcomp0, python-palaso-core 
 Provides: ${python:Provides}
 Description: Payap Language Software python keyboard support
  Python scripts and modules for interacting with keyboard descriptions,
@@ -40,7 +40,7 @@ Description: Payap Language Software python keyboard support
 
 Package: python-palaso-sfm
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-sfm (>= 0.7.5), python-palaso-teckit, python-palaso-core
+Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-sfm (>= 1:0.7.5), python-palaso-teckit, python-palaso-core
 Provides: ${python:Provides}
 Description: Standard Format Markup python support
  Python modules and scripts for interacting with SFM and USFM files.
@@ -49,7 +49,7 @@ Description: Standard Format Markup python support
 
 Package: python-palaso-teckit
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-teckit (>= 0.7.5), python-palaso-core, libteckit0
+Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-teckit (>= 1:0.7.5), python-palaso-core, libteckit0
 Provides: ${python:Provides}
 Description: TECKit text mapping wrapper
  Python module and scripts to interact with TECKit mappings.
@@ -58,7 +58,7 @@ Description: TECKit text mapping wrapper
 
 Package: python-palaso-unicode
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-unicode (>= 0.7.5), python-pyicu, python-gtk2 (>=2.14), python-palaso-core
+Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-unicode (>= 1:0.7.5), python-pyicu, python-gtk2 (>=2.14), python-palaso-core
 Provides: ${python:Provides}
 Description: Payap Language Software unicode text processing
  Python modules and scripts to support Unicode text processing. Including:
@@ -69,7 +69,7 @@ Description: Payap Language Software unicode text processing
 
 Package: python-palaso
 Architecture: all
-Depends: ${misc:Depends}, python3-palaso (>= 0.7.5), python-palaso-kbd, python-palaso-font, python-palaso-teckit, python-palaso-sfm, python-palaso-unicode
+Depends: ${misc:Depends}, python3-palaso (>= 1:0.7.5), python-palaso-kbd, python-palaso-font, python-palaso-teckit, python-palaso-sfm, python-palaso-teckit, python-palaso-unicode
 Description: Payap Language Software python package and scripts
  This metapackage provides Python scripts, modules and packages created by the
  Computing Unit at the Payap Linguistic Institute, a partnership between SIL and
@@ -81,8 +81,8 @@ Description: Payap Language Software python package and scripts
 Package: python3-palaso-core
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}
-Breaks: python-palaso-core (<< 0.7.5)
-Replaces: python-palaso-core (<< 0.7.5)
+Breaks: python-palaso-core (<< 1:0.7.5)
+Replaces: python-palaso-core (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: Payap Language Software general python modules
  Various general purpose Python modules used by other palaso packages.
@@ -91,9 +91,9 @@ Description: Payap Language Software general python modules
 
 Package: python3-palaso-font
 Architecture: all
-Depends: ${python3:Depends}, ${misc:Depends}, python3-fonttools, libgraphite2-3, fontforge-nox | fontforge, python3-fontforge, python3-palaso-core
-Breaks: python-palaso-font (<< 0.7.5)
-Replaces: python-palaso-font (<< 0.7.5)
+Depends: ${python3:Depends}, ${misc:Depends}, python3-fonttools, libgraphite2-3, python3-fontforge, python3-palaso-core
+Breaks: python-palaso-font (<< 1:0.7.5)
+Replaces: python-palaso-font (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: Payap Language Software python font support
  Python scripts and modules for interacting with fonts, including graphite,
@@ -104,8 +104,8 @@ Description: Payap Language Software python font support
 Package: python3-palaso-kbd
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}, python-palaso-core 
-Breaks: python-palaso-kbd (<< 0.7.5)
-Replaces: python-palaso-kbd (<< 0.7.5)
+Breaks: python-palaso-kbd (<< 1:0.7.5)
+Replaces: python-palaso-kbd (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: Payap Language Software python keyboard support
  Python scripts and modules for interacting with kmn keyboard descriptions.
@@ -116,8 +116,8 @@ Description: Payap Language Software python keyboard support
 Package: python3-palaso-sfm
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-teckit, python3-palaso-core
-Breaks: python-palaso-sfm (<< 0.7.5)
-Replaces: python-palaso-sfm (<< 0.7.5)
+Breaks: python-palaso-sfm (<< 1:0.7.5)
+Replaces: python-palaso-sfm (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: Standard Format Markup python support
  Python modules and scripts for interacting with SFM and USFM files.
@@ -126,9 +126,9 @@ Description: Standard Format Markup python support
 
 Package: python3-palaso-teckit
 Architecture: all
-Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-core 
-Breaks: python-palaso-teckit (<< 0.7.5)
-Replaces: python-palaso-teckit (<< 0.7.5)
+Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-core, libteckit0
+Breaks: python-palaso-teckit (<< 1:0.7.5)
+Replaces: python-palaso-teckit (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: TECKit text mapping wrapper
  Python module and scripts to interact with TECKit mappings.
@@ -138,8 +138,8 @@ Description: TECKit text mapping wrapper
 Package: python3-palaso-unicode
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}, python3-icu, python3-palaso-core
-Breaks: python-palaso-unicode (<< 0.7.5)
-Replaces: python-palaso-unicode (<< 0.7.5)
+Breaks: python-palaso-unicode (<< 1:0.7.5)
+Replaces: python-palaso-unicode (<< 1:0.7.5)
 Provides: ${python3:Provides}
 Description: Payap Language Software unicode text processing
  Python modules and scripts to support Unicode text processing. Including:
@@ -150,9 +150,9 @@ Description: Payap Language Software unicode text processing
 
 Package: python3-palaso
 Architecture: all
-Depends: ${misc:Depends}, python3-palaso-font, python3-palaso-teckit, python3-palaso-sfm, python3-palaso-unicode
-Breaks: python-palaso (<< 0.7.5)
-Replaces: python-palaso (<< 0.7.5)
+Depends: ${misc:Depends}, python3-palaso-font, python3-palaso-kbd, python3-palaso-teckit, python3-palaso-sfm, python3-palaso-unicode
+Breaks: python-palaso (<< 1:0.7.5)
+Replaces: python-palaso (<< 1:0.7.5)
 Description: Payap Language Software python package and scripts
  This metapackage provides Python scripts, modules and packages created by the
  Computing Unit at the Payap Linguistic Institute, a partnership between SIL and
