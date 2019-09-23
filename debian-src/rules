@@ -1,6 +1,11 @@
 #!/usr/bin/make -f
 
-export DH_OPTIONS=-v
+export DH_VERBOSE = 1
+export PYBUILD_NAME = pypapk
+export PYBUILD_DISABLE = test
 
 % :
-	dh $@ --with python2 --buildsystem=pybuild
+	dh $@ --with python2,python3 --buildsystem=pybuild
+
+override_dh_python3:
+	dh_python3 --shebang=/usr/bin/python3

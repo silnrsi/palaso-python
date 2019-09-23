@@ -1,3 +1,2 @@
-usr/lib/python2.7/dist-packages/palaso/kmfl.so
-usr/lib/python2.7/dist-packages/palaso/kmn/*
-usr/bin/km*
+debian/python-pypapk/usr/lib/python2.7/dist-packages/palaso/{kmfl.so,kmn} usr/lib/python2.7/dist-packages/palaso/
+debian/python-pypapk/usr/bin/{keymancoverage,kmfltestkeys,kmn{2{c,klc,ldml,xml},xml2svg}} usr/bin/

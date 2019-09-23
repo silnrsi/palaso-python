@@ -1,4 +1,68 @@
-python-palaso (0.7.3-hg343-1.3ubuntu1) trusty; urgency=medium
+python-palaso (0.7.5+dev0-4) bionic; urgency=medium
+
+  * Make debian dir generate both python2 and ptyhon3 packages from single 
+    source.
+  * Move all non-libkmfl dependant scripts to the python3 packages.
+  * Make the python2 packages depend on python3 to force upgrade to ptyon3 
+    packages for script users.
+
+ -- Tim Eves <tim_eves@sil.org>  Fri, 23 Sep 2019 11:46:53 +0700
+
+python-palaso (0.7.4.1dev0ubuntu1) bionic; urgency=medium
+
+  * More python fixes. 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Tue, 22 Jan 2019 22:09:21 -0600
+
+python-palaso (0.7.4.1dev0) bionic; urgency=low
+
+  * Bionic transition to py3.
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Fri, 18 Jan 2019 22:02:14 -0600
+
+python-palaso (0.7.4-git-3ubuntu1) xenial; urgency=medium
+
+  * Added setuptools dependency. 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Thu, 25 Oct 2018 12:51:56 +0200
+
+python-palaso (0.7.4-git-3ubuntu1) xenial; urgency=medium
+
+  * Bumped versionning for LP recipe.
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Mon, 27 Nov 2017 18:39:18 -0600
+
+python-palaso (0.7.4-git-2.1ubuntu2) xenial; urgency=medium
+
+  * Bumped versionning for LP recipe. 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 01 Nov 2017 11:44:35 +0100
+
+python-palaso (0.7.4-2.1ubuntu1) xenial; urgency=medium
+
+  * Moved to fontforge-nox dependency.
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Mon, 26 Jun 2017 22:44:25 +0200
+
+python-palaso (0.7.4-1.0ubuntu1) trusty; urgency=medium
+
+  * Added packaging branch for LP recipe.
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Tue, 24 May 2016 11:39:04 +0200
+
+python-palaso (0.7.3+hg343-1.3ubuntu3) trusty; urgency=medium
+
+  * Removed leftover python-support dependency. 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 06 Apr 2016 12:54:18 +0200
+
+python-palaso (0.7.3+hg343-1.3ubuntu2) xenial; urgency=medium
+
+  * Rebuild for Xenial 
+
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Wed, 06 Apr 2016 12:04:19 +0200
+
+python-palaso (0.7.3+hg343-1.3ubuntu1) trusty; urgency=medium
 
   * Rebuild for LP 
 
