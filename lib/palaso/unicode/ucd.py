@@ -13,7 +13,7 @@ If you want to use your own data file (perhaps the module data is stale) the use
 the object interface:
 
     from palaso.unicode.ucd import UCD
-    myucd = UCD(localfile="ucd.nounihan.flat.zip")
+    myucd = UCD(localfile="ucd.nounihan.flat.zip")   # localfile falls back to bundled data
     print(myucd.get(0x0041, 'scx'))
 """
 
