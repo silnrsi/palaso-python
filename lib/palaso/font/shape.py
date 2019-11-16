@@ -16,21 +16,28 @@ class GrFont(Font) :
     def __init__(self, fname, size = 0, rtl = 0, feats = {}, script = 0, lang = 0) :
         super(GrFont, self).__init__(fname, size, rtl)
         self.grface = gr.Face(fname)
-        self.feats = self.grface.get_featureval(lang)
+        self.lang = lang
+        self.feats = self._featureval(feats, lang)
         self.script = script
-        for f,v in feats.items() :
-            fref = self.grface.get_featureref(f)
-            self.feats.set(fref, v)
         if size > 0 :
             size = size * 96 / 72.
         else :
             size = float(self.grface.get_upem())
         self.font = gr.Font(self.grface, size)
 
+    def _featureval(self, feats, lang):
+        res = self.grface.get_featureval(lang)
+        for f,v in feats.items() :
+            if v is None:
+                continue
+            fref = self.grface.get_featureref(f.encode("utf-8"))
+            res.set(fref, v)
+        return res
+        
     def measure(self, text, after = False) :
         """Returns a list of x positions for before/after the indexth character and
         a list of breakweights"""
-        seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
+        seg = gr.Segment(self.font, self.grface, self.script, str(text), self.rtl, feats = self.feats)
         num = seg.num_cinfo()
         pos = []
         bw = []
@@ -48,8 +55,14 @@ class GrFont(Font) :
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
         return seg.advance[0]
 
-    def glyphs(self, text, includewidth = False) :
-        seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
+    def glyphs(self, text, includewidth = False, feats = None, rtl = None) :
+        if feats is None:
+            feats = self.feats
+        else:
+            feats = self._featureval(feats, self.lang)
+        if rtl is None:
+            rtl = self.rtl
+        seg = gr.Segment(self.font, self.grface, self.script, str(text), rtl, feats = feats)
         res = []
         for s in seg.slots :
             res.append((s.gid, s.origin, seg.cinfo(s.original).unicode))
