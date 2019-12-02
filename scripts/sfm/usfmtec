@@ -13,7 +13,7 @@ Tim Eves provided the concordance program on which this is based.
 
 from palaso.sfm import usfm, style, pprint, element, text
 from palaso.teckit.engine import Converter, Mapping
-from itertools import groupby, chain, imap
+from itertools import groupby, chain
 import palaso.unicsv as csv
 import codecs, glob, optparse, os.path, re, warnings, sys, unicodedata
 
@@ -156,7 +156,7 @@ class usfm_transducer(object) :
         if tnode.parent and ((tnode.parent.meta.get('StyleType') == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags) :
             self.caps[-1] = 1
         self.tnode = tnode
-        res = re.sub(ur'[^\x00-\x1f]+', self.convert, tnode)
+        res = re.sub(r'[^\x00-\x1f]+', self.convert, tnode)
         if self.normal : res = unicodedata.normalize(self.normal, res)
         return res
 
@@ -168,13 +168,13 @@ class usfm_transducer(object) :
         res = self.enc.convert(input, finished=True)
         if res.strip() == '' : return res
         if self.caps[-1] :
-            res = re.sub(ur'^([\s' + self.oquotes + ur']*)(.)',
+            res = re.sub(r'^([\s' + self.oquotes + r']*)(.)',
                             lambda m : m.group(1) + m.group(2).upper(), res)
-        if re.search(ur'[{1}][{0}]*\s*$'.format(self.cquotes, self.punc), res) :
+        if re.search(r'[{1}][{0}]*\s*$'.format(self.cquotes, self.punc), res) :
             self.caps[-1] = 1
-        elif re.search(ur'[{0}]+\s*$'.format(self.cquotes), res) :
+        elif re.search(r'[{0}]+\s*$'.format(self.cquotes), res) :
             pass
-        elif re.match(ur'^\s*\S', res) :
+        elif re.match(r'^\s*\S', res) :
             self.caps[-1] = 0
         rlist = aswords(res)
         res = ""
@@ -207,12 +207,12 @@ class usfm_transducer(object) :
             else :
                 res += wd
 
-        res = re.sub(ur'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
+        res = re.sub(r'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m : m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
 
         if self.tnode.parent and (self.tnode.parent.meta['TextType'] == 'Title' or self.tnode.parent.name in self.calltags) and self.capquotes:
-            res = re.sub(ur'(^\s*|\s)([' + self.capquotes + ur']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
+            res = re.sub(r'(^\s*|\s)([' + self.capquotes + r']*)(.)', lambda m : m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
         elif self.capquotes :
-            res = re.sub('(?<=[' + self.capquotes + ur'])([' + self.oquotes + ']*)(.)', lambda m: m.group(1) + m.group(2).upper() if isword(m.group(2)[0]) else m.group(1) + m.group(2), res)
+            res = re.sub('(?<=[' + self.capquotes + r'])([' + self.oquotes + ']*)(.)', lambda m: m.group(1) + m.group(2).upper() if isword(m.group(2)[0]) else m.group(1) + m.group(2), res)
 
         if self.case :
             res = re.sub(self.case, lambda m : m.group(0)[0].upper() + m.group(0)[1:], res)
@@ -234,7 +234,7 @@ def transduce(fname, opts) :
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
         doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
-    except SyntaxError, err :
+    except SyntaxError as err :
         sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
         sys.exit(1)
     finally:
@@ -251,11 +251,11 @@ if __name__ == '__main__':
     parser.add_option("-c","--capitalise",action="store",help="regular expression match which is capitalised")
     parser.add_option("--capitaltags",action="store",help="list of tags to capitalise their contents")
     parser.add_option("--capitalalltags",action="store",help="list of tags to capitalise each word in their contents")
-    parser.add_option("--openquotes",action="store",help="list of opening quote chars as a string with \u escaping [default: %default]")
-    parser.add_option("--closequotes",action="store",help="list of closing quote chars as a string with \u escaping [default: %default]")
-    parser.add_option("--sentencepunc",action="store",help="list of sentence final punctuation with \u escaping [default: %default]")
+    parser.add_option("--openquotes",action="store",help="list of opening quote chars as a string with \\u escaping [default: %default]")
+    parser.add_option("--closequotes",action="store",help="list of closing quote chars as a string with \\u escaping [default: %default]")
+    parser.add_option("--sentencepunc",action="store",help="list of sentence final punctuation with \\u escaping [default: %default]")
     parser.add_option("--capitalopenquotes",action="store",help="list of chars that force a new sentence [default value of --openquotes]")
-    parser.add_option("--letters",action="store",help="more word forming characters, with \u escaping")
+    parser.add_option("--letters",action="store",help="more word forming characters, with \\u escaping")
     parser.add_option("-d","--dict", action="store", metavar='PATH', help="CSV dictionary of input output replacements")
     parser.add_option("--dict-input",action="store",type="int",dest="dictinput",default=0,help="Input column number (from 0) of CSV dictionary [%default]")
     parser.add_option("--dict-output",action="store",type="int",default=1,dest="dictoutput",help="Output column number (from 0) of CSV dictionary [%default]")
@@ -288,7 +288,7 @@ if __name__ == '__main__':
         sys.stdout.write(__version__+"\n")
         sys.exit(0)
 
-    sfms = list(chain.from_iterable(imap(glob.iglob, sfms)))
+    sfms = list(chain.from_iterable(map(glob.iglob, sfms)))
     if len(sfms) < 1:
         sys.stderr.write(parser.expand_prog_name('%prog: missing SFM FILE\n'))
         parser.print_help(file=sys.stderr)
@@ -328,7 +328,7 @@ if __name__ == '__main__':
                 ofh.write(res)
                 ofh.close()
                 
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
         sys.exit(2)
 
