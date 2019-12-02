@@ -57,13 +57,13 @@ if __name__ == '__main__':
         parser.error("no SFM files found to check.")
 
     try:
-        stylesheet = functools.reduce(
-            lambda a, s: a.update(s),
-            (style.parse((args.project / p).open()) for p in args.stylesheet),
-            usfm.default_stylesheet.copy())
+        stylesheet = usfm.default_stylesheet.copy()
+        for p in args.stylesheet:
+            stylesheet = style.parse((args.project / p).open(), base=stylesheet)
     except SyntaxError as err:
         parser.exit(3, f'{parser.prog}: Style sheet parsing error: {err!s}\n')
 
+    print([stylesheet, usfm.default_stylesheet.copy()])
     with warnings.catch_warnings(record=True) as warns:
         warnings.simplefilter("always", SyntaxWarning)
         try:

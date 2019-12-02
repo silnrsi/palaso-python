@@ -25,12 +25,14 @@ except ImportError:
 
 _fields = {'Marker'         : (str,             UnrecoverableError('Start of record marker: {0} missing')),
            'Endmarker'      : (str,             None),
-           'Name'           : (str,             StructureError('Marker {0} defintion missing: {1}')),
-           'Description'    : (str,             StructureError('Marker {0} defintion missing: {1}')),
+           'Name'           : (str,             None),
+           'Description'    : (str,             None),
+#           'Name'           : (str,             StructureError('Marker {0} defintion missing: {1}')),
+#           'Description'    : (str,             StructureError('Marker {0} defintion missing: {1}')),
            'OccursUnder'    : (unique(sequence(str)),   [None]),
            'Rank'           : (int,             None),
            'TextProperties' : (unique(sequence(str)),   []),
-           'TextType'       : (str,             StructureError('Marker {0} defintion missing: {1}')),
+           'TextType'       : (str,             "Unspecified"),
            'StyleType'      : (str,             None),
            'FontSize'       : (int,             None),
            'Regular'        : (flag,            False),
@@ -58,7 +60,7 @@ def _munge_record(r):
     return (tag, r)
 
 
-def parse(source, error_level=level.Content):
+def parse(source, error_level=level.Content, base=None):
     '''
     >>> from pprint import pprint
     >>> pprint(parse("""
@@ -135,9 +137,13 @@ def parse(source, error_level=level.Content):
     SyntaxError: <string>: line 2,1: Marker error defintion missing: TextType
     '''
     no_comments = imap(partial(_comment.sub,''), source)
-    rec_parser = records.parser(no_comments, records.schema('Marker', _fields), error_level=error_level)
+    rec_parser = records.parser(no_comments, records.schema('Marker', _fields), error_level=error_level, base=base)
     rec_parser.source = getattr(source, 'name', '<string>')
     recs = iter(rec_parser)
     next(recs,None)
-    return dict(imap(_munge_record, recs))
+    res = dict(imap(_munge_record, recs))
+    if base is not None:
+        base.update(res)
+        res = base
+    return res
 

@@ -144,20 +144,22 @@ class parser(sfm.parser):
     ...
     SyntaxError: <string>: line 1,1: Marker toc1 defintion missing: Name
     '''
-    def __init__(self, source, schema, error_level=level.Content):
+    def __init__(self, source, schema, error_level=level.Content, base=None):
         if not isinstance(schema, _schema): 
             raise TypeError('arg 2 must a \'schema\' not {0!r}'.format(schema))
         metas = dict((k,super(parser,self).default_meta) for k in schema.fields)
         super(parser,self).__init__(source, 
                     metas, error_level=error_level)
         self.__schema = schema
+        self.__base = base
     
     def __iter__(self):
         start,fields = self.__schema
         proto = dict((k,dv) for k,(_,dv) in fields.items())
         default_field = (lambda x:x, None)
         def record(rec):
-            rec_ = proto.copy()
+            rec = dict(rec)
+            rec_ = self.__base.get(rec[start]) if self.__base is not None and rec[start] in self.__base else proto.copy()
             rec_.update(rec)
             for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
                 if err: 
