@@ -26,7 +26,11 @@
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
 import os, re, csv
+from itertools import combinations
 from six import with_metaclass
+
+def powerset(x):
+    return sum(([set(y) for y in combinations(x, i)] for i in range(len(x)+1)), [])
 
 class Singleton(type):
     _instances = {}
@@ -56,6 +60,10 @@ class LangTag(object) :
         self.variants = variants
         self.extensions = extensions
         self.base = []
+        self.hidescript = False
+        self.hideregion = False
+        self.hidevariants = None
+        self.hideextensions = None
         if tag is not None : self.parse(tag)
 
     def _extensions(self) :
@@ -168,7 +176,7 @@ class LangTag(object) :
             self.script = oldscript
             return False
         elif tag.region is None:
-            self.hidescript = True
+            self.hidescript = True  # yes really script
         if self.region == tag.region and not self.hideregion:
             self.hideregion = tag.hideregion
         if not self.hideboth:
@@ -189,13 +197,36 @@ class LangTag(object) :
         if self.region is not None:
             rs.append(self.region)
         srs = [[s] + [r] for s in ss for r in rs if s is not None or r is not None or self.hideboth]
-        extras = []
-        if self.variants is not None : extras.extend(self.variants)
+        extravars = []
+        if self.variants is not None :
+            varset = set(self.variants)
+            if self.hidevariants is None:
+                removes = [set()]
+            else:
+                removes = powerset(self.hidevariants)
+            for r in removes:
+                extravars.append("-".join(sorted(varset - r)))
+        else:
+            extravars = [None]
+        extraexts = []
         if self.extensions is not None :
-            for ns in sorted(self.extensions.keys()) :
-                extras.append(ns)
-                extras.extend(sorted(self.extensions[ns]))
-        res = ["-".join([x for x in [self.lang] + s + extras if x is not None]) for s in srs]
+            extset = set((k, x) for k, v in self.extensions.items() for x in v)
+            if self.hideextensions is None:
+                removes = [set()]
+            else:
+                removes = powerset([(k, x) for k, v in self.hideextensions.items() for x in v])
+            for r in removes:
+                short = {}
+                for k, v in (extset - r):
+                    short.setdefault(k, []).append(v)
+                extraexts.append("-".join(["-".join([k] + sorted(v)) for k, v in sorted(short.items())]))
+        else:
+            extraexts = [None]
+        res = []
+        for s in srs:
+            for ev in sorted(extravars):
+                for en in sorted(extraexts):
+                    res.append("-".join(x for x in [self.lang] + s + [ev, en] if x is not None and len(x)))
         for b in self.base:
             if b in history or b == self:
                 continue
