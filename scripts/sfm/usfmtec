@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 '''
 Convert the publishable vernacular text in a USFM file according to a given
 .tec mapping file. In addition, support dictionary replacement, and automatic
@@ -14,7 +14,8 @@ Tim Eves provided the concordance program on which this is based.
 from palaso.sfm import usfm, style, pprint, element, text
 from palaso.teckit.engine import Converter, Mapping
 from itertools import groupby, chain
-import palaso.unicsv as csv
+#import palaso.unicsv as csv
+import csv
 import codecs, glob, optparse, os.path, re, warnings, sys, unicodedata
 
 class scrparser(usfm.parser) :
@@ -35,7 +36,7 @@ def sfmmap(elements, elemente, textf, doc) :
         else :
             e_ = textf(e)
             return text(e_, e.pos, e)
-    return map(_g, doc)
+    return list(map(_g, doc))
 
 def isword(char) :
     if char in isletters : return True
@@ -64,14 +65,17 @@ class pyconverter(object) :
     def convert(self, txt, **kw) :
         return self.fn(txt)
 
+def uni_unescape(s):
+    return s.encode("utf-8").decode("raw_unicode_escape")
+
 class usfm_transducer(object) :
 
     def __init__(self, case = '', tec = notec(), opts = {}) :
         self.caps = [1]
-        self.oquotes = opts.openquotes.decode('raw_unicode_escape')
-        self.cquotes = opts.closequotes.decode('raw_unicode_escape')
-        self.punc = opts.sentencepunc.decode('raw_unicode_escape')
-        self.capquotes = opts.capitalopenquotes.decode('raw_unicode_escape') if opts.capitalopenquotes else self.oquotes
+        self.oquotes = uni_unescape(opts.openquotes)
+        self.cquotes = uni_unescape(opts.closequotes)
+        self.punc = uni_unescape(opts.sentencepunc)
+        self.capquotes = uni_unescape(opts.capitalopenquotes) if opts.capitalopenquotes else self.oquotes
         self.case = case
         self.enc = tec
         self.opts = opts
@@ -97,34 +101,34 @@ class usfm_transducer(object) :
 
     def load_dict(self, fname, incol, outcol, tagcol = None) :
         morph_keys = []
-        fh = open(fname, 'rb')
+        fh = open(fname, 'r')
         entries = csv.reader(fh, skipinitialspace=True)
-        maxcol = max(incol, outcol, tagcol)
-        for e in entries :
-            if len(e) <= maxcol or (len(e[0]) and e[0][0] == "#") : continue
+        maxcol = max(incol, outcol, tagcol or 0)
+        for e in entries:
+            if len(e) <= maxcol or (len(e[0]) and e[0][0] == "#"): continue
             k = self.enc.convert(e[incol], finished=True).strip()
             if k.find(self.morphid) != -1 :     # has stem marker
-                if k[0] != self.morphid :
+                if k[0] != self.morphid:
                     mk = '^' + k
                 else :
                     mk = k[1:]
                     k = k[1:]
-                if k[-1] != self.morphid :
+                if k[-1] != self.morphid:
                     mk = mk + '$'
                 else :
                     k = k[0:-1]
                     mk = mk[0:-1]
                 morph_keys.append(mk)
                 self.morphs[k] = e[outcol].strip()
-            elif len(filter(isword, k)) != len(k) :
+            elif len(list(filter(isword, k))) != len(k) :
                 self.phrases[k] = e[outcol].strip()
             else :                              # dictionary entry
                 self.dict[k] = e[outcol].strip()
             if tagcol != None and e[tagcol] :                      # has tag constraints
                 self.tags[k] = set(e[tagcol].split())
-        morph_keys.sort(cmp = lambda x, y : cmp(len(y), len(x)))
+        morph_keys.sort(key=lambda x:-len(x))
         self.morph_keys = "|".join(morph_keys)
-        phrase_keys = sorted(self.phrases.keys(), cmp = lambda x, y: cmp(len(y), len(x)))
+        phrase_keys = sorted(self.phrases.keys(), key=lambda x: -len(x))
         for k in phrase_keys :
             p = aswords(k)
             if p[0] in self.phrase_keys :

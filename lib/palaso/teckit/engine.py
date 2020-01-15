@@ -148,15 +148,16 @@ class Converter(object):
         
     
     def _coerce_to_target(self, data):
+        return data
         return _unicode_decoder(data)[0] if self.targetFlags.unicode else data
     
     
     def convert(self, input, finished=False, options=Option.UseReplacementCharSilently):
         # Validate input parameters and do an necessary conversions
-        if self.sourceFlags.unicode and isinstance(input,str):
-            raise TypeError("source is type 'str' but type 'unicode' is expected")
-        if not self.sourceFlags.unicode and isinstance(input, unicode):
-            raise TypeError("source is type 'unicode' but type 'str' is expected")    
+        if self.sourceFlags.unicode and isinstance(input, bytes):
+            raise TypeError("source is type 'bytes' but type 'unicode' is expected")
+        if not self.sourceFlags.unicode and isinstance(input, str):
+            raise TypeError("source is type 'str' but type 'bytes' is expected")    
         data = _unicode_encoder(input)[0] if self.sourceFlags.unicode else input
         options |= finished and Option.InputIsComplete
         

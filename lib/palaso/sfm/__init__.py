@@ -26,7 +26,7 @@ __history__ = '''
 	20101109 - tse - Fix separator space being included when it shouldn't and
 		use the unique field types set object to improve performance.
 '''
-import collections, codecs, functools, operator, re, warnings, os, sys
+import collections, functools, operator, re, warnings, os, sys
 from itertools import chain, groupby
 from functools import partial
 

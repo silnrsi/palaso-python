@@ -25,7 +25,10 @@ class reader:
         self.__reader = csv.reader(_utf8_recoder(f,encoding), dialect, *args, **kwds)
 
     def next(self):
-        return tuple(unicode(cell,'utf-8') for cell in self.__reader.next())
+        return tuple(unicode(cell,'utf-8') for cell in next(self.__reader))
+
+    def __next__(self):     # python3
+        return self.next()
 
     def __iter__(self):
         return self
