@@ -152,10 +152,26 @@ class ETWriter(object):
         return q
 
     def addnode(self, parent, tag, **kw):
+        kw = dict((k, v) for k, v in kw.items() if v is not None)
         return et.SubElement(parent, tag, **kw)
 
-    def unify_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
+    def unify_path(self, path, base=None, text=None, draft=None, alt=None, matchdraft=None, before=None):
         '''Path contains a list of tags or (tag, attrs) to search in succession'''
+
+        def add_node(before, draft, text, parent, tag, **kw):
+            if draft is not None:
+                attrs['draft'] = draft
+            se = self.addnode(parent, tag, **kw)
+            if before is not None:
+                for j, e in enumerate(parent):
+                    if e.tag == before:
+                        parent.remove(se)
+                        parent.insert(j, se)
+                        break
+            if text is not None:
+                se.text = text
+            return se
+
         if base is None:
             base = self.root
         newcurr = [base]
@@ -180,7 +196,7 @@ class ETWriter(object):
             if matchdraft is not None and i == len(path)-1:
                 temp = newcurr
                 newcurr = []
-                # matchdraft == 'draft' (find all alternates with given draf, including not alternate)
+                # matchdraft == 'draft' (find all alternates with given draft, including not alternate)
                 # matchdraft == 'alt' (find all alternates with given alt)
                 # matchdraft == 'both' (find all alternates with given alt and draft)
                 for c in temp:
@@ -198,20 +214,20 @@ class ETWriter(object):
                         elif matchdraft == 'alt' or r.get('draft', '') == draft:
                             newcurr.append(r)
             if not len(newcurr):
-                job = curr[0]
-                if draft is not None:
-                    attrs['draft'] = draft
-                se = self.addnode(job, tag, attrib=attrs, alt=alt)
-                if before is not None:
-                    for j, e in enumerate(job):
-                        if e.tag == before:
-                            job.remove(se)
-                            job.insert(j, se)
-                            break
-                newcurr.append(se)
+                newcurr.append(add_node(before, draft, text, curr[0], tag, attrib=attrs, alt=alt))
+        if text is not None:
+            curr = newcurr
+            newcurr = []
+            for job in curr:
+                extras = [] if draft is None or not hasattr(job, 'alternates') else job.alternates.keys()
+                for j in [job] + extras:
+                    if j.text == text and (draft is None or self.get_draft(j) <= draftratings.get(draft, len(draftratings))):
+                        newcurr.append(j)
+            if not len(newcurr):
+                newcurr.append(add_node(before, draft, text, curr[0], tag, attrib=attrs, alt=alt))
         return newcurr
 
-    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
+    def ensure_path(self, path, base=None, text=None, draft=None, alt=None, matchdraft=None, before=None):
         ''' Find a node in a path and create any intermediate nodes, including the final, necessary
             Returns a list of nodes found, or created, even if only 1.'''
         if path.startswith("/"):
@@ -231,7 +247,7 @@ class ETWriter(object):
                 if k.startswith("@") and v[0] in '"\'':
                     attrs[k[1:]] = v[1:-1]
             steps.append((tag, attrs))
-        return self.unify_path(steps, base=base, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
+        return self.unify_path(steps, base=base, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
 
     def _reverselocalns(self, tag):
         '''Convert ns:tag -> {fullns}tag'''
@@ -563,7 +579,7 @@ class Ldml(ETWriter):
             if self.get_draft(v, default) >= odraft:
                 del target.alternates[alt]
         return res
-            
+
     def _find_best(self, node, threshold=len(draftratings), alt=None):
         maxr = len(draftratings)
         if not hasattr(node, 'alternates'):
@@ -620,9 +636,9 @@ class Ldml(ETWriter):
             alt = best
         return self._promote(node, node.alternates[best], alt=alt)
 
-    def ensure_path(self, path, base=None, draft=None, alt=None, matchdraft=None, before=None):
+    def ensure_path(self, path, base=None, text=None, draft=None, alt=None, matchdraft=None, before=None):
         draft = self.use_draft if draft is None else draft
-        return super(Ldml, self).ensure_path(path, base=base,
+        return super(Ldml, self).ensure_path(path, base=base, text=text,
                         draft=draft, alt=alt, matchdraft=matchdraft, before=before)
 
     def find(self, path, elem=None):
@@ -777,7 +793,7 @@ class Ldml(ETWriter):
     def get_draft(self, e, default=None):
         ldraft = e.get('draft', None) if e is not None else None
         if ldraft is not None: return draftratings.get(ldraft, 5)
-        return draftratings.get(default, self.default_draft)
+        return draftratings.get(default, draftratings[self.default_draft])
 
     def overlay(self, other, usedrafts=False, this=None):
         """Add missing information in self from other. Honours @draft attributes"""

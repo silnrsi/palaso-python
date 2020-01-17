@@ -30,7 +30,8 @@ class LDMLTests(unittest.TestCase):
 </ldml>'''
         tf = StringIO(self.tf)
         self.ldml = Ldml(tf)
-        self.tpath ='characters/exemplarCharacters[@type=""]' 
+        self.tpath ='characters/exemplarCharacters[@type=""]'
+        self.tstring = "[" + " ".join("default") + "]"
         self.teststrs = dict((x, "[" + " ".join(x) + "]") for x in draftratings.keys())
 
     def tearDown(self):
@@ -71,6 +72,20 @@ class LDMLTests(unittest.TestCase):
         b = self.ldml.ensure_path(self.tpath)[0]
         self.assertTrue(b.text == self.teststrs['generated'])
         self.assertTrue(id(b) == id(e))
+
+    def test_ensure_text(self):
+        b = self.ldml.ensure_path(self.tpath, text=self.tstring, draft="generated")[0]
+        self.assertTrue(b.get('draft', "") != "generated")
+
+    def test_ensure_text2(self):
+        b = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="contributed")[0]
+        n = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="generated")[0]
+        self.assertTrue(n.get('draft', "") != "generated")
+
+    def test_ensure_text3(self):
+        b = self.ldml.ensure_path("identity/special/ensure_test3", text="Hello World", draft="contributed")
+        n = self.ldml.ensure_path("identity/special/ensure_test3", text="test3", draft="generated", alt="pytest")[0]
+        self.assertTrue(n.get('draft', "") == "generated")
 
     def test_output(self):
         res = StringIO()
