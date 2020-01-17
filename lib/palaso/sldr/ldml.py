@@ -349,12 +349,6 @@ class Ldml(ETWriter):
             fname = os.path.join(os.path.dirname(__file__), 'supplementalMetadata.xml')
         doc = et.parse(fname)
         base = doc.getroot().find('metadata')
-        # l = base.findtext('attributeOrder').split()
-        # cls.attributeOrder = dict(zip(l, range(1, len(l) + 1)))
-        # l = base.findtext('elementOrder').split()
-        # cls.elementOrder = dict(zip(l, range(1, len(l) + 1)))
-        # cls.maxEls = len(cls.elementOrder) + 1
-        # cls.maxAts = len(cls.attributeOrder) + 1
         cls.variables = {}
         for v in base.findall('validity/variable'):
             name = v.get('id')[1:]
@@ -398,32 +392,6 @@ class Ldml(ETWriter):
                     cls.parentLocales[l].append(parent)
                 else:
                     cls.parentLocales[l] = [parent]
-        cls.languageInfo = {}
-        ps = doc.getroot().find('languageData')
-        for p in ps.findall('language'):
-            ss = []; ts = []
-            if p.get('type') in cls.languageInfo:
-                ss, ts = cls.languageInfo[p.get('type')]
-            if p.get('scripts'):
-                if p.get('alt') == 'secondary':
-                    ss += p.get('scripts').split(' ')
-                else:
-                    ss = p.get('scripts').split(' ') + ss
-            if p.get('territories'):
-                ts += p.get('territories').split(' ')
-            cls.languageInfo[p.get('type')] = [ss, ts]
-
-    @classmethod
-    def ReadLikelySubtags(cls, fname = None):
-        """Reads the likely subtag mappings"""
-        if fname is None:
-            fname = os.path.join(os.path.dirname(__file__), 'likelySubtags.xml')
-        doc = et.parse(fname)
-        cls.likelySubtags = {}
-        ps = doc.getroot().find('likelySubtags')
-        for p in ps.findall('likelySubtag'):
-            cls.likelySubtags[p.get('from')] = p.get('to')
-
     @classmethod
     def ReadDTD(cls, fname = None):
         """Reads LDML DTD to get element and attribute orders"""
@@ -1150,49 +1118,6 @@ class Ldml(ETWriter):
         this.comments.append('Attribute ({}) clash: "{}" or "{}" from "{}"'.format(key, tval, oval, bval))
         return tval        # not sure what to do here. 'We' win!
 
-    def get_script(self, name):
-        """Analyses the language name and code and anything it can find to identify the script for this file"""
-        start = name.find('_')
-        if start > 0:
-            end = name[start+1:].find('_')
-            if end < 0:
-                end = len(name)
-            else:
-                end += start + 1
-            if (end - start) == 5:
-                return name[start+1:end]
-        l = self.root.find('identity/language')
-        if l is not None:
-            lang = l.get('type')
-        else:
-            lang = name
-        scripts = []
-        if not hasattr(self, 'languageInfo'): self.__class__.ReadSupplementalData()
-        if lang in self.languageInfo:
-            scripts = self.languageInfo[lang][0]
-            if len(scripts) == 1: return scripts[0]
-        if not hasattr(self, 'likelySubtags'): self.__class__.ReadLikelySubtags()
-        if lang in self.likelySubtags:
-            return self.likelySubtags[lang].split('_')[1]
-        if len(scripts): return scripts[0]
-        return None
-
-    def get_default_territory(self, name):
-        start = name.find('_')
-        if start > 0: lang = name[0:start]
-        elif len(name): lang = name
-        else:
-            l = self.root.find('identity/language')
-            if l is not None:
-                lang = l.get('type')
-            else: return None
-        if not hasattr(self, 'likelySubtags'): self.__class__.ReadLikelySubtags()
-        if lang in self.likelySubtags:
-            subtags = self.likelySubtags[lang].split('_')
-            if len(subtags) > 2:
-                return subtags[2]
-        return None
-        
     def remove_private(self):
         """ Remove private elements and return them as a list of elements """
         res = []
@@ -1240,14 +1165,13 @@ def getldml(lname, dirs, **kw):
             return Ldml(f, **kw)
     return None
 
-def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
+def flattenlocale(lname, dirs=[], rev='f', changed=set(),
                   skipstubs=False, fname=None, flattencollation=False, resolveAlias=False):
     """ Flattens an ldml file by filling in missing details from the fallback chain.
         If rev true, then do the opposite and unflatten a flat LDML file by removing
         everything that is the same in the fallback chain.
         changed contains an optional set of locales that if present says that the operation
         is only applied if one or more of the fallback locales are in the changed set.
-        autoidentity says to insert or remove script information from the identity element.
         Values for rev: f - flatten, r - unflatten, c - copy"""
     def trimtag(s):
         r = s.rfind('_')
@@ -1297,19 +1221,6 @@ def flattenlocale(lname, dirs=[], rev='f', changed=set(), autoidentity=False,
     if resolveAlias:
         l.resolve_aliases()
     if skipstubs and len(l.root) == 1 and l.root[0].tag == 'identity': return None
-    if autoidentity:
-        i = l.root.find('identity')
-        if i is not None:
-            jobs = (('script', l.get_script(lname)),
-                    ('territory', l.get_default_territory(lname)))
-            for (n, j) in jobs:
-                if j is None: continue
-                curr = i.find(n)
-                if rev == 'r':
-                    if curr is not None and curr.get('type') == j:
-                        i.remove(curr)
-                elif curr is None:
-                    l.addnode(i, n, type=j)
     if flattencollation:
         collmap = {'phonebk' : 'phonebook'}
         def getcollator(lang, coll):
