@@ -7,10 +7,10 @@ except ImportError:
     from io import StringIO
 
 try:
-    from sldr.ldml import Ldml, draftratings
+    from palaso.sldr.ldml import Ldml, draftratings
 except ImportError:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib', 'palaso')))
-    from sldr.ldml import Ldml, draftratings, etwrite
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
+    from palaso.sldr.ldml import Ldml, draftratings, etwrite
 
 
 class LDMLTests(unittest.TestCase):
@@ -74,18 +74,27 @@ class LDMLTests(unittest.TestCase):
         self.assertTrue(id(b) == id(e))
 
     def test_ensure_text(self):
+        """ Get an existing node """
         b = self.ldml.ensure_path(self.tpath, text=self.tstring, draft="generated")[0]
         self.assertTrue(b.get('draft', "") != "generated")
 
     def test_ensure_text2(self):
+        """ Create a node and check we get it back """
         b = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="contributed")[0]
         n = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="generated")[0]
         self.assertTrue(n.get('draft', "") != "generated")
 
     def test_ensure_text3(self):
+        """ Create a node and another once, checking we get a new node """
         b = self.ldml.ensure_path("identity/special/ensure_test3", text="Hello World", draft="contributed")
         n = self.ldml.ensure_path("identity/special/ensure_test3", text="test3", draft="generated", alt="pytest")[0]
         self.assertTrue(n.get('draft', "") == "generated")
+
+    def test_ensure_text4(self):
+        """ Create a node and check we can increase its draft """
+        b = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="generated")[0]
+        n = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="contributed")[0]
+        self.assertTrue(n.get('draft', "") != "generated")
 
     def test_output(self):
         res = StringIO()
