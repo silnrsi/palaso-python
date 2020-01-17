@@ -1,4 +1,7 @@
 # -*- coding: utf-8
+
+from __future__ import print_function
+
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -23,12 +26,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from __future__ import print_function
 from xml.etree import ElementTree as et
 from xml.etree import ElementPath as ep
 import re, os, codecs
 import xml.parsers.expat
-from functools import reduce
+import functools
 #from six import string_types
 from .py3xmlparser import XMLParser, TreeBuilder
 
@@ -214,7 +216,7 @@ class _minhash(object):
     def update(self, *vec):
         h = map(self.hasher, vec)
         if self.minhash is not None: map(self._minhashupdate, h)
-        self.hashed = reduce(lambda x,y:x * 1000003 + y, h, self.hashed) & self._mask
+        self.hashed = functools.reduce(lambda x,y:x * 1000003 + y, h, self.hashed) & self._mask
 
     def merge(self, aminh):
         if self.minhash is not None and aminh.minhash is not None: self._minhashupdate(aminh.minhash)
@@ -388,10 +390,10 @@ class Ldml(ETWriter):
                     elif curr is not None:
                         curr.hasdeletedchild = False
         fh.close()
-        self.analyse()
+        self._analyse()
         self.normalise(self.root, usedrafts=usedrafts)
 
-    def copynode(self, n, parent=None):
+    def _copynode(self, n, parent=None):
         res = n.copy()
         for a in ('contentHash', 'attrHash', 'comments', 'commentsafter', 'parent', 'document'):
             if hasattr(n, a):
@@ -625,7 +627,7 @@ class Ldml(ETWriter):
         return elem.find(path)
 
     def get_parent_locales(self, thislangtag):
-        """ Find the parent locale for this ldml, given its langtag"""
+        """ Find the parent locales for this ldml, given its langtag"""
         if not hasattr(self, 'parentLocales'):
             self.__class__.ReadSupplementalData()
         fall = self.root.find('fallback')
@@ -682,7 +684,7 @@ class Ldml(ETWriter):
                     t.alternates[a] = c
                     base.remove(c)
 
-    def analyse(self):
+    def _analyse(self):
         """ Pull out key information from the ldml for its processing."""
         identity = self.root.find('./identity/special/{' + self.silns + '}identity')
         if identity is not None:
@@ -786,9 +788,7 @@ class Ldml(ETWriter):
                 this.remove(c)
                 count = 1
                 for res in this.findall(v + "/*"):
-                    res = self.copynode(res, parent=this)
-                    # res.set('{'+self.silns+'}alias', "1")
-                    # self.namespaces[self.silns] = 'sil'
+                    res = self._copynode(res, parent=this)
                     if v in _cache:
                         print("Alias loop discovered: %s in %s" % (v, self.fname))
                         return True
@@ -817,27 +817,11 @@ class Ldml(ETWriter):
         else:
             return res
         
-    def remove_private(self):
-        """ Remove private elements and return them as a list of elements """
-        res = []
-        if self.root is None: return res
-        for n in ('contacts', 'comments'):
-            for e in self.root.findall(n):
-                res.append(e)
-                self.root.remove(e)
-                e.parent = None
-        return res
-
     def add_silidentity(self, **kws):
         """ Inserts attributes in identity/special/sil:identity"""
         s = self.ensure_path('identity/special/sil:identity')[0]
         for k, v in kws.items():
             s.set(k, v)
-
-    def flag_nonroots(self):
-        """ Add @sil:modified="true" to key elements"""
-        for n in self.root.findall('collations/collation'):
-            n.set('{'+self.silns+'}modified', 'true')
 
     def flatten_collation(self, collstr, importfn):
         """ Flattens [import] statements in a collation tailoring"""

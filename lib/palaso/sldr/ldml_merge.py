@@ -129,6 +129,11 @@ class LdmlMerge(Ldml):
         for f in fonts:
             this.append(f)
 
+    def flag_nonroots(self):
+        """ Add @sil:modified="true" to collation elements"""
+        for n in self.root.findall('collations/collation'):
+            n.set('{'+self.silns+'}modified', 'true')
+
     def _merge_leaf(self, other, b, o):
         """Handle @draft and @alt"""
         if not hasattr(o, 'alternates'): return
