@@ -96,6 +96,11 @@ class LDMLTests(unittest.TestCase):
         n = self.ldml.ensure_path("identity/special/fred", text="Hello World", draft="contributed")[0]
         self.assertTrue(n.get('draft', "") != "generated")
 
+    def test_ensure1(self):
+        """ Create a multi attribute node using xpath """
+        n = self.ldml.ensure_path('identity/special/jim[@name="test"][@other="not"]')[0]
+        self.assertTrue(n.get('name',"") == "test" and n.get('other',"") == "not")
+
     def test_output(self):
         res = StringIO()
         self.ldml.serialize_xml(res.write)

@@ -612,19 +612,14 @@ class Ldml(ETWriter):
                     attrib = (steps[-1][1] if isinstance(steps[-1], tuple) else {}), alt=alt))
         return newcurr
 
-    def find(self, path, elem=None):
-        """ Execute ElementTree.find but use ns:name type path names instead of
-            {url}name"""
-        def nstons(m):
-            for (k, v) in self.namespaces.items():
-                if m.group(1) == v:
-                    return "{"+k+"}"
-            return ""
+    def _invertns(self, ns):
+        return {v:k for k, v in ns.items()}
 
-        if elem is None:
-            elem = self.root
-        path = re.sub(r"([a-z0-9]+):", nstons, path)
-        return elem.find(path)
+    def find(self, path, elem=None, ns=None):
+        return (elem or self.root).find(path, self._invertns(ns or self.namespaces))
+
+    def findall(self, path, elem=None, ns=None):
+        return (elem or self.root).findall(path, self._invertns(ns or self.namespaces))
 
     def get_parent_locales(self, thislangtag):
         """ Find the parent locales for this ldml, given its langtag"""
