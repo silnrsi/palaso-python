@@ -81,7 +81,7 @@ def parseftml(fnameorstr):
             else:
                 feats = None
             lang = style.get('lang', None)
-        rtl = test.get('rtl', "") == "True"
+        rtl = test.get('rtl', "").lower() in ("true", "1")
         for w in s.split():
             s = UserString(w)
             s.feats = feats
