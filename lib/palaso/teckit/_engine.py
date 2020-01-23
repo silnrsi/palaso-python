@@ -66,6 +66,7 @@ class Flags(IntFlag):
     unicode = auto()
     # this is Unicode rather than a byte encoding
 
+
 @unique
 class NameID(IntEnum):
     # required names
@@ -270,6 +271,7 @@ getVersion = prototype(('TECkit_GetVersion', __library__))
 #           - stop conversion, returning immediately on encountering an
 #             unmapped character
 #
+
 
 @unique
 class Option(IntFlag):

@@ -52,7 +52,7 @@ teckit_error_fn: Callable = LOCALFUNCTYPE(None, c_void_p, c_char_p, c_char_p,
 
 
 def key_error(err_val: int, msg: str) -> Callable:
-    def check(res: status, f, args: List[Any]) -> status:
+    def check(res: status, f, args: List) -> status:
         if res != err_val:
             return res
         else:

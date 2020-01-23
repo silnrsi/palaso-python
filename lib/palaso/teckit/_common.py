@@ -127,7 +127,7 @@ class Form(IntEnum):
     NFD = 0x0200
 
 
-class CompilationError(SyntaxError):
+class CompilationError(Exception):
     pass
 
 

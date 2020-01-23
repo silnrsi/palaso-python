@@ -28,8 +28,10 @@ __all__ = ['Mapping',
 
 class CompilationError(_common.CompilationError):
     @staticmethod
-    def __format_err(msg, param, line):
-        return f'line {line}: {msg} {": " + param if param else ""}'
+    def __format_err(msg: bytes, param: bytes, line: int) -> str:
+        msg = msg.decode('utf_8')
+        param = (param or b'').decode('utf_8')
+        return f'line {line}: {msg}{param and ": "+param}'
 
     def __init__(self, errors: List) -> None:
         self.errors = errors
@@ -40,40 +42,55 @@ class CompilationError(_common.CompilationError):
 
 
 class _Compiled(Mapping):
-    def __new__(cls,  txt: AnyStr, compress: bool = True) -> Any:
+    def __new__(cls,  txt: AnyStr, compress: bool = True,
+                form=_common.Form.Unspecified) -> Any:
         compile_errors = []
         if isinstance(txt, str):
-            txt = txt.encode('utf_8')
-        callback = _compiler.teckit_error_fn(
-            lambda _, *err: compile_errors.append(err))
-        (tbl, tbl_len) = _compiler.compile(txt, len(txt), compress, callback,
-                                           None)
-        if compile_errors:
-            raise CompilationError(compile_errors)
+            txt = txt.encode('utf_8_sig')
+
+        @_compiler.teckit_error_fn
+        def callback(_, *err): compile_errors.append(err)
+        try:
+            (tbl, tbl_len) = _compiler.compileOpt(
+                                txt, len(txt),
+                                compress,
+                                callback, None,
+                                form)
+        except _common.CompilationError:
+            if compile_errors:
+                raise CompilationError(compile_errors) from None
+            else:
+                raise
 
         buf = super(Mapping, cls).__new__(cls, tbl[:tbl_len])
         _compiler.disposeCompiled(tbl)
         return buf
 
-    def __init__(self, *args) -> None:
+    def __init__(self, *args, **kw) -> None:
         res = []
         for arg in args:
             res.append(repr(arg[:20] + '...'
                             if isinstance(arg, str) else arg))
+        for k,v in kw.items():
+            res.append(f'{k}={arg[:20] + "..." if isinstance(arg, (str,bytes)) else arg!r}')
         self._repr_args = ','.join(res)
 
 
-def translate(txt: AnyStr) -> bytes:
+def translate(txt: AnyStr, form=_common.Form.Unspecified) -> bytes:
     compile_errors = []
     if isinstance(txt, str):
-        txt = txt.encode('utf_8')
-    callback = _compiler.teckit_error_fn(
-        lambda _, *err: compile_errors.append(err))
-    (tbl, tbl_len) = _compiler.compileOpt(txt, len(txt), callback, None,
-                                          _compiler.Opt.XML)
+        txt = txt.encode('utf_8_sig')
 
-    if compile_errors:
-        raise CompilationError(compile_errors)
+    @_compiler.teckit_error_fn
+    def callback(_, *err): compile_errors.append(err)
+    try:
+        (tbl, tbl_len) = _compiler.compileOpt(txt, len(txt), callback, None,
+                                              _compiler.Opt.XML)
+    except _common.CompilationError:
+        if compile_errors:
+            raise CompilationError(compile_errors) from None
+        else:
+            raise
 
     xml_doc = bytes(tbl[:tbl_len])
     _compiler.disposeCompiled(tbl)

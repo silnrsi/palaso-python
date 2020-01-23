@@ -11,7 +11,7 @@
 import codecs
 import ctypes
 import sys
-from typing import AnyStr, Callable, Tuple, cast
+from typing import AnyStr, Tuple, cast
 from functools import lru_cache
 from palaso.teckit import _engine
 from palaso.teckit._common import (
@@ -188,9 +188,9 @@ class Converter(object):
                                                            options)
             except FullBuffer as err:
                 cons, outs, lhc = err.args
-            except EmptyBuffer as err:
+            except EmptyBuffer:
                 if finished:
-                    raise err
+                    raise
             except UnmappedChar as err:
                 self._handle_unmapped_char(input, 'convert', err)
 
