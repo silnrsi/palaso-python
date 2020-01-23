@@ -103,7 +103,7 @@ class LdmlMerge(Ldml):
         """Handle sil:font fallback mechanism"""
         silfonttag = '{'+self.silns+'}font'
         fonts = []
-        this = filter(lambda x: x.attrHash == o.attrHash, this)[0]
+        this = list(filter(lambda x: x.attrHash == other.attrHash, this))[0]
         for t in list(this):
             if t.tag == silfonttag:
                 fonts.append(t)

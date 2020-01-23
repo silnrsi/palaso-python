@@ -40,6 +40,11 @@ try:
 except NameError:
     string_types = str
 
+def iterate_files(root, ext=".xml"):
+    """ Iterate a directory and subdirectories finding files with given extension """
+    return sorted(functools.reduce(lambda a,x: a + x,
+            ([os.path.join(w[0], f) for f in w[2] if f.endswith(ext)]
+                    for w in os.walk(root)), []))
 
 _elementprotect = {
     '&': '&amp;',
@@ -149,7 +154,7 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
-    def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
+    def save_as(self, fname, base = None, indent = '', topns = False, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
         with codecs.open(fname, "w", encoding="utf-8") as outf:
             self.serialize_xml(outf.write, base=base, indent=indent, topns=topns, namespaces=namespaces)
@@ -526,13 +531,14 @@ class Ldml(ETWriter):
             se.text = text
         return se
 
-    def _unify_path(self, path, base=None, text=None, draft=None, alt=None, matchdraft=None, before=None):
+    def _unify_path(self, path, base=None, action="add", text=None, draft=None, alt=None, matchdraft=None, before=None):
         ''' Path contains a list of tags or (tag, attrs) to search in succession'''
         if base is None:
             base = self.root
         newcurr = [base]
         if matchdraft is not None:
             realalt = self.alt(alt)
+        parent = base
         for i, p in enumerate(path):
             curr = newcurr
             newcurr = []
@@ -570,14 +576,14 @@ class Ldml(ETWriter):
                         elif matchdraft == 'alt' or r.get('draft', '') == draft:
                             newcurr.append(r)
             if not len(newcurr):
-                newcurr.append(self._add_inserted_node(before, draft, text, curr[0], tag, attrib=attrs, alt=alt))
+                if action == "add":
+                    newcurr.append(self._add_inserted_node(before, draft, text, parent, tag, attrib=attrs, alt=alt))
+                else:
+                    return []
+            parent = newcurr[0]
         return newcurr
 
-    def ensure_path(self, path, base=None, text=None, draft=None, alt=None, matchdraft=None, before=None):
-        """ Find a node in a path and create any intermediate nodes, including the final, necessary
-            Returns a list of nodes found, or created, even if only 1.
-            If text is given, only return matching nodes, creating if necessary. If the draft of a matching
-            string is worse then improve it."""
+    def _process_path(self, path, base=None, action="add", text=None, draft=None, alt=None, matchdraft=None, before=None):
         draft = self.use_draft if draft is None else draft
         if path.startswith("/"):
             raise SyntaxError
@@ -596,7 +602,15 @@ class Ldml(ETWriter):
                 if k.startswith("@") and v[0] in '"\'':
                     attrs[k[1:]] = v[1:-1]
             steps.append((tag, attrs))
-        newcurr = self._unify_path(steps, base=base, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
+        res = self._unify_path(steps, base=base, action=action, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
+        return (res, steps)
+
+    def ensure_path(self, path, text=None, draft=None, alt=None, before=None, **kw):
+        """ Find a node in a path and create any intermediate nodes, including the final, necessary
+            Returns a list of nodes found, or created, even if only 1.
+            If text is given, only return matching nodes, creating if necessary. If the draft of a matching
+            string is worse then improve it."""
+        (newcurr, steps) = self._process_path(path, action="add", text=text, draft=draft, alt=alt, **kw)
         if text is not None:
             curr = newcurr
             newcurr = []
@@ -607,10 +621,26 @@ class Ldml(ETWriter):
                         if draft is not None and self.get_draft(j) > draftratings.get(draft, len(draftratings)):
                             self.change_draft(j, draft, alt=alt)
                         newcurr.append(j)
+            tag = steps[-1]
+            if not isinstance(tag, str):
+                tag = tag[0]
+                attrs = tag[1]
+            else:
+                attrs = {}
             if not len(newcurr):
-                newcurr.append(self._add_inserted_node(before, draft, text, curr[0], tag, 
-                    attrib = (steps[-1][1] if isinstance(steps[-1], tuple) else {}), alt=alt))
+                newcurr.append(self._add_inserted_node(before, draft, text, curr[0].parent, tag, 
+                    attrib = attrs, alt=alt))
         return newcurr
+
+    def remove_path(self, path, **kw):
+        """ Finds the given nodes from the path and deletes them.
+            Takes same parameters as ensure_path. """
+        newcurr, steps = self._process_path(path, action="remove", **kw)
+        if not len(newcurr):
+            return False
+        for c in newcurr:
+            c.parent.remove(c)
+        return True
 
     def _invertns(self, ns):
         return {v:k for k, v in ns.items()}

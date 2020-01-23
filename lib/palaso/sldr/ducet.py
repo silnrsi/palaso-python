@@ -2,9 +2,7 @@
 
 # Py2 and Py3 compatibility
 from __future__ import print_function
-
 import os, re
-
 
 # Read the DUCET file and return a corresponding data structure.
 def readDucet(path="") :
@@ -29,8 +27,6 @@ def readDucet(path="") :
         if len(parts) != 2:
             continue
 
-        ####if lineno < 9500 or lineno > 10000: continue
-
         try:
             key = u"".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
             vals = valre.findall(parts[1])
@@ -40,8 +36,8 @@ def readDucet(path="") :
 
     return result
 
-# end of readDucet
-
+def _cmp(a, b):
+    return (a > b) - (a < b)
 
 def ducetCompare(ducetDict, str1, str2) :
     try:
@@ -65,8 +61,7 @@ def ducetCompare(ducetDict, str1, str2) :
             level2 += 1
 
     # sort keys are equal as far as they go
-    return cmp(len(sortKey1), len(sortKey2)) * 4
-
+    return _cmp(len(sortKey1), len(sortKey2)) * 4
 
 # For looking up the sort key in the DUCET table;
 # eg, "ab" -> "0061 0062"
