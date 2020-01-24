@@ -2,6 +2,7 @@
 
 import argparse, logging, os
 from multiprocessing import Pool, current_process, cpu_count
+from collections import UserString
 from functools import reduce
 from fontTools import ttLib
 from palaso.font.shape import GrFont
@@ -34,6 +35,9 @@ def run_graphite(args, *a):
             else:
                 with open(fname, "r") as fh:
                     strings.extend([UserString(x.strip()) for l in fh.readlines() for x in l.split()])
+                if args.rtl:
+                    for s in strings:
+                        s.rtl = True
             break
     if args.jobs == 1:
         grfont = GrFont(args.font, 1 if args.rtl else 0)
