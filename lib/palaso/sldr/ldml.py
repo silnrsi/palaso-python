@@ -769,10 +769,13 @@ class Ldml(ETWriter):
         res += n.tag + u"".join(u'[@{}="{}"]'.format(*x) for x in tests)
         return res
 
-    def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}):
+    def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}, nouid=True):
         """ Output this LDML to the given io stream """
-        if self.uid is not None:
+        if base is None and self.uid is not None and not nouid:
+            dstatus = self.use_draft
+            self.use_draft = None
             self.ensure_path('identity/special/sil:identity[@uid="{}"]'.format(self.uid))
+            self.use_draft = dstatus
         if self.useDrafts:
             n = base if base is not None else self.root
             draft = n.get('draft', '')
