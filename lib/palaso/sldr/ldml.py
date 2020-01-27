@@ -634,13 +634,12 @@ class Ldml(ETWriter):
 
     def remove_path(self, path, **kw):
         """ Finds the given nodes from the path and deletes them.
-            Takes same parameters as ensure_path. """
+            Takes same parameters as ensure_path. Returns nodes deleted. """
         newcurr, steps = self._process_path(path, action="remove", **kw)
-        if not len(newcurr):
-            return False
-        for c in newcurr:
-            c.parent.remove(c)
-        return True
+        if len(newcurr):
+            for c in newcurr:
+                c.parent.remove(c)
+        return newcurr
 
     def _invertns(self, ns):
         return {v:k for k, v in ns.items()}
