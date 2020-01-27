@@ -598,9 +598,9 @@ class Ldml(ETWriter):
             attrs = {}
             for p in parts:
                 if not len(p): continue
-                (k, v) = p.replace(' ','').split("=")
+                (k, v) = re.split(r'\s*=\s*', p)
                 if k.startswith("@") and v[0] in '"\'':
-                    attrs[k[1:]] = v[1:-1]
+                    attrs[self._reverselocalns(k[1:])] = v[1:-1]
             steps.append((tag, attrs))
         res = self._unify_path(steps, base=base, action=action, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
         return (res, steps)
@@ -621,13 +621,13 @@ class Ldml(ETWriter):
                         if draft is not None and self.get_draft(j) > draftratings.get(draft, len(draftratings)):
                             self.change_draft(j, draft, alt=alt)
                         newcurr.append(j)
-            tag = steps[-1]
-            if not isinstance(tag, str):
-                tag = tag[0]
-                attrs = tag[1]
-            else:
-                attrs = {}
             if not len(newcurr):
+                tag = steps[-1]
+                if not isinstance(tag, str):
+                    attrs = tag[1]
+                    tag = tag[0]
+                else:
+                    attrs = {}
                 newcurr.append(self._add_inserted_node(before, draft, text, curr[0].parent, tag, 
                     attrib = attrs, alt=alt))
         return newcurr
