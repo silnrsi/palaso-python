@@ -5,6 +5,11 @@ from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
 import warnings
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 class Duplicate(RuntimeError) : 
     def __init__(self, str) :
         RuntimeError.__init__(self, str.encode('utf-8'))
@@ -103,7 +108,7 @@ class Collation :
             res = res + "[" + k + " " + v + "]\n"
         for r in self.rules :
             for e in r :
-                res += e.asICU()
+                res += e.asICU() + " "
             res += "\n"
         return res
     def asLDML(self, sax) :
@@ -225,17 +230,17 @@ class Element :
     def asICU(self) :
         res = unicode(Element.icu_relation_map[self.relation])
         if self.context and self.context.context :
-            res += self.context.context + "|"
+            res += " " + self.context.context + "|"
         if self.special :
             command = self.special.replace('non_ignorable', 'regular')
             res += "[" + command.replace('_', ' ') + "]"
         else :
-            str = self.string
+            st = self.string
             for s in self.string :
                 if s in self.icu_protect or unicodedata.category(s) in self.icu_categories :
-                    str = "'" + re.sub("['(]", "\\\1", str) + "'"
+                    st = "'" + re.sub("['(]", "\\\1", st) + "'"
                     break
-            res += str
+            res += " " + st
         if self.context and self.context.extend :
             res += "/" + self.context.extend
         return res
@@ -271,6 +276,7 @@ class ElementIter :
     def __init__(self, start) :
         self.curr = start
     def __iter__(self) : return self
+    def __next__(self) : return self.next()
     def next(self) :
         res = self.curr
         if not res : raise StopIteration()

@@ -46,6 +46,21 @@ def iterate_files(root, ext=".xml"):
             ([os.path.join(w[0], f) for f in w[2] if f.endswith(ext)]
                     for w in os.walk(root)), []))
 
+def getldml(loc, indirs):
+    """ Given a langtag and list of root directories, seach for an LDML file and return the object """
+    foundit = False
+    for p in (".", loc[0].lower()):
+        for i in indirs:
+            filep = os.path.join(i, p, loc.replace("-", "_")+".xml")
+            if os.path.exists(filep):
+                foundit = True
+                break
+        if foundit:
+            break
+    else:
+        return None
+    return Ldml(filep)
+
 _elementprotect = {
     '&': '&amp;',
     '<': '&lt;',
@@ -645,10 +660,12 @@ class Ldml(ETWriter):
         return {v:k for k, v in ns.items()}
 
     def find(self, path, elem=None, ns=None):
-        return (elem or self.root).find(path, self._invertns(ns or self.namespaces))
+        if elem is None: elem = self.root
+        return elem.find(path, self._invertns(ns or self.namespaces))
 
     def findall(self, path, elem=None, ns=None):
-        return (elem or self.root).findall(path, self._invertns(ns or self.namespaces))
+        if elem is None: elem = self.root
+        return elem.findall(path, self._invertns(ns or self.namespaces))
 
     def get_parent_locales(self, thislangtag):
         """ Find the parent locales for this ldml, given its langtag"""

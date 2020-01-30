@@ -35,7 +35,7 @@ def main(infile) :
     parser.setFeature(xml.sax.handler.feature_namespaces, 1)
 #    parser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
     parser.parse(infile)
-    print handler.icu.encode("utf-8")
+    print(handler.icu)
 
 if __name__ == "__main__" :
     main(sys.argv[1])
