@@ -169,7 +169,7 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
-    def save_as(self, fname, base = None, indent = '', topns = False, namespaces = {}):
+    def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
         with codecs.open(fname, "w", encoding="utf-8") as outf:
             self.serialize_xml(outf.write, base=base, indent=indent, topns=topns, namespaces=namespaces)
