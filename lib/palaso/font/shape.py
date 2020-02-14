@@ -30,8 +30,11 @@ class GrFont(Font) :
         for f,v in feats.items() :
             if v is None:
                 continue
-            fref = self.grface.get_featureref(f.encode("utf-8"))
-            res.set(fref, v)
+            try:
+                fref = self.grface.get_featureref(f.encode("utf-8"))
+                res.set(fref, v)
+            except ValueError:
+                pass
         return res
         
     def measure(self, text, after = False) :
@@ -55,11 +58,11 @@ class GrFont(Font) :
         seg = gr.Segment(self.font, self.grface, self.script, text, self.rtl, feats = self.feats)
         return seg.advance[0]
 
-    def glyphs(self, text, includewidth = False, feats = None, rtl = None) :
+    def glyphs(self, text, includewidth = False, feats = None, rtl = None, lang = None, **kw) :
         if feats is None:
             feats = self.feats
         else:
-            feats = self._featureval(feats, self.lang)
+            feats = self._featureval(feats, lang if lang is not None else self.lang)
         if rtl is None:
             rtl = self.rtl
         seg = gr.Segment(self.font, self.grface, self.script, str(text), rtl, feats = feats)
@@ -70,7 +73,7 @@ class GrFont(Font) :
         return res
 
 class HbFont(Font) :
-    def __init__(self, fname, size, rtl, feats = {}, script = 0, lang = 0) :
+    def __init__(self, fname, size, rtl, feats = None, script = 0, lang = 0) :
         super(HbFont, self).__init__(fname, size, rtl)
         self.ftface = ft.Face(fname)
         if size <= 0 :
@@ -84,12 +87,13 @@ class HbFont(Font) :
         self.script = script
         self.lang = lang
         self.rtl = rtl
+        self.feats = {} if feats is None else feats
 
-    def glyphs(self, text, includewidth = False) :
+    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, **kw) :
         kws = {}
         if self.rtl : kws['rtl'] = 1
-        buf = hb.Buffer(text, script = self.script, lang = self.lang, **kws)
-        buf.shape(self.font, shapers = self.shapers)
+        buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), **kws)
+        buf.shape(self.font, shapers = self.shapers, feats = self.feats if feats is None else feats)
         res = []
         clus = []
         x = 0

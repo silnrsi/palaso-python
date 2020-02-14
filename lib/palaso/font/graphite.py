@@ -252,6 +252,8 @@ class Face(object):
     def get_featureval(self, lang):
         if isinstance(lang, bytes):
             lang = gr2.gr_str_to_tag(lang)
+        elif isinstance(lang, str):
+            lang = gr2.gr_str_to_tag(lang.encode("utf-8"))
         return FeatureVal(gr2.gr_face_featureval_for_lang(self.face, lang))
 
     def get_featureref(self, featid):
