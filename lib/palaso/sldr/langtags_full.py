@@ -347,7 +347,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                 self.add(to)
         
     def readIana(self, fname = None) :
-        """Reads the iana registry, particularly ths suppress script info"""
+        """Reads the iana registry, particularly the suppress script info"""
         if fname is None :
             fname = os.path.join(os.path.dirname(__file__), "language-subtag-registry.txt")
         with open(fname) as f :
@@ -369,6 +369,7 @@ class LangTags(with_metaclass(Singleton, dict)):
                 elif l.startswith("Suppress-Script: ") and currlang is not None :
                     tag.script = l[17:]
                     tag.hidescript = True
+                    tag.suppress = True
                 elif l.startswith("Deprecated: ") and tag is not None:
                     tag.deprecated = True
                 elif l.startswith("Description: ") and tag is not None:
