@@ -17,6 +17,9 @@ from itertools import groupby, chain
 import palaso.unicsv as csv
 import codecs, glob, optparse, os.path, re, warnings, sys, unicodedata
 
+def uniunescape(s):
+    return codecs.decode(s, encoding='raw_unicode_escape')
+
 class scrparser(usfm.parser) :
     def _canonicalise_footnote(self, content) :
         return content
@@ -68,10 +71,10 @@ class usfm_transducer(object) :
 
     def __init__(self, case = '', tec = notec(), opts = {}) :
         self.caps = [1]
-        self.oquotes = opts.openquotes.decode('raw_unicode_escape')
-        self.cquotes = opts.closequotes.decode('raw_unicode_escape')
-        self.punc = opts.sentencepunc.decode('raw_unicode_escape')
-        self.capquotes = opts.capitalopenquotes.decode('raw_unicode_escape') if opts.capitalopenquotes else self.oquotes
+        self.oquotes = uniunescape(opts.openquotes)
+        self.cquotes = uniunescape(opts.closequotes)
+        self.punc = uniunescape(opts.sentencepunc)
+        self.capquotes = uniunescape(opts.capitalopenquotes) if opts.capitalopenquotes else self.oquotes
         self.case = case
         self.enc = tec
         self.opts = opts
@@ -305,7 +308,7 @@ if __name__ == '__main__':
     else:
         opts.stylesheet = usfm.default_stylesheet
 
-    if opts.letters : isletters = opts.letters.decode('raw_unicode_escape')
+    if opts.letters : isletters = uniunescape(opts.letters)
 
     work = []
     first_def = -1
