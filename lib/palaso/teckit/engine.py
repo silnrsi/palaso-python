@@ -8,57 +8,65 @@
 # History:
 #   2009-06-10  tse     Initial version using the ctypes FFI
 #
-from __future__ import with_statement, absolute_import
-
+import codecs
+import ctypes
+import sys
+from typing import AnyStr, Tuple, cast
+from functools import lru_cache
 from palaso.teckit import _engine
-import codecs, sys
+from palaso.teckit._common import (
+    ConverterBusy, Form, MappingVersionError)
+from palaso.teckit._engine import (
+    FullBuffer, EmptyBuffer, UnmappedChar,
+    Flags, Option,
+    getVersion, getConverterName)
 
-from palaso.teckit._engine import getVersion, memoize
-from palaso.teckit._engine import Option
-from palaso.teckit._engine import \
-    CompilationError, ConverterBusy, MappingVersionError, \
-    FullBuffer, EmptyBuffer, UnmappedChar, flags, Form
+__all__ = ['ConverterBusy', 'MappingVersionError',
+           'FullBuffer', 'EmptyBuffer', 'UnmappedChar',
+           'Flags', 'Form', 'Option',
+           'getVersion']
 
 
 class Mapping(bytes):
-    def __new__(cls, path):
+    def __new__(cls, path: str):
         with open(path, 'rb') as mf:
-            return super(Mapping,cls).__new__(cls,mf.read())
-    
-    def __init__(self, path):
+            return super(Mapping, cls).__new__(cls, mf.read())
+
+    def __init__(self, path: str) -> None:
         self._repr_args = repr(path)
 
-    @memoize   
-    def __getattr__(self, name):
-        from palaso.teckit._engine import getMappingName
+    @lru_cache(maxsize=16)
+    def __getattr__(self, name: str) -> str:
         try:
-            nid = getattr(_engine.NameID,name)
-            nlen = getMappingName(self, len(self), nid)
-        except (AttributeError):
-            raise AttributeError('%r object has no attribute %r' % (self,name))
+            nid = getattr(_engine.NameID, name)
+            nlen = _engine.getMappingName(self, len(self), nid)
+        except AttributeError:
+            raise AttributeError(f'{self!r} object has no attribute {name!r}')
         except IndexError:
-            return None
-        buf  = _engine.create_string_buffer(nlen)
-        nlen = getMappingName(self, len(self), nid, buf, nlen)
+            return ''
+        buf = ctypes.create_string_buffer(nlen)
+        nlen = _engine.getMappingName(self, len(self), nid, buf, nlen)
         return str(buf[:nlen])
 
-    def __str__(self):  return self.lhsName + ' <-> ' + self.rhsName
-    
-    def __repr__(self): return ('Mapping(%s)' % self._repr_args 
-                                if hasattr(self,'_repr_args') 
-                                else self.__str__())
-    
+    def __str__(self) -> str:
+        return self.lhsName + ' <-> ' + self.rhsName
+
+    def __repr__(self) -> str:
+        return (f'Mapping({self._repr_args})' if hasattr(self, '_repr_args')
+                else self.__str__())
+
     @property
-    @memoize
-    def flags(self):
-        return _engine.getMappingFlags(self, len(self))
-    
+    @lru_cache(maxsize=8)
+    def flags(self) -> Tuple[Flags, Flags]:
+        lf, rf = _engine.getMappingFlags(self, len(self))
+        return Flags(lf), Flags(rf)
+
     @property
-    def lhsFlags(self):
+    def lhsFlags(self) -> Flags:
         return self.flags[0]
-    
+
     @property
-    def rhsFlags(self):
+    def rhsFlags(self) -> Flags:
         return self.flags[1]
 
 
@@ -73,128 +81,141 @@ _unicode_encoder = codecs.getencoder(_unicode_encoder_name)
 _unicode_decoder = codecs.getdecoder(_unicode_encoder_name)
 
 
-def _form_from_flags(form, flags):
-    if form==Form.Unspecified or form==None:
-        if   flags.expectsNFD or flags.generatesNFD:  form = Form.NFD
-        elif flags.expectsNFC or flags.generatesNFC:  form = Form.NFC
+def _form_from_flags(form: Form, flags: Flags) -> Form:
+    if form is Form.Unspecified or form is None:
+        if flags.expectsNFD or flags.generatesNFD:
+            form = Form.NFD
+        elif flags.expectsNFC or flags.generatesNFC:
+            form = Form.NFC
     else:
-        form &= Form_NormalizationMask
-    return form + (_Form_UNICODE if flags.unicode else Form.Bytes)
+        form = cast(Form, form & Form.NormalizationMask)
+    return cast(Form, form + (_Form_UNICODE if flags.unicode else Form.Bytes))
 
 
 class Converter(object):
-    def __init__(self, mapping, forward=True,source=Form.Unspecified,target=Form.Unspecified):
-        source = _form_from_flags(source, mapping.lhsFlags if forward else mapping.rhsFlags)
-        target = _form_from_flags(target, mapping.rhsFlags if forward else mapping.lhsFlags)
-        self._converter = _engine.createConverter(mapping, len(mapping), forward, source, target)
-        self._buffer    = _engine.create_string_buffer(80*4)
-    
-    
+    def __init__(self, mapping: Mapping, forward: bool = True,
+                 source: Form = Form.Unspecified,
+                 target: Form = Form.Unspecified) -> None:
+        source = _form_from_flags(
+            source,
+            mapping.lhsFlags if forward else mapping.rhsFlags)
+        target = _form_from_flags(
+            target,
+            mapping.rhsFlags if forward else mapping.lhsFlags)
+        self._converter = _engine.createConverter(mapping, len(mapping),
+                                                  forward, source, target)
+        self._buffer = ctypes.create_string_buffer(80*4)
+
     def __del__(self):
         _engine.disposeConverter(self._converter)
-    
-    
-    @memoize
-    def __getattr__(self, name):
-        from _engine import getConverterName
+
+    @lru_cache(maxsize=32)
+    def __getattr__(self, name: str) -> str:
         try:
-            nid = getattr(_engine.NameID,name)
+            nid = getattr(_engine.NameID, name)
             nlen = getConverterName(self._converter, nid)
         except (AttributeError):
-            raise AttributeError('%r object has no attribute %r' % (self,name))
+            raise AttributeError(f'{self!r} object has no attribute {name!r}')
         except IndexError:
-            return None
-        
-        buf  = _engine.create_string_buffer(nlen)
+            return ''
+
+        buf = ctypes.create_string_buffer(nlen)
         nlen = getConverterName(self._converter, nid, buf, nlen)
-        return str(buf[:nlen])
-    
-    
-    @property 
-    @memoize
-    def flags(self):
-        return _engine.getConverterFlags(self._converter)
-    
-    
+        return str(cast(bytes, buf[:nlen]), 'ascii')
+
     @property
-    def sourceFlags(self):
+    @lru_cache(maxsize=8)
+    def flags(self) -> Tuple[Flags, Flags]:
+        lf, rf = _engine.getConverterFlags(self._converter)
+        return Flags(lf), Flags(rf)
+
+    @property
+    def sourceFlags(self) -> Flags:
         return self.flags[0]
-    
-    
+
     @property
-    def targetFlags(self):
+    def targetFlags(self) -> Flags:
         return self.flags[1]
-    
-    
+
     def reset(self):
         _engine.resetConverter(self._converter)
-    
-    
-    def _handle_unmapped_char(self, input, context, cons, outs, lhc):
+
+    def _handle_unmapped_char(self, input: AnyStr, context: str,
+                              uc: UnmappedChar):
         # This looks like a nasty hack because it is. Sorry
+        cons, outs, lhc = uc.args
         _engine.resetConverter(self._converter)
         name = (self.lhsName + '<->' + self.rhsName).lower()
-        errtype = UnicodeEncodeError if self.sourceFlags.unicode else UnicodeDecodeError
+        errtype = (UnicodeEncodeError if self.sourceFlags.unicode
+                   else UnicodeDecodeError)
         if self.sourceFlags.unicode:
             end = cons/4
             end -= (lhc if end != len(input) else 0)
-            start = end -1
+            start = end - 1
         else:
             start = cons - 1
             end = start + lhc
-        end = min(end,len(input))
-        raise errtype(name, input, start, end, 
+        end = min(end, len(input))
+        raise errtype(name, input, start, end,
                       context + ' stopped at unmapped character')
-        
-    
-    def _coerce_to_target(self, data):
+
+    def _coerce_to_target(self, data: bytes):
         return _unicode_decoder(data)[0] if self.targetFlags.unicode else data
-    
-    
-    def convert(self, input, finished=False, options=Option.UseReplacementCharSilently):
+
+    def convert(self, input: AnyStr, finished: bool = False,
+                options: Option = Option.UseReplacementCharSilently):
         # Validate input parameters and do an necessary conversions
-        if self.sourceFlags.unicode and isinstance(input,str):
-            raise TypeError("source is type 'str' but type 'unicode' is expected")
-        if not self.sourceFlags.unicode and isinstance(input, unicode):
-            raise TypeError("source is type 'unicode' but type 'str' is expected")    
-        data = _unicode_encoder(input)[0] if self.sourceFlags.unicode else input
+        if self.sourceFlags.unicode:
+            if isinstance(input, bytes):
+                raise TypeError(
+                    "source is type 'bytes' but type 'str' is expected")
+            data: bytes = _unicode_encoder(input)[0]
+        if not self.sourceFlags.unicode:
+            if isinstance(input, str):
+                raise TypeError(
+                    "source is type 'str' but type 'bytes' is expected")
+            data = input
         options |= finished and Option.InputIsComplete
-        
-        buf = self._buffer; cons = outs = 0; res = ''
+
+        buf = self._buffer
+        cons = outs = 0
+        res = '' if self.targetFlags.unicode else b''
         while data:
             try:
-                cons,outs,lhc = _engine.convertBufferOpt(self._converter, 
-                                                         data, len(data), 
-                                                         buf, len(buf), 
-                                                         options)
-            except FullBuffer as e: pass
-            except EmptyBuffer as e:
-                if finished: 
-                    raise self._unicode_error('expected more data.')
+                cons, outs, lhc = _engine.convertBufferOpt(self._converter,
+                                                           data, len(data),
+                                                           buf, len(buf),
+                                                           options)
+            except FullBuffer as err:
+                cons, outs, lhc = err.args
+            except EmptyBuffer:
+                if finished:
+                    raise
             except UnmappedChar as err:
                 self._handle_unmapped_char(input, 'convert', err)
-            
-            res += self._coerce_to_target(str(buf[:outs]))
+
+            res += self._coerce_to_target(cast(bytes, buf[:outs]))
             data = data[cons:]
-        
+
         if finished:
             res += self.flush()
         return res
-    
-    
-    def flush(self,finished=True,options=Option.UseReplacementCharSilently):
-        options |= finished and Option.InputIsComplete
-        
-        buf = self._buffer; outs = 0; res  = ''
+
+    def flush(self, finished: bool = True,
+              options: Option = Option.UseReplacementCharSilently):
+        options = cast(Option, options | (finished and Option.InputIsComplete))
+
+        buf = self._buffer
+        outs = 0
+        res = '' if self.targetFlags.unicode else b''
         while True:
             try:
-                outs,lhc = _engine.flushOpt(self._converter, 
-                                            buf, len(buf), 
-                                            options)
-                return res + self._coerce_to_target(str(buf[:outs]))
-            except FullBuffer as outs:
-                res += self._coerce_to_target(str(buf[:outs]))
+                outs, lhc = _engine.flushOpt(self._converter,
+                                             buf, len(buf),
+                                             options)
+                return res + self._coerce_to_target(cast(bytes, buf[:outs]))
+            except FullBuffer as err:
+                outs, lhc = err.args
+                res += self._coerce_to_target(cast(bytes, buf[:outs]))
             except UnmappedChar as err:
-                self._handle_unmapped_char(input, 'flush', err)
-
-
+                self._handle_unmapped_char('', 'flush', err)
