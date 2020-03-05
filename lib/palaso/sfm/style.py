@@ -40,13 +40,15 @@ _fields = {'Marker'         : (str,             UnrecoverableError('Start of rec
            'Italic'         : (flag,            False),
            'Underline'      : (flag,            False),
            'Superscript'    : (flag,            False),
+           'Smallcaps'      : (flag,            False),
            'Justification'  : (str,             'Left'),
            'SpaceBefore'    : (int,             0),
            'SpaceAfter'     : (int,             0),
            'FirstLineIndent': (float,           0),
            'LeftMargin'     : (float,           0),
            'RightMargin'    : (float,           0),
-           'Color'          : (int,             0)
+           'Color'          : (int,             0),
+           'color'          : (int,             0)
            }
 
 _comment = re.compile(r'\s*#.*$')
