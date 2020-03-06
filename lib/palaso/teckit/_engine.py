@@ -27,7 +27,6 @@
 #   22-Dec-2001     jk      initial version
 
 import warnings
-
 from typing import Any, List, Tuple, cast
 from enum import IntEnum, IntFlag, auto, unique
 from ctypes import (

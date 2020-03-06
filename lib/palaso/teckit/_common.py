@@ -7,6 +7,9 @@
 # Author: Tim Eves
 #
 # History:
+#   20-Jan-2020     tse     Converted to python3 and replaced custom flag and
+#                            enum meta classes with std lib versions. Added
+#                            type hints.
 #   10-Jun-2009     tse     converted to python ctypes and added the
 #                            status_check function for the ctypes errcheck
 #                            protocol.
@@ -23,11 +26,9 @@
 import ctypes.util
 import platform
 
-from typing import Any, Callable, List, cast
-from enum import IntEnum, auto, unique
-from ctypes import POINTER, c_char, c_long, c_ubyte
-
-currentTECKitVersion: int = 0x00020004   # 16.16 version number
+from typing import List, Callable
+from enum import IntFlag, unique
+from ctypes import c_char_p, c_long
 
 LOCALFUNCTYPE: Callable = (ctypes.WINFUNCTYPE if platform.system() == "Windows"
                            else ctypes.CFUNCTYPE)
@@ -52,7 +53,7 @@ def load_teckit_library(component: str = ''):
 
 
 @unique
-class Status(IntEnum):
+class Status(IntFlag):
     NoError = 0
     BasicMask = 0x000000FF
 
@@ -113,15 +114,15 @@ class Status(IntEnum):
 #  encoding form constants for TECkit_CreateConverter and TECkit_Compile
 #
 # EncodingFormMask = 0x000F
-class Form(IntEnum):
+class Form(IntFlag):
     EncodingMask = 0x000F
     Unspecified = 0  # invalid as argument to TECkit_CreateConverter
-    Bytes = auto()
-    UTF8 = auto()
-    UTF16BE = auto()
-    UTF16LE = auto()
-    UTF32BE = auto()
-    UTF32LE = auto()
+    Bytes = 1
+    UTF8 = 2
+    UTF16BE = 3
+    UTF16LE = 4
+    UTF32BE = 5
+    UTF32LE = 6
     NormalizationMask = 0x0F00
     NFC = 0x0100
     NFD = 0x0200
@@ -152,12 +153,11 @@ class UnmappedChar(Exception):
 
 
 # Define some 'typedefs' these make the argtypes list slight less opaque.
-mapping = POINTER(c_char)
+mapping = c_char_p
 status = c_long
-c_bool = c_ubyte
 
 
-def dispatch_error_status_code(s: Status, fn, args: List[Any]):
+def dispatch_error_status_code(s: Status, fn, args: List):
     if s == Status.InvalidForm:
         raise ValueError(
             f'inForm or outForm parameter does not match mapping: {args[0]!r}')
@@ -184,10 +184,10 @@ def dispatch_error_status_code(s: Status, fn, args: List[Any]):
 
 
 def status_code(s_: status, fn, args: List) -> List:
-    s = cast(Status, s_)
+    s = Status(s_)
     if s < Status.NoError:
         dispatch_error_status_code(s, fn, args)
-    s = cast(Status, s & Status.BasicMask)
+    s = s & Status.BasicMask
     if s == Status.NoError:
         return args
     raise RuntimeError(f'unknown status code {s_} returned')

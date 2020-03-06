@@ -53,7 +53,7 @@ def _teckit_search(mapping):
 
     codec = Codec(mapobj)
     return codecs.CodecInfo(
-        name=mapobj.__str__(),
+        name=str(mapobj),
         encode=codec.encode,
         decode=codec.decode,
         incrementalencoder=incrementalencoder,

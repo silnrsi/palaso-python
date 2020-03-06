@@ -6,12 +6,13 @@
 # Author: Tim Eves
 #
 # History:
-#   2009-06-10  tse     Initial version using the ctypes FFI
-#
+# 20-Jan-2020 tse   Port to Python3 and use updated _engine module.
+# 10-Jun-2009 tse   Initial version using the ctypes FFI
+
 import codecs
 import ctypes
 import sys
-from typing import AnyStr, Tuple, cast
+from typing import AnyStr, Tuple, Union, cast
 from functools import lru_cache
 from palaso.teckit import _engine
 from palaso.teckit._common import (
@@ -23,17 +24,27 @@ from palaso.teckit._engine import (
 
 __all__ = ['ConverterBusy', 'MappingVersionError',
            'FullBuffer', 'EmptyBuffer', 'UnmappedChar',
-           'Flags', 'Form', 'Option',
+           'Converter', 'Flags', 'Form', 'Mapping', 'Option',
            'getVersion']
 
 
 class Mapping(bytes):
-    def __new__(cls, path: str):
-        with open(path, 'rb') as mf:
-            return super(Mapping, cls).__new__(cls, mf.read())
+    def __new__(cls, data: Union[str, bytes]):
+        if isinstance(data, bytes):
+            return super(Mapping, cls).__new__(cls, data)
+        else:
+            with open(data, 'rb') as mf:
+                return super(Mapping, cls).__new__(cls, mf.read())
 
-    def __init__(self, path: str) -> None:
-        self._repr_args = repr(path)
+    def __init__(self, *args, **kw) -> None:
+        res = []
+        for arg in args:
+            res.append(repr(arg[:20] + '...'
+                            if isinstance(arg, str) else arg))
+        for k, v in kw.items():
+            res.append(
+                f'{k}={v[:20]+"..." if isinstance(v, (str,bytes)) else v!r}')
+        self._repr_args = ','.join(res)
 
     @lru_cache(maxsize=16)
     def __getattr__(self, name: str) -> str:
@@ -43,7 +54,7 @@ class Mapping(bytes):
         except AttributeError:
             raise AttributeError(f'{self!r} object has no attribute {name!r}')
         except IndexError:
-            return ''
+            raise
         buf = ctypes.create_string_buffer(nlen)
         nlen = _engine.getMappingName(self, len(self), nid, buf, nlen)
         return str(buf[:nlen])
@@ -102,8 +113,9 @@ class Converter(object):
         target = _form_from_flags(
             target,
             mapping.rhsFlags if forward else mapping.lhsFlags)
-        self._converter = _engine.createConverter(mapping, len(mapping),
-                                                  forward, source, target)
+        self._converter = _engine.createConverter(
+                            mapping, len(mapping), forward,
+                            source, target)
         self._buffer = ctypes.create_string_buffer(80*4)
 
     def __del__(self):
@@ -117,7 +129,7 @@ class Converter(object):
         except (AttributeError):
             raise AttributeError(f'{self!r} object has no attribute {name!r}')
         except IndexError:
-            return ''
+            raise
 
         buf = ctypes.create_string_buffer(nlen)
         nlen = getConverterName(self._converter, nid, buf, nlen)
@@ -163,7 +175,7 @@ class Converter(object):
         return _unicode_decoder(data)[0] if self.targetFlags.unicode else data
 
     def convert(self, input: AnyStr, finished: bool = False,
-                options: Option = Option.UseReplacementCharSilently):
+                options: Option = Option.UseReplacementCharSilently) -> AnyStr:
         # Validate input parameters and do an necessary conversions
         if self.sourceFlags.unicode:
             if isinstance(input, bytes):
@@ -182,10 +194,11 @@ class Converter(object):
         res = '' if self.targetFlags.unicode else b''
         while data:
             try:
-                cons, outs, lhc = _engine.convertBufferOpt(self._converter,
-                                                           data, len(data),
-                                                           buf, len(buf),
-                                                           options)
+                cons, outs, lhc = _engine.convertBufferOpt(
+                                    self._converter,
+                                    data, len(data),
+                                    buf, len(buf),
+                                    options)
             except FullBuffer as err:
                 cons, outs, lhc = err.args
             except EmptyBuffer:
@@ -202,7 +215,7 @@ class Converter(object):
         return res
 
     def flush(self, finished: bool = True,
-              options: Option = Option.UseReplacementCharSilently):
+              options: Option = Option.UseReplacementCharSilently) -> AnyStr:
         options = cast(Option, options | (finished and Option.InputIsComplete))
 
         buf = self._buffer
@@ -210,9 +223,8 @@ class Converter(object):
         res = '' if self.targetFlags.unicode else b''
         while True:
             try:
-                outs, lhc = _engine.flushOpt(self._converter,
-                                             buf, len(buf),
-                                             options)
+                outs, lhc = _engine.flushOpt(
+                                self._converter, buf, len(buf), options)
                 return res + self._coerce_to_target(cast(bytes, buf[:outs]))
             except FullBuffer as err:
                 outs, lhc = err.args

@@ -7,6 +7,8 @@
 # Author: Tim Eves
 #
 # History:
+#   20-Jan-2020     tse     Converted to python3 and replaced custom flag and enum
+#                            meta classes with std lib versions. Added type hints.
 #   10-Jun-2009     tse     Converted to python representationsm and
 #                            added ctypes function defintitions for the
 #                            public API.
@@ -22,12 +24,12 @@
 #   14-May-2002     jk      added WINAPI to function declarations
 #                            keep MS compiler happy
 
-from typing import Any, Callable, List, Tuple
-from enum import IntFlag
+from enum import IntFlag, unique
 from ctypes import (
     POINTER,
     c_bool, c_int, c_size_t, c_uint32,
     c_void_p, c_char_p)
+from typing import Callable, List, Tuple
 from palaso.teckit._common import (
     LOCALFUNCTYPE, mapping, status,
     load_teckit_library, status_code)
@@ -38,7 +40,10 @@ __library__ = load_teckit_library('Compiler')
 Opts_FormMask = 0x0000000F    # see TECkit_Common.h for encoding form constants
 
 
+@unique
 class Opt(IntFlag):
+    FormMask = 0x0000000F
+
     Compress = 0x10
     # Generate compressed mapping table.
 

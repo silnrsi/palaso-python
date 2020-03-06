@@ -6,20 +6,22 @@
 # Author: Tim Eves
 #
 # History:
-#   2009-06-10  tse     Initial version using the ctypes FFI
-#
+# 20-Jan-2020 tse   Port to Python3 and use updated _engine module.
+# 10-Jun-2009 tse   Initial version using the ctypes FFI
+
+from itertools import starmap
+from typing import Any, AnyStr, List
+
 from palaso.teckit import _compiler
 from palaso.teckit import _common
-from typing import Any, AnyStr, List
-from itertools import starmap
-
+from palaso.teckit._common import Form
 from palaso.teckit._compiler import (
     getUnicodeName,
     getTECkitName,
     getUnicodeValue)
 from palaso.teckit.engine import Mapping
 
-__all__ = ['Mapping',
+__all__ = ['Form', 'Mapping',
            'CompilationError',
            'translate', 'compile',
            'getTECkitName', 'getVersion',
@@ -41,54 +43,48 @@ class CompilationError(_common.CompilationError):
         return 'compilation failed with errors:\n' + errors
 
 
-class _Compiled(Mapping):
-    def __new__(cls,  txt: AnyStr, compress: bool = True,
-                form=_common.Form.Unspecified) -> Any:
-        compile_errors = []
-        if isinstance(txt, str):
-            txt = txt.encode('utf_8_sig')
-
-        @_compiler.teckit_error_fn
-        def callback(_, *err): compile_errors.append(err)
-        try:
-            (tbl, tbl_len) = _compiler.compileOpt(
-                                txt, len(txt),
-                                compress,
-                                callback, None,
-                                form)
-        except _common.CompilationError:
-            if compile_errors:
-                raise CompilationError(compile_errors) from None
-            else:
-                raise
-
-        buf = super(Mapping, cls).__new__(cls, tbl[:tbl_len])
-        _compiler.disposeCompiled(tbl)
-        return buf
-
-    def __init__(self, *args, **kw) -> None:
-        res = []
-        for arg in args:
-            res.append(repr(arg[:20] + '...'
-                            if isinstance(arg, str) else arg))
-        for k,v in kw.items():
-            res.append(f'{k}={arg[:20] + "..." if isinstance(arg, (str,bytes)) else arg!r}')
-        self._repr_args = ','.join(res)
-
-
-def translate(txt: AnyStr, form=_common.Form.Unspecified) -> bytes:
-    compile_errors = []
+def compile(txt: AnyStr,
+            compress: bool = True,
+            form: Form = Form.Unspecified) -> Any:
+    errors = []
     if isinstance(txt, str):
         txt = txt.encode('utf_8_sig')
 
     @_compiler.teckit_error_fn
-    def callback(_, *err): compile_errors.append(err)
+    def callback(_, *err): errors.append(err)
+
     try:
-        (tbl, tbl_len) = _compiler.compileOpt(txt, len(txt), callback, None,
-                                              _compiler.Opt.XML)
+        (tbl, tbl_len) = _compiler.compileOpt(
+                            txt, len(txt),
+                            compress,
+                            callback, None,
+                            form)
     except _common.CompilationError:
-        if compile_errors:
-            raise CompilationError(compile_errors) from None
+        if errors:
+            raise CompilationError(errors) from None
+        else:
+            raise
+
+    buf = Mapping(tbl[:tbl_len])
+    _compiler.disposeCompiled(tbl)
+    return buf
+
+
+def translate(txt: AnyStr, form: Form = Form.Unspecified) -> bytes:
+    errors = []
+    if isinstance(txt, str):
+        txt = txt.encode('utf_8_sig')
+
+    @_compiler.teckit_error_fn
+    def callback(_, *err): errors.append(err)
+    try:
+        (tbl, tbl_len) = _compiler.compileOpt(
+                            txt, len(txt),
+                            callback, None,
+                            _compiler.Opt.XML)
+    except _common.CompilationError:
+        if errors:
+            raise CompilationError(errors) from None
         else:
             raise
 
@@ -96,7 +92,5 @@ def translate(txt: AnyStr, form=_common.Form.Unspecified) -> bytes:
     _compiler.disposeCompiled(tbl)
     return xml_doc
 
-
-compile = _Compiled
 
 getVersion = _compiler.getCompilerVersion
