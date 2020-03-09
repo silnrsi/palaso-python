@@ -1,28 +1,21 @@
-#
-# Copyright (C) 2009 SIL International. All rights reserved.
-#
-# Provides python definitions of the Public API to the TECkit
-# compiler library.
-#
-# Author: Tim Eves
-#
+"""
+TECkit Compiler library C API for python.
+
+Provides python ctypes definitions and functions for the public API to
+the TECkit compiler library.
+"""
+__author__ = "Tim Eves"
+__date__ = "23 January 2020"
+__credits__ = '''\
+Jonathon Kew for TECkit_Compiler.h this is based on.
+'''
+__copyright__ = "Copyright © 2020 SIL International"
+__license__ = "MIT"
+__email__ = "tim_eves@sil.org"
 # History:
-#   20-Jan-2020     tse     Converted to python3 and replaced custom flag and enum
-#                            meta classes with std lib versions. Added type hints.
-#   10-Jun-2009     tse     Converted to python representationsm and
-#                            added ctypes function defintitions for the
-#                            public API.
-# History of TECKit_Compiler.h this is based on:
-#   18-Jan-2008     jk      added EXPORTED to declarations, for mingw32
-#                            cross-build
-#   16-Sep-2006     jk      added APIs to convert USVs to names and
-#                            vice versa
-#   21-May-2005     jk      changes based on Ulrik Petersen's patch for
-#                            MS VC++ 6
-#   18-Mar-2005     jk      added option to generate XML representation
-#    5-Jul-2002     jk      corrected placement of WINAPI/CALLBACK to
-#   14-May-2002     jk      added WINAPI to function declarations
-#                            keep MS compiler happy
+# 20-Jan-2020 tse   Converted to python3 and replaced custom flag and enum
+#                   meta classes with std lib versions. Added type hints.
+# 10-Jun-2009 tse   Created ctypes  function defintitions for the public API.
 
 from enum import IntFlag, unique
 from ctypes import (

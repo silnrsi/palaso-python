@@ -1,10 +1,14 @@
-#
-# Copyright (C) 2009 SIL International. All rights reserved.
-#
-# Provides a python module to interface with SIL's TECKit library compiler API.
-#
-# Author: Tim Eves
-#
+"""
+TECkit engine Pythonic interface.
+
+Provides a python module to interface with SIL's TECKit compiler library API.
+"""
+__author__ = "Tim Eves"
+__date__ = "23 January 2020"
+__credits__ = None
+__copyright__ = "Copyright © 2020 SIL International"
+__license__ = "MIT"
+__email__ = "tim_eves@sil.org"
 # History:
 # 20-Jan-2020 tse   Port to Python3 and use updated _engine module.
 # 10-Jun-2009 tse   Initial version using the ctypes FFI

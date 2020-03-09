@@ -1,28 +1,24 @@
-#
-# Copyright (C) 2009 SIL International. All rights reserved.
-#
-# Provides python definitions of the common types and defines for the
-# engine and compiler.
-#
-# Author: Tim Eves
-#
+"""
+Common implmentation functions and variables for TECKit python API.
+
+Provides python definitions of the common types and defines for the
+engine and compiler.
+"""
+__author__ = "Tim Eves"
+__date__ = "23 January 2020"
+__credits__ = '''\
+Jonathon Kew for TECkit_Common.h this is based on.
+'''
+__copyright__ = "Copyright © 2020 SIL International"
+__license__ = "MIT"
+__email__ = "tim_eves@sil.org"
 # History:
-#   20-Jan-2020     tse     Converted to python3 and replaced custom flag and
-#                            enum meta classes with std lib versions. Added
-#                            type hints.
-#   10-Jun-2009     tse     converted to python ctypes and added the
-#                            status_check function for the ctypes errcheck
-#                            protocol.
-# History of TECKit_Common.h this is based on:
-#   16-Sep-2006     jk      updated version to 2.4 (adding new
-#                            compiler APIs for Bob E)
-#   23-May-2005     jk      patch for 64-bit architectures (thanks to
-#                            Ulrik P)
-#   18-Mar-2005     jk      updated minor version for 2.3 (engine unchanged,
-#                            XML option in compiler)
-#   23-Sep-2003     jk      updated for version 2.1 - extended status values
-#   xx-xxx-2002     jk      version 2.0 initial release
-#
+# 20-Jan-2020     tse     Converted to python3 and replaced custom flag and
+#                         enum meta classes with std lib versions. Added
+#                         type hints.
+# 10-Jun-2009     tse     Created ctypes bindings and added the status_check
+#                         function for the ctypes errcheck protocol.
+
 import ctypes.util
 import platform
 
@@ -111,9 +107,8 @@ class Status(IntFlag):
 
 
 #
-#  encoding form constants for TECkit_CreateConverter and TECkit_Compile
+#  encoding form constants for TECkit_CreateConverterOpt and TECkit_CompileOpt
 #
-# EncodingFormMask = 0x000F
 class Form(IntFlag):
     EncodingMask = 0x000F
     Unspecified = 0  # invalid as argument to TECkit_CreateConverter

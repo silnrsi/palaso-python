@@ -1,30 +1,21 @@
-#
-# Copyright (C) 2009 SIL International. All rights reserved.
-#
-# Provides python ctypes definitions and functions of the public API to
-# the TECkit conversion engine.
-#
-# Author: Tim Eves
-#
+"""
+TECkit library C API for python.
+
+Provides python ctypes definitions and functions for the public API to
+the TECkit conversion engine.
+"""
+__author__ = "Tim Eves"
+__date__ = "23 January 2020"
+__credits__ = '''\
+Jonathon Kew for TECKit_Engine.h this is based on.
+'''
+__copyright__ = "Copyright © 2020 SIL International"
+__license__ = "MIT"
+__email__ = "tim_eves@sil.org"
 # History:
-#   20-Jan-2020     tse     Converted to python3 and replaced custom flag and
-#                            enum meta classes with std lib versions. Added
-#                            type hints.
-#   10-Jun-2009     tse     Converted to python representationsm and
-#                            added ctypes function defintitions for the
-#                            public API.
-# History of TECKit_Engine.h this is based on:
-#   18-Jan-2008     jk      added EXPORTED to declarations, for mingw32
-#                            cross-build
-#   18-Mar-2005     jk      moved version number to TECkit_Common.h as it
-#                            is shared with the compiler
-#   19-Mar-2004     jk      updated minor version for 2.2 engine
-#                            (improved matching functionality)
-#   23-Sep-2003     jk      updated for version 2.1 - new "...Opt" APIs
-#    5-Jul-2002     jk      corrected placement of WINAPI to keep MS
-#                            compiler happy
-#   14-May-2002     jk      added WINAPI to function declarations
-#   22-Dec-2001     jk      initial version
+# 20-Jan-2020 tse   Converted to python3 and replaced custom flag enum meta
+#                   classes with std lib versions. Added type hints.
+# 10-Jun-2009 tse   Created ctypes function defintitions for the public API.
 
 import warnings
 from typing import Any, List, Tuple, cast
@@ -39,65 +30,78 @@ from palaso.teckit._common import (
     dispatch_error_status_code, load_teckit_library, status_code)
 
 flags = c_uint32
+"""C type of flags enum"""
+
 nameid = c_uint16
+"""C type of NameID enum"""
 
 
-# formFlags bits for normalization; if none are set, then this side of the
-#  mapping is normalization-form-agnostic on input, and may generate an
-#  unspecified mixture.
 @unique
 class Flags(IntFlag):
+    """formFlags bits for normalization
+
+    if none are set, then this side of the
+    mapping is normalization-form-agnostic on input, and may generate an
+    unspecified mixture.
+    """
+
     expectsNFC = auto()
-    # expects fully composed text (NFC)
+    """expects fully composed text (NFC)."""
 
     expectsNFD = auto()
-    # expects fully decomposed text (NCD)
+    """expects fully decomposed text (NCD)."""
 
     generatesNFC = auto()
-    # generates fully composed text (NFC)
+    """generates fully composed text (NFC)."""
 
     generatesNFD = auto()
-    # generates fully decomposed text (NCD)
+    """generates fully decomposed text (NCD)."""
 
     visualOrder = generatesNFD << 12  # 11 unused bits here
-    # visual rather than logical order
+    """visual rather than logical order."""
 
     unicode = auto()
-    # this is Unicode rather than a byte encoding
+    """this is Unicode rather than a byte encoding."""
 
 
 @unique
 class NameID(IntEnum):
-    # required names
+    """Permited names stored in a TECKit mapping.
+
+    These are the onlny permissable values for the nameid value passed to
+    TECkit_GetMappingName() or TECkit_GetConverterName().
+
+    Additional name IDs may be defined in the future.
+    """
+
     lhsName = 0
-    # "source" or LHS encoding name, e.g. "SIL-EEG_URDU-2001"
+    '''"source" or LHS encoding name, e.g. "SIL-EEG_URDU-2001"'''
 
     rhsName = auto()
-    # "destination" or RHS encoding name, e.g. "UNICODE-3-1"
+    '''"destination" or RHS encoding name, e.g. "UNICODE-3-1"'''
 
     lhsDescription = auto()
-    # source encoding description, e.g. "SIL East Eurasia Group Extended Urdu
-    # (Mac OS)"
+    '''source encoding description, e.g. "SIL East Eurasia Group Extended Urdu
+    (Mac OS)"'''
 
     rhsDescription = auto()
-    # destination description, e.g. "Unicode 3.1"
+    '''destination description, e.g. "Unicode 3.1"'''
 
     # additional recommended names (parallel to UTR-22)
     version = auto()
-    # "1.0b1"
+    '''version of the mapping e.g. 1.0b1'''
 
     contact = auto()
-    # "mailto:jonathan_kew@sil.org"
+    '''e.g. mailto:jonathan_kew@sil.org'''
 
     regAuthority = auto()
-    # "SIL International"
+    '''e.g. "SIL International"'''
 
     regName = auto()
-    # "Greek (Galatia)"
+    '''e.g. "Greek (Galatia)"'''
 
     copyright = auto()
-    # "(c)2002 SIL International"
-# additional name IDs may be defined in the future
+    '''Copyright notice'''
 
 
 #
@@ -258,26 +262,26 @@ getVersion = prototype(('TECkit_GetVersion', __library__))
 #
 #   ***** New APIs for version 2.1 of the engine *****
 #
-#   A converter object now has options to control behavior when "unmappable"
-#   characters occur in the input text.
-#   Choices are:
-#       UseReplacementCharSilently
-#           - original behavior, just uses "replacement character" in the
-#             mapping
-#       UseReplacementCharWithWarning
-#           - do the same mapping, but return a warning in the status value
-#       DontUseReplacementChar
-#           - stop conversion, returning immediately on encountering an
-#             unmapped character
-#
-
-
 @unique
 class Option(IntFlag):
+    """How to handle an unmappable character.
+
+    Control converter behavior when "unmappable" characters occur in the
+    input text.
+    """
+
     UseReplacementCharSilently = 0
+    """Default behavior, just uses "replacement character" in the mapping."""
+
     UseReplacementCharWithWarning = 1
+    """Same as UseReplacementCharSilently, but return a warning status."""
+
     DontUseReplacementChar = 2
+    """stop conversion, returning immediately."""
+
     InputIsComplete = 0x100
+    """Dont operating in streaming mode."""
+
     UnmappedBehavior = 0x000F
 
 
