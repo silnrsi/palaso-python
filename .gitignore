@@ -6,3 +6,5 @@ __pycache__
 /dist
 /MANIFEST
 lib/palaso.kmfl.[ch]
+/.vscode
+*.code-workspace
