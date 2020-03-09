@@ -55,6 +55,11 @@ _fields = {
 }
 
 _comment = re.compile(r'\s*#.*$')
+_markers = re.compile(r'^\s*\\[^\s\\]+\s')
+
+
+def _lower_match(m):
+    return m.group().lower()
 
 
 def _munge_record(r):
@@ -144,9 +149,14 @@ def parse(source, error_level=level.Content, base=None):
     ''' # noqa
     # strip comments out
     no_comments = map(partial(_comment.sub, ''), source)
+    # lowercase all markers
+    lower_source = map(partial(_markers.sub, _lower_match), no_comments)
+    # lowercase all field names.
+    lower_fields = {k.lower(): v for k, v in _fields.items()}
+
     rec_parser = records.parser(
-                    no_comments, 
-                    records.schema('Marker', _fields), 
+                    lower_source,
+                    records.schema('Marker', lower_fields),
                     error_level=error_level,
                     base=base)
     rec_parser.source = getattr(source, 'name', '<string>')
