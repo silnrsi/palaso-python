@@ -1,57 +1,61 @@
-'''
-The STY stylesheet file parser module.  This defines the database schema for 
-STY files necessary to drive the SFM DB parser.
-'''
-__version__ = '20101011'
-__date__    = '11 October 2010'
-__author__  = 'Tim Eves <tim_eves@sil.org>'
-__history__ = '''
-	20100111 - tse - Initial version
-	20101026 - tse - rewrote to use new palaso.sfm.records module
-	20101109 - tse - Update to use unique field type's set object and fix 
-		poor quality error messages that fail to identify the source file.
-'''
+"""
+The STY stylesheet file parser module.
+
+This defines the database schema for STY files necessary to drive the SFM DB
+parser and pre-processing to remove comments, etc.
+"""
+__author__ = "Tim Eves"
+__date__ = "06 January 2020"
+__copyright__ = "Copyright © 2020 SIL International"
+__license__ = "MIT"
+__email__ = "tim_eves@sil.org"
+# History:
+# 09-Nov-2010 tse   Update to use unique field type's set object and fix poor
+#                   quality error messages that fail to identify the source
+#                   file.
+# 26-Jan-2010 tse   Rewrote to use new palaso.sfm.records module.
+# 11-Jan-2010 tse   Initial version.
+
 import re
+
 import palaso.sfm.records as records
-from palaso.sfm.records import sequence,flag,unique,level
-from palaso.sfm.records import StructureError, UnrecoverableError 
+from palaso.sfm.records import sequence, flag, unique, level
+from palaso.sfm.records import UnrecoverableError
 from functools import partial
 
-try:
-    from itertools import imap
-except ImportError:
-    imap = map
-
-
-_fields = {'Marker'         : (str,             UnrecoverableError('Start of record marker: {0} missing')),
-           'Endmarker'      : (str,             None),
-           'Name'           : (str,             None),
-           'Description'    : (str,             None),
-#           'Name'           : (str,             StructureError('Marker {0} defintion missing: {1}')),
-#           'Description'    : (str,             StructureError('Marker {0} defintion missing: {1}')),
-           'OccursUnder'    : (unique(sequence(str)),   [None]),
-           'Rank'           : (int,             None),
-           'TextProperties' : (unique(sequence(str)),   []),
-           'TextType'       : (str,             "Unspecified"),
-           'StyleType'      : (str,             None),
-           'FontSize'       : (int,             None),
-           'Regular'        : (flag,            False),
-           'Bold'           : (flag,            False),
-           'Italic'         : (flag,            False),
-           'Underline'      : (flag,            False),
-           'Superscript'    : (flag,            False),
-           'Smallcaps'      : (flag,            False),
-           'Justification'  : (str,             'Left'),
-           'SpaceBefore'    : (int,             0),
-           'SpaceAfter'     : (int,             0),
-           'FirstLineIndent': (float,           0),
-           'LeftMargin'     : (float,           0),
-           'RightMargin'    : (float,           0),
-           'Color'          : (int,             0),
-           'color'          : (int,             0)
-           }
+_fields = {
+    'Marker': (str, UnrecoverableError(
+                        'Start of record marker: {0} missing')),
+    'Endmarker':      (str, None),
+    # For Name and Description, a default
+    #  StructureError('Marker {0} defintion missing: {1}') causes
+    #  problems with real world STY files.
+    'Name':            (str,   None),
+    'Description':     (str,   None),
+    'OccursUnder':     (unique(sequence(str)), [None]),
+    'Rank':            (int,   None),
+    'TextProperties':  (unique(sequence(str)), []),
+    'TextType':        (str,   "Unspecified"),
+    'StyleType':       (str,   None),
+    'FontSize':        (int,   None),
+    'Regular':         (flag,  False),
+    'Bold':            (flag,  False),
+    'Italic':          (flag,  False),
+    'Underline':       (flag,  False),
+    'Superscript':     (flag,  False),
+    'Smallcaps':       (flag,  False),
+    'Justification':   (str,   'Left'),
+    'SpaceBefore':     (int,   0),
+    'SpaceAfter':      (int,   0),
+    'FirstLineIndent': (float, 0),
+    'LeftMargin':      (float, 0),
+    'RightMargin':     (float, 0),
+    'Color':           (int,   0),
+    'color':           (int,   0)
+}
 
 _comment = re.compile(r'\s*#.*$')
+
 
 def _munge_record(r):
     tag = r.pop('Marker').lstrip()
@@ -66,18 +70,18 @@ def parse(source, error_level=level.Content, base=None):
     '''
     >>> from pprint import pprint
     >>> pprint(parse("""
-    ... \Marker toc1
+    ... \\Marker toc1
     ... \\Name toc1 - File - Long Table of Contents Text
-    ... \Description Long table of contents text
-    ... \OccursUnder h h1 h2 h3 
-    ... \Rank 1
-    ... \TextType Other
-    ... \TextProperties paragraph publishable vernacular
-    ... \StyleType Paragraph
-    ... \FontSize 12
-    ... \Italic
-    ... \Bold
-    ... \Color 16384""".splitlines(True)))
+    ... \\Description Long table of contents text
+    ... \\OccursUnder h h1 h2 h3
+    ... \\Rank 1
+    ... \\TextType Other
+    ... \\TextProperties paragraph publishable vernacular
+    ... \\StyleType Paragraph
+    ... \\FontSize 12
+    ... \\Italic
+    ... \\Bold
+    ... \\Color 16384""".splitlines(True)))
     {'toc1': {'Bold': True,
               'Color': 16384,
               'Description': 'Long table of contents text',
@@ -100,13 +104,13 @@ def parse(source, error_level=level.Content, base=None):
               'TextType': 'Other',
               'Underline': False}}
     >>> pprint(parse("""
-    ... \Marker dummy1
+    ... \\Marker dummy1
     ... \\Name dummy1 - File - dummy marker definition
-    ... \Description A marker used for demos
-    ... \OccursUnder id NEST
-    ... \TextType Other
-    ... \Bold
-    ... \Color 12345""".splitlines(True)))
+    ... \\Description A marker used for demos
+    ... \\OccursUnder id NEST
+    ... \\TextType Other
+    ... \\Bold
+    ... \\Color 12345""".splitlines(True)))
     {'dummy1': {'Bold': True,
                 'Color': 12345,
                 'Description': 'A marker used for demos',
@@ -129,23 +133,27 @@ def parse(source, error_level=level.Content, base=None):
                 'TextType': 'Other',
                 'Underline': False}}
     >>> pprint(parse("""
-    ... \Marker error
+    ... \\Marker error
     ... \\Name error - File - cause a marker definition parse error
-    ... \Description A marker to demostrate error reporting
-    ... \Bold
-    ... \Color 12345""".splitlines(True)))
+    ... \\Description A marker to demostrate error reporting
+    ... \\Bold
+    ... \\Color 12345""".splitlines(True)))
     Traceback (most recent call last):
     ...
     SyntaxError: <string>: line 2,1: Marker error defintion missing: TextType
-    '''
-    no_comments = imap(partial(_comment.sub,''), source)
-    rec_parser = records.parser(no_comments, records.schema('Marker', _fields), error_level=error_level, base=base)
+    ''' # noqa
+    # strip comments out
+    no_comments = map(partial(_comment.sub, ''), source)
+    rec_parser = records.parser(
+                    no_comments, 
+                    records.schema('Marker', _fields), 
+                    error_level=error_level,
+                    base=base)
     rec_parser.source = getattr(source, 'name', '<string>')
     recs = iter(rec_parser)
-    next(recs,None)
-    res = dict(imap(_munge_record, recs))
+    next(recs, None)
+    res = dict(map(_munge_record, recs))
     if base is not None:
         base.update(res)
         res = base
     return res
-
