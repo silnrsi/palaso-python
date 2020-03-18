@@ -90,16 +90,22 @@ class UCD(list):
             return
         elif localfile.endswith(".xml"):
             with open(localfile) as inf:
-                self._loadxml(inf)
+                enums = self._preproc(inf)
+                inf.seek(0)
+                self._loadxml(inf, enums=enums)
         elif localfile.endswith('.zip'):
             with zipfile.ZipFile(localfile, 'r') as z:
                 firstf = z.namelist()[0]
                 with z.open(firstf) as inf:
-                    self._loadxml(inf)
+                    enums = self._preproc(inf)
+                with z.open(firstf) as inf:
+                    self._loadxml(inf, enums=enums)
 
-    def _loadxml(self, fh):
-        enums = self._preproc(fh)
-        fh.seek(0)
+    def _loadxml(self, fh, enums=None):
+        if enums is None:
+            enums = {}
+            for k, v in self.enums.items():
+                enums[k] = {x: i for i, x in enumerate(v)}
         for (ev, e) in et.iterparse(fh, events=['start']):
             if ev == 'start' and e.tag.endswith('char'):
                 d = dict(e.attrib)
