@@ -116,7 +116,7 @@ class UCD(list):
                     firstcp = d.pop('first-cp')
                     lastcp = d.pop('last-cp')
                 for n in _cpfields:
-                    if d[n] == "#":
+                    if n not in d or d[n] == "#":
                         d[n] = ""
                     d[n] = "".join(chr(int(x, 16)) for x in d[n].split())
                 for n, v in enums.items():
