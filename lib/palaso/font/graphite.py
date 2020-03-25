@@ -259,7 +259,13 @@ class Face(object):
     def get_featureref(self, featid):
         if isinstance(featid, bytes):
             featid = gr2.gr_str_to_tag(featid)
-        return FeatureRef(gr2.gr_face_find_fref(self.face, featid))
+        elif isinstance(featid, str):
+            featid = gr2.gr_str_to_tag(featid.encode("ascii"))
+        try:
+            fref = gr2.gr_face_find_fref(self.face, featid)
+        except IndexError:
+            return None
+        return FeatureRef(fref)
 
     @property
     def featureRefs(self):

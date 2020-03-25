@@ -32,7 +32,8 @@ class GrFont(Font) :
                 continue
             try:
                 fref = self.grface.get_featureref(f.encode("utf-8"))
-                res.set(fref, v)
+                if fref is not None:
+                    res.set(fref, v)
             except ValueError:
                 pass
         return res
