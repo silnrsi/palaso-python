@@ -262,6 +262,8 @@ class Ldml(ETWriter):
     takesCData = set(('cr',))
     silns = "urn://www.sil.org/ldml/0.1"
     use_draft = None
+    nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
+    keyContexts = {}            # cls.keyContexts[element] = set(attributes)
 
     @classmethod
     def ReadMetadata(cls, fname = None):
@@ -279,8 +281,6 @@ class Ldml(ETWriter):
             elif v.text:
                 cls.variables[name] = v.text.strip()
         cls.blocks = set(base.find('blocking/blockingItems').get('elements', '').split())
-        cls.nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
-        cls.keyContexts = {}            # cls.keyContexts[element] = set(attributes)
         cls.keys = set()
         for e in base.findall('distinguishing/distinguishingItems'):
             if 'elements' in e.attrib:
@@ -298,6 +298,7 @@ class Ldml(ETWriter):
                 cls.keys.update(e.get('attributes').split())
         cls.keyContexts['{'+cls.silns+'}matched-pair'] = set(['open', 'close'])
         cls.keyContexts['{'+cls.silns+'}quotation'] = set(['level'])
+        cls.keyContexts['{'+cls.silns+'}punctuation-pattern'] = set(['context', 'pattern'])
 
     @classmethod
     def ReadSupplementalData(cls, fname = None):
@@ -333,13 +334,31 @@ class Ldml(ETWriter):
                     elementCount = procmodel(name, n[3], cls, elementCount)
             return elementCount
         def elementDecl(name, model):
+            # model[]: 0: (EMPTY=1, ANY, MIXED, NAME, CHOICE, SEQ), 
+            #          1: (NONE=0, OPT, REP, PLUS), 
+            #          2: string convert function,
+            #          3: name,
+            #          4: children
             elementCount = procmodel(name, model[3], cls, 0)
             cls.maxEls = max(cls.maxEls, elementCount + 1)
             cls.attributeOrder[name] = {}
             attribCount[name] = 0
+            curAttrib = None
+            curEl = name
         def attlistDecl(elname, attname, xmltype, default, required):
             attribCount[elname] += 1
             cls.attributeOrder[elname][attname] = attribCount[elname]
+            cls.keyContexts.setdefault(elname, set()).add(attname)
+            curEl = elname
+            curAttrib = attname
+        def comment(txt):
+            m = re.match(r"^@([A-Z]+)(?:(.*?))?\s*$", txt)
+            if m is None:
+                return
+            if curAttrib is not None and (m.group(1) == "METADATA" or m.group(1) == "VALUE"):
+                cls.keyContexts[curEl].remove(curAttrib)
+                cls.nonkeyContexts.setdefault(curEl, set()).add(curAttrib)
+            
         parser = xml.parsers.expat.ParserCreate()
         parser.ElementDeclHandler = elementDecl
         parser.AttlistDeclHandler = attlistDecl

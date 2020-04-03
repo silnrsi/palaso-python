@@ -149,6 +149,18 @@ class UnicodeSet(set):
         self.startgroup = False
         self.endgroup = False
 
+    def asSet(self):
+        """ Returns a set of strings, one per 'character' in the flattened set. """
+        if self.negative:
+            return set()
+        res = set()
+        for s in self:
+            if isinstance(s, UnicodeSet):
+                res.update(s.asSet())
+            else:
+                res.add(s)
+        return res
+
     def negate(self, state):
         self.negative = state
 
@@ -164,10 +176,10 @@ def _expand(p, vals, ind, indval):
         return vals[ind][indval]
 
 
-def flatten(s):
-    p = parse(s)
-    vals = map(sorted, p)
-    lens = map(len, vals)
+def flatten(s, normal=None):
+    p = parse(s, normal=normal)
+    vals = list(map(sorted, p))
+    lens = list(map(len, vals))
     num = len(vals)
     indices = [0] * num
     while True:
