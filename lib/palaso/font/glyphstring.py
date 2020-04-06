@@ -77,46 +77,60 @@ class Collection(object):
 
     def process(self, k, rounding):
         ''' Remove small positioned strings, duplicates; cluster and reduce '''
+        # need to keep small (0) movements around to help mask shorter strings
         if rounding > 0:
-            self.stripSmalls(rounding)
+            self.mergeSmalls(rounding)
         self.stripDuplicates()
         if len(self.gidmap) > 1:
             self.round(rounding, k)
-        return (len(self.gidmap), self.reduce())
+        self.reduce()
+        self.stripSmalls()
+        return (len(self.gidmap), self.gidmap)
 
     def stripDuplicates(self):
         for k, v in self.gidmap.items():
             self.gidmap[k] = remove_duplicates(sorted(v, key=lambda x:x.key()))
 
-    def stripSmalls(self, rounding):
+    def mergeSmalls(self, rounding):
         ''' Remove any string that has positions < rounding close to 0 '''
         newmap = {}
         for k, v in self.gidmap.items():
             for s in v:
                 if s.testPos(rounding):
                     newmap.setdefault(k, []).append(s)
+                else:
+                    newk = k[:k.find(":")] + ":0,0"
+                    newmap.setdefault(newk, []).append(s)
         self.gidmap = newmap
 
     def reduce(self):
         ''' Reduce rules to their minimum context and remove rules covered by others '''
         res = {}
         for k, v in sorted(self.gidmap.items(), key=lambda x:len(x[1])):
-            if k.endswith(":0,0"):
-                continue
+            # if k.endswith(":0,0"):
+            #     continue
             res[k] = []
             for r in v:
                 if any(t.isSubstringOf(r) for t in res[k]):
                     continue
                 res[k].append(r)
-#                lengths = [len(r.pre)+len(r.post)+3] * (len(r.post) + 1)
-#                for s in range(len(r.post)+1):
-#                    for p in range((1 if len(r.pre) else 0),len(r.pre)+1):
-#                        if self.isUnique(k, r, p, s):
-#                            lengths[s] = p
-#                            break
-#                best = min(enumerate(lengths), key=lambda x: (x[1], -x[0]))
-#                res[k].append(String(pre=r.pre[-best[1]:], post=r.post[:best[0]], match=r.match))
+        self.gidmap = res
         return res
+
+    def stripSmalls(self):
+        ''' Remove 0 kerns for those strings for which there is no shorter string anywhere '''
+        allitems = sorted(self.gidmap.items(), key=lambda x:len(x[1]))
+        for k, v in [x for x in allitems if x[0].endswith(":0,0")]:
+            newlist = []
+            for r in v:
+                for l, w in [x for x in allitems if not x[0].endswith(":0,0")]:
+                    if any(t.isSubstringOf(r) for t in w):
+                        newlist.append(r)
+                        break
+            if len(newlist):
+                self.gidmap[k] = newlist
+            else:
+                del self.gidmap[k]
 
     def isUnique(self, key, rule, prelen, postlen):
         ''' Returns whether a rule context is unique in this collection '''
@@ -171,6 +185,8 @@ class String(object):
     def fromStr(cls, dat, variables=[], cmap={}):
         self = cls()
         end = skipws(dat, 0)
+        if end >= len(dat):
+            return self
         if dat[end] == '"':
             e = dat[end+1:].find('"')
             self.text = dat[end+1:e]
@@ -666,7 +682,35 @@ class RuleSet:
                 ri += 1
             self.strings.extend(s.rules)
 
+    def learnClasses(self, keys, cmap):
+        if len(keys) > 1:
+            k = " ".join(cmap[x] for x in keys)
+            if k not in self.classes:
+                self.classes[k] = 1
+            else:
+                self.classes[k] += 1
+
+    def assignClasses(self):
+        res = []
+        count = 1
+        for k, v in sorted(self.classes.items(), key=lambda x: (-x[1], len(x[0]), x[0])):
+            if v > 1:
+                self.classes[k] = "@kernClass_{}".format(count)
+                count += 1
+                res.append("{} = [{}];  # used {} times".format(self.classes[k], k, v))
+            else:
+                del self.classes[k]
+        return "\n".join(res)
+
+    def lookupClass(self, keys, cmap):
+        if len(keys) > 1:
+            k = " ".join(cmap[x] for x in keys)
+            return self.classes.get(k, "["+k+"]")
+        else:
+            return cmap[keys[0]]
+
     def outfea(self, outfile, cmap, rtl=False):
+        self.classes = {}
         rules = []
         allPositions = {}
         lkupmap = {}
@@ -679,38 +723,38 @@ class RuleSet:
                 poslkup = ["lookup kernpos_{} {{".format(count)]
                 for k in sorted(g):
                     p = g.parseKey(k)
-                    poslkup.append(posfmt.format(cmap[p[0]], p[1]))
+                    if p[0] != 0 or p[1] != 0:
+                        poslkup.append(posfmt.format(cmap[p[0]], p[1]))
                 poslkup += ["}} kernpos_{};".format(count)]
                 lkupmap[i] = count
                 count += 1
                 outf.write("\n".join(poslkup) + "\n\n")
 
             for r in sorted(self.strings, key=lambda x:-len(x)):
+                for m in r.pre:
+                    self.learnClasses(m.keys, cmap)
+                for m in r.match:
+                    self.learnClasses(m.keys, cmap)
+                for m in r.post:
+                    self.learnClasses(m.keys, cmap)
+            outf.write("\n")
+            outf.write(self.assignClasses())
+            outf.write("\n")
+            for r in sorted(self.strings, key=lambda x:-len(x)):
                 rule = []
                 for m in r.pre:
-                    if len(m.keys) > 1:
-                        rule.append("[" + " ".join(cmap[x] for x in m.keys) + "]")
-                    else:
-                        rule.append(cmap[m.keys[0]])
+                    rule.append(self.lookupClass(m.keys, cmap))
                 count = 0
                 for m in r.match:
                     if m.hasPositions:
                         s = m.asStr(cmap)
                         lnum = lkupmap[r.gnps[count]]
                         count += 1
-                        if len(m.keys) > 1:
-                            rule.append("[" + " ".join(cmap[x] for x in m.keys) + "]' lookup kernpos_{}".format(lnum))
-                        else:
-                            rule.append(cmap[m.keys[0]] + "' lookup kernpos_{}".format(lnum))
-                    elif len(m.keys) > 1:
-                        rule.append("[" + " ".join(cmap[x] for x in m.keys) + "]'")
+                        rule.append(self.lookupClass(m.keys, cmap) + "' lookup kernpos_{}".format(lnum))
                     else:
-                        rule.append(cmap[m.keys[0]] + "'")
+                        rule.append(self.lookupClass(m.keys, cmap) + "'")
                 for m in r.post:
-                    if len(m.keys) > 1:
-                        rule.append("[" + " ".join(cmap[x] for x in m.keys) + "]")
-                    else:
-                        rule.append(cmap[m.keys[0]])
+                    rule.append(self.lookupClass(m.keys, cmap))
                 rules.append("pos " + " ".join(rule) + ";")
             outf.write("lookup mainkern {\n    ")
             outf.write("\n    ".join(rules))

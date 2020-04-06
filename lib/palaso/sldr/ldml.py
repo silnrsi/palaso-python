@@ -336,9 +336,8 @@ class Ldml(ETWriter):
         def elementDecl(name, model):
             # model[]: 0: (EMPTY=1, ANY, MIXED, NAME, CHOICE, SEQ), 
             #          1: (NONE=0, OPT, REP, PLUS), 
-            #          2: string convert function,
-            #          3: name,
-            #          4: children
+            #          2: name,
+            #          3: children
             elementCount = procmodel(name, model[3], cls, 0)
             cls.maxEls = max(cls.maxEls, elementCount + 1)
             cls.attributeOrder[name] = {}
