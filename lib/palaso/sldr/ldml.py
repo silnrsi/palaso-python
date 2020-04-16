@@ -319,7 +319,7 @@ class Ldml(ETWriter):
     def ReadDTD(cls, fname = None):
         """ Reads LDML DTD to get element and attribute orders"""
         if fname is None:
-            fname = os.path.join(os.path.dirname(__file__), 'ldml.dtd')
+            fname = os.path.join(os.path.dirname(__file__), 'sil.dtd')
         cls.elementCount = 0
         cls.attributeOrder = {}
         cls.elementOrder = {}
