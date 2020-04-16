@@ -107,14 +107,14 @@ def reduce_lookups(outrules):
     outrules.rebuild_strings()
     return outrules
 
-fnindices = {k:i for i,k in enumerate(['graphite', 'strings', 'reduced', 'classes', 'lookups'])}
+fnindices = {k:i for i,k in enumerate(['graphite', 'strings', 'reduced', 'classes', 'lookups', 'layers'])}
 fnmap = [run_graphite, run_strings, run_reduced, run_classes, reduce_lookups]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("outfile",help="Output file of results")
 parser.add_argument("-i","--input",action="append",help="Input test text file")
 parser.add_argument("-s","--start",default='graphite',help="start with [graphite, strings, reduced, classes, lookups]")
-parser.add_argument("-e","--end",default='lookups',help="end after given start value")
+parser.add_argument("-e","--end",default='layers',help="end after given start value")
 parser.add_argument("-f","--font",required=True,help="Path to font file")
 parser.add_argument("-d","--directory",action="append",default=['.'],help="Directories to search for input test files")
 parser.add_argument("-R","--rtl",action="store_true",help="Render strings rtl")
@@ -151,7 +151,9 @@ outrules.make_ruleSets()
 logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
 if end >= fnindices['lookups']:
     reduce_lookups(outrules)
-    logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
+    if end >= fnindices['layers']:
+        outrules.addLayers()
+    logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), outrules.stringslength()))
 
 if args.outfile.endswith(".fea"):
     outrules.outfea(args.outfile, cmap, rtl=args.rtl)
