@@ -102,13 +102,20 @@ def run_classes(args, res, *a):
     logging.info("{} rules after grouping into classes".format(len(res)))
     return (res, )
 
-def reduce_lookups(outrules):
+def reduce_lookups(args, res, *a):
+    outrules = RuleSet(res)
+    outrules.make_ruleSets()
+    logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
     outrules.reduceSets()
     outrules.rebuild_strings()
-    return outrules
+    return (outrules, )
+
+def add_layers(args, outrules, *a):
+    outrules.addLayers()
+    return (outrules, )
 
 fnindices = {k:i for i,k in enumerate(['graphite', 'strings', 'reduced', 'classes', 'lookups', 'layers'])}
-fnmap = [run_graphite, run_strings, run_reduced, run_classes, reduce_lookups]
+fnmap = [run_graphite, run_strings, run_reduced, run_classes, reduce_lookups, add_layers]
 
 parser=argparse.ArgumentParser()
 parser.add_argument("outfile",help="Output file of results")
@@ -142,18 +149,16 @@ if start > 0:
 else:
     res = ([], )
 
-last = end if end < fnindices['lookups'] else fnindices['lookups']-1
-for i in range(start, last+1):
+for i in range(start, end+1):
     res = fnmap[i](args, *res)
 
-outrules = RuleSet(res[0])
-outrules.make_ruleSets()
-logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
-if end >= fnindices['lookups']:
-    reduce_lookups(outrules)
-    if end >= fnindices['layers']:
-        outrules.addLayers()
-    logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), outrules.stringslength()))
+if end < fnindices['lookups']:
+    outrules = RuleSet(res[0])
+    outrules.make_ruleSets()
+else:
+    outrules = res[0]
+
+logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), outrules.stringslength()))
 
 if args.outfile.endswith(".fea"):
     outrules.outfea(args.outfile, cmap, rtl=args.rtl)

@@ -1070,14 +1070,14 @@ class Layer:
                 allsets[i].update(r.keys)
         self.sets = [sorted(a) for a in allsets]
         self.lengths = sorted(alllengths)
-        for s in self.sets:
-            parent.learnClasses(s, cmap, count=len(self.contexts))
+        for i, s in enumerate(self.sets):
+            parent.learnClasses(s, cmap, count=len(self.contexts) * sum(1 if l >= i else 0 for l in self.lengths))
 
     def outFeaRef(self, index, cmap, parent):
         rules = []
         for c in self.contexts:
             for l in self.lengths:
-                rule = ["    pos"]
+                rule = ["pos"]
                 for p in c[0]:
                     rule.append(parent.lookupClass(p.keys, cmap))
                 rule.append(parent.lookupClass(sorted(self.sets[0]), cmap) + "' lookup kernposchain_{}".format(index))
@@ -1085,7 +1085,7 @@ class Layer:
                     rule.append(parent.lookupClass(sorted(s), cmap) + "'")
                 for p in c[1]: 
                     rule.append(parent.lookupClass(p.keys, cmap))
-            rules.append(" ".join(rule) + ";")
+                rules.append(" ".join(rule) + ";")
         return rules
 
     def outFeaLookup(self, index, cmap, parent, lkupmap):
@@ -1111,183 +1111,3 @@ def addString(collections, s, rounding=0):
 
 def printall(res, go):
     return "\n".join(r.asStr(cmap=go) for r in sorted(res, key=lambda x:x.key()))
-
-if __name__ == '__main__':
-    import argparse
-    from fontTools import ttLib
-    from multiprocessing import Pool
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('infile',help='Input results file')
-    parser.add_argument('outfile', help='Output results file')
-    parser.add_argument('-f','--font',required=True,help='Base font')
-    parser.add_argument('-r','--rounding',default=10,type=int,help='Rounding accuracy [10]')
-    parser.add_argument('-j','--jobs',default=0,type=int,help='Number of parallel jobs [0=num cpus]')
-    parser.add_argument('-s','--start',default=0,type=int,help='Starting phase')
-    parser.add_argument('-e','--end',default=2,type=int,help="Final phase before output and stopping")
-    parser.add_argument('-R','--rtl',action="store_true",help="Output rtl appropriate adjustments")
-    parser.add_argument('--printeach',action='store_true',help='Print rules after each phase')
-    parser.add_argument('--log',default="info",help="logging level (debug, *info*, warn, error, critical)")
-    parser.add_argument('--logfile',help="Log to file")
-    parser.add_argument('--tracefile',help="Trace results to file")
-    args = parser.parse_args()
-
-    loglevel = getattr(log, args.log.upper(), None)
-    if isinstance(loglevel, int):
-        parms = {'level': loglevel, 'format': ''}
-        if args.logfile is not None:
-            parms.update(filename=args.logfile, filemode="w")
-        log.basicConfig(**parms)
-
-    if args.tracefile and os.path.exists(args.tracefile):
-        os.remove(args.tracefile)
-
-    font = ttLib.TTFont(args.font)
-    go = font.getGlyphOrder()
-    cmap = {n: i for i, n in enumerate(go)}
-    colls = {}
-    linecount = 0
-    with open(args.infile) as fh:
-        for l in fh.readlines():
-            addString(colls, String.fromStr(l, cmap=cmap), rounding=args.rounding)
-            linecount += 1
-    rulecount = sum(len(x) for v in colls.values() for x in v.gidmap.values())
-    log.info("Input rules: {} flattened to {} rules".format(linecount, rulecount))
-
-    def process(k):
-        return (k, colls[k].process(k, args.rounding))
-
-    if args.jobs != 1:
-        if args.jobs == 0:
-            pool = Pool()
-        else:
-            pool = Pool(processes=args.jobs)
-        iterproc = pool.imap_unordered
-    else:
-        iterproc = map
-
-    if args.start < 1:
-        print("0: Reducing strings")
-        # Remove small positioned strings, duplicates; cluster, split and reduce
-        # process longest lists firsts to average out processing time
-        keylengths = {k: sum(len(x) for x in v.gidmap.values()) for k, v in colls.items()}
-        res = {}
-        total = [0, 0]
-        for k, r in iterproc(process, [x[0] for x in sorted(keylengths.items(), key=lambda y:-y[1])]):
-            # print("{}: {} -> {}".format(go[k], len(colls[k].gidmap), r[0]))
-            total[0] += len(colls[k].gidmap)
-            total[1] += r[0]
-            res[k] = r[1]
-        log.info("Totals: {} -> {}".format(*total))
-        res = [r for vg in sorted(res.keys()) for v in sorted(res[vg].keys()) for r in res[vg][v]]
-        if args.printeach:
-            print(printall(res, go))
-    else:
-        res = [r for vg in sorted(colls.keys()) \
-                    for v in sorted(colls[vg].gidmap.keys()) for r in colls[vg].gidmap[v]]
-
-    # res is a [maString]
-    # colls = dict[gid of first moved glyph] = Collection
-    # Find substrings and remove
-    # This is already done in the reduce() above.
-    if False and args.start < 2 and args.end > 0:
-        marks = set(colls.keys())
-        def process1(rules):
-            finder = {}
-            for r in rules:
-                gs = r.gids()
-                mask = 0
-                for i, g in enumerate(gs):
-                    if g in marks:
-                        mask |= 1 << i
-                for i in range(len(gs)):
-                    for j in range(i+1, len(gs)+1):
-                        testmask = (1 << (i+1)) - 1
-                        testmask |= (1 << len(gs)) - (1 << j)
-                        # only interested in substrings gs[i:j] that contain something that a rule somewhere moves
-                        # all other substrings will never be matched by a rule
-                        if (mask & testmask) != 0:
-                            finder.setdefault(struct.pack("{}H".format(j-i), *gs[i:j]), []).append((r, i))
-            return finder
-        def process1a(rules, finder):
-            newrules = []
-            for r in rules:
-                gs = r.gids()
-                match = finder.get(struct.pack("{}H".format(len(gs)), *gs), None)
-                matchfound = False
-                # match can only contain one occurrence of any rule
-                if match is not None and len(match) > 1:
-                    for m in match:
-                        if m[0] == r:
-                            continue
-                        try:
-                            n = m[0][m[1] + len(r.pre)]
-                        except IndexError:
-                            import pdb; pdb.set_trace()
-                        if n.hasPositions() and r.match[0].pos not in n.positions:
-                            # not really a matching rule since different positions
-                            continue
-                        matchfound = True
-                if not matchfound:
-                    newrules.append(r)
-            return newrules
-        # can't multiprocess this because the overhead of locking is greater than the gain
-        log.info("1: Merging substrings")
-        finder = process1(res)
-        if args.printeach:
-            print(finder)
-        res = process1a(res, finder)
-        if args.printeach:
-            print(printall(res, go))
-
-    # res = [String]
-    # Create classes
-    if args.start < 2 and args.end > 0:
-        log.info("1: Creating classes")
-        lastlen = 0
-        # import pdb; pdb.set_trace()
-        for r in res:
-            r.dropme = False
-        maxlen = max(len(x) for x in res)
-        while len(res) != lastlen:
-            lastlen = len(res)
-            newres = set()
-            finder = {}
-            for i in range(maxlen):
-                for r in res:
-                    if len(r) <= i:
-                        continue
-                    j = r.weightedIndex(i)
-                    k = b"".join(x.pack() for x in r[:j] + r[j+1:])
-                    if k in finder:
-                        for s in finder[k]:
-                            if not s.dropme and s.addString(r):
-                                r.dropme = True
-                                newres.discard(r)
-                                newres.add(s)
-                                break
-                        else:
-                            finder[k].append(r)
-                    else:
-                        finder[k] = [r]
-            for r in res:
-                if not r.dropme:
-                    newres.add(r)
-            res = list(newres)
-            #res = sorted(newres, key=lambda x:x.asStr(go))
-        if args.printeach:
-            print(printall(res, go))
-        log.info("Rule count: " + str(len(res)))
-
-    outrules = RuleSet(res)
-    outrules.make_ruleSets()
-    log.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
-    if args.start < 3 and args.end > 1:
-        log.info ("2: Reduce lookups")
-        outrules.reduceSets(args.tracefile)
-        outrules.rebuild_strings()
-    if args.outfile.endswith(".fea"):
-        outrules.outfea(args.outfile, go, rtl=args.rtl)
-    else:
-        outrules.outtext(args.outfile, go)
-    log.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
