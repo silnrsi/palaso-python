@@ -948,6 +948,7 @@ class GNPSet:
         return sum(3 * len(r) + 2 * len(r.match) + 10 for r in self.rules)
 
 def listPrefix(a, b):
+    ''' Return the first index at which the alignments of the two lists don't match '''
     c = list(zip(a, b))
     for i, d in enumerate(c):
         if d[0] != d[1]:
@@ -956,7 +957,7 @@ def listPrefix(a, b):
 
 class Layer:
     def __init__(self):
-        self.contexts = set()
+        self.contextset = set()
         self.base_context = None
         self.strings = set()
         self.covered_strings = set()
@@ -966,23 +967,20 @@ class Layer:
         return s in self.strings or s in self.covered_strings
 
     def contexts(self):
-        for c in sorted(self.contexts, key=sum):
+        ''' Iterates over all the contexts shortest first '''
+        for c in sorted(self.contextset, key=lambda x:len(x[0])+len(x[1])):
             yield c
 
     def addContext(self, pre, post):
         c = (tuple(pre), tuple(post))
         if self.base_context == None or sum(self.base_context) < sum(c):
             self.base_context = c
-        self.contexts.add(c)
-        # self.contexts.add((":".join(map(str, pre)), ":".join(map(str, post))))
+        self.contextset.add(c)
 
     def findContext(self, s):
         ''' If we could add a string, return True '''
-        # import pdb; pdb.set_trace()
-        #if s in self.strings:
-        #    return False
         res = None
-        for c in self.contexts:
+        for c in self.contexts():
             cpre = listPrefix(s.pre, c[0])
             cpost = listPrefix(reversed(s.post), reversed(c[1]))
             if cpre < len(c[0]) or cpost < len(c[1]):
@@ -990,7 +988,15 @@ class Layer:
         return True
 
     def findCLengths(self, s):
-        return max((listPrefix(c[0], s.pre), listPrefix(reversed(c[1]), reversed(s.post))) for c in self.contexts)
+        ''' Finds the longest matching context and the amount to trim off the string to match it '''
+        return max((listPrefix(c[0], s.pre), listPrefix(reversed(c[1]), reversed(s.post))) for c in self.contexts())
+
+    def findAllCLengths(self, s):
+        ''' Iterates all the contexts that this string matches and the amount of trim for each one '''
+        for c in self.contexts():
+            res = (listPrefix(c[0], s.pre), listPrefix(reversed(c[1]), reversed(s.post)))
+            if res[0] == len(c[0]) and res[1] == len(c[1]):
+                yield (res, c)
 
     def addString(self, s):
         ''' Adds a string if we can '''
@@ -1004,11 +1010,9 @@ class Layer:
 
     def mergeScore(self, other):
         ''' Returns a count of the number of strings other would add to self '''
-        # Are the contexts formal subsequences of each other (one way or the other)
-        #import pdb; pdb.set_trace()
         mode = None
-        for c in self.contexts:
-            for d in other.contexts:
+        for c in self.contexts():
+            for d in other.contexts():
                 cpre = listPrefix(c[0], d[0])
                 cpost = listPrefix(reversed(c[1]), reversed(d[1]))
                 if mode is None:
@@ -1032,56 +1036,82 @@ class Layer:
 
     def merge(self, other):
         ''' Assumes a mergeScore > 0 which means contexts can merge '''
-        for c in other.contexts:
-            self.contexts.add(c)
+        for c in other.contexts():
+            self.contextset.add(c)
         for s in list(other.strings):
             if self.addString(s):
                 other.removeString(s)
 
     def reduce(self):
         ''' Removes duplicate strings. Returns True if there is more than one unique string
-            with the same lookup/gnp in the strings '''
+            with the same lookup/gnp in the strings. Also removes strings if the string does
+            not occur in all contexts '''
         count = 0
         def skey(x):
             return getattr(x, 'gnps', [10000])
+        # Use mark and sweep
+        for r in self.strings:
+            r.keepme = False
         # import pdb; pdb.set_trace()
         for g in itertools.groupby(sorted(self.strings, key=skey), key=skey):
             cache = {}
+            strings = {}
             for r in g[1]:
-                p = self.findCLengths(r)
-                k = " ".join(x.asStr() for x in r[p[0]:-p[1]])
-                if k in cache:
+                for p, c  in self.findAllCLengths(r):
+                    k = " ".join(x.asStr() for x in r[p[0]:-p[1]])
+                    if k in cache:
+                        if id(c) in cache[k]:
+                            self.strings.remove(r)
+                            self.covered_strings.add(r)
+                            count += 1
+                        else:
+                            cache[k].add(id(c))
+                            strings[k].append(r)
+                    else:
+                        cache[k] = set([id(c)])
+                        strings[k] = [r]
+            for k, v in cache.items():
+                if len(v) == len(self.contextset):
+                    count += len(strings[k])-1
+                    for r in strings[k]:
+                        r.keepme = True
+        if count > 0:
+            for r in list(self.strings):
+                if not r.keepme:
                     self.strings.remove(r)
-                    self.covered_strings.add(r)
-                    count += 1
-                else:
-                    cache[k] = r
         return count
 
     def makeSets(self, parent, cmap):
+        ''' Creates sets of glyphs for each main lookup match string to this lookup.
+            Creates different sets for each length of match string '''
         allsets = []
         alllengths = set()
         for s in self.strings:
             p = self.findCLengths(s)
-            alllengths.add(len(s) - p[0] - p[1])
+            l = len(s) - p[0] - p[1]
+            if l not in alllengths:
+                alllengths.add(l)
+                while l >= len(allsets):
+                    allsets.append([])
+                allsets[l] = [set() for i in range(l)]
             for i, r in enumerate(s[p[0]:-p[1]]):
-                while i >= len(allsets):
-                    allsets.append(set())
-                allsets[i].update(r.keys)
-        self.sets = [sorted(a) for a in allsets]
+                allsets[l][i].update(r.keys)
+        self.sets = [[sorted(s) for s in a] for a in allsets]
         self.lengths = sorted(alllengths)
-        for i, s in enumerate(self.sets):
-            parent.learnClasses(s, cmap, count=len(self.contexts) * sum(1 if l >= i else 0 for l in self.lengths))
+        for a in self.sets:
+            for s in a:
+                parent.learnClasses(s, cmap, count=len(self.contextset))
 
     def outFeaRef(self, index, cmap, parent):
+        ''' Creates rules to match and call our lookup, in the main lookup '''
         rules = []
-        for c in self.contexts:
+        for c in self.contexts():
             for l in self.lengths:
                 rule = ["pos"]
                 for p in c[0]:
                     rule.append(parent.lookupClass(p.keys, cmap))
-                rule.append(parent.lookupClass(sorted(self.sets[0]), cmap) + "' lookup kernposchain_{}".format(index))
-                for s in self.sets[1:l]:
+                rule.append(parent.lookupClass(sorted(self.sets[l][0]), cmap) + "' lookup kernposchain_{}".format(index))
+                for s in self.sets[l][1:l]:
                     rule.append(parent.lookupClass(sorted(s), cmap) + "'")
                 for p in c[1]: 
                     rule.append(parent.lookupClass(p.keys, cmap))
@@ -1089,15 +1119,18 @@ class Layer:
         return rules
 
     def outFeaLookup(self, index, cmap, parent, lkupmap):
+        ''' Creates the lookup itself '''
         rules = []
         rules.append("lookup kernposchain_{} {{".format(index))
+        ruleset = set()
         for s in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
             p = self.findCLengths(s)
             rule = ["    pos"]
             rule.extend(parent.lookupClass(n.keys, cmap) for n in s.pre[p[0]:])
             rule.extend(parent.outFeaMatch(s, s.match, cmap, lkupmap))
             rule.extend(parent.lookupClass(n.keys, cmap) for n in s.post[:-p[1]])
-            rules.append(" ".join(rule) + ";")
+            ruleset.add((-len(rule), " ".join(rule) + ";"))
+        rules.extend(r[1] for r in sorted(ruleset))
         rules.append("}} kernposchain_{};".format(index))
         return rules
 
