@@ -49,7 +49,7 @@ def parseFeat(f:str):
     value = 1 if value in (None, 'on') else 0 if value == 'off' else int(value)
     return (tag,value)
 
-def parseftml(fnameorstr):
+def parseftml(fnameorstr, feats=None):
     """parse an FTML document into a list ftmlstrings
 
     Args:
@@ -71,20 +71,24 @@ def parseftml(fnameorstr):
         s = re.sub(r'\\u([a-fA-F0-9]{4,6})', lambda m: chr(int(m.group(1), 16)), s)
         stylename = test.get('stylename', None)
         if stylename is None:
-            feats = None
+            lfeats = None
             lang = None
         else:
             style = root.find(f'./head/styles/style[@name="{stylename}"]')
-            feats = style.get('feats', None)
-            if feats is not None:
-                feats = dict(parseFeat(t.strip()) for t in feats.split(','))
+            lfeats = style.get('feats', None)
+            if lfeats is not None:
+                lfeats = dict(parseFeat(t.strip()) for t in lfeats.split(','))
+                if feats is not None:
+                    lfeats.update(feats)
+            elif feats is not None:
+                lfeats = feats
             else:
-                feats = None
+                lfeats = None
             lang = style.get('lang', None)
         rtl = test.get('rtl', "").lower() in ("true", "1")
         for w in s.split():
             s = UserString(w)
-            s.feats = feats
+            s.feats = lfeats
             s.lang = lang
             s.rtl = rtl
             strs.append(s)

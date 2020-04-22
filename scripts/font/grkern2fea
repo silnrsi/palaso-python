@@ -23,6 +23,7 @@ def proc_makestring(s):
     return makestring(proc.grface, s)
 
 def run_graphite(args, *a):
+    """ Create strings from running real text strings through Graphite """
     logging.info("Running graphite on input data")
     strings = []
     for inf in args.input:
@@ -31,13 +32,15 @@ def run_graphite(args, *a):
             if not os.path.exists(fname):
                 continue
             if fname.endswith(".xml") or fname.endswith(".ftml"):
-                strings.extend(parseftml(fname))
+                strings.extend(parseftml(fname, feats=args.feats))
             else:
                 with open(fname, "r") as fh:
                     strings.extend([UserString(x.strip()) for l in fh.readlines() for x in l.split()])
-                if args.rtl:
+                if args.rtl or args.feats is not None:
                     for s in strings:
-                        s.rtl = True
+                        s.rtl = args.rtl
+                        if args.feats is not None:
+                            s.feats = args.feats
             break
     if args.jobs == 1:
         grfont = GrFont(args.font, 1 if args.rtl else 0)
@@ -48,6 +51,7 @@ def run_graphite(args, *a):
     return (res, )
 
 def run_strings(args, strings, *a):
+    """ Flatten strings with more than one kern into single strings for each kern """
     colls = {}
     res = []
     for s in strings:
@@ -61,6 +65,7 @@ def run_strings(args, strings, *a):
     return (res, colls)
 
 def run_reduced(args, strings, colls, *a):
+    """ Apply clustering. Remove resulting duplicates. Remove 0 kerns where there is nothing shorter """
     rules = {}
     keylengths = {k: sum(len(x) for x in v.gidmap.values()) for k, v in colls.items()}
     rules = {k: v.process(k, args.rounding)[1] for k,v in sorted(colls.items(), key=lambda x:-keylengths[x[0]])}
@@ -69,6 +74,7 @@ def run_reduced(args, strings, colls, *a):
     return (res, )
 
 def run_classes(args, res, *a):
+    """ Group strings into strings of classes """
     lastlen = 0
     # import pdb; pdb.set_trace()
     for r in res:
@@ -103,6 +109,7 @@ def run_classes(args, res, *a):
     return (res, )
 
 def reduce_lookups(args, res, *a):
+    """ Create kerning adjustment lookups and associate strings and minimise """
     outrules = RuleSet(res)
     outrules.make_ruleSets()
     logging.info ("Lookups: {} sum {}, Strings: {}".format(outrules.numlookups(), outrules.totallookuplength(), len(outrules.strings)))
@@ -111,6 +118,7 @@ def reduce_lookups(args, res, *a):
     return (outrules, )
 
 def add_layers(args, outrules, *a):
+    """ Create layered string matching lookups. One layer only """
     outrules.addLayers()
     return (outrules, )
 
@@ -126,11 +134,17 @@ parser.add_argument("-f","--font",required=True,help="Path to font file")
 parser.add_argument("-d","--directory",action="append",default=['.'],help="Directories to search for input test files")
 parser.add_argument("-R","--rtl",action="store_true",help="Render strings rtl")
 parser.add_argument("-r","--rounding",default=10,type=int,help="Cluster rounding")
+parser.add_argument("-F","--feature",default=[],action="append",help="Add feat=value to each string. Can repeat")
 parser.add_argument("-j","--jobs",default=cpu_count(),help="Number of parallel jobs to run")
 parser.add_argument("-L","--log",default="INFO",help="Logging level [DEBUG, *INFO*, WARN, ERROR]")
 parser.add_argument("--logfile",help="Log to file")
 args = parser.parse_args()
 
+if len(args.feature):
+    args.feats = dict((x.strip() for x in y.split('=')) for y in args.feature)
+else:
+    args.feats = None
+ 
 if args.log:
     loglevel = getattr(logging, args.log.upper(), None)
     if isinstance(loglevel, int):
