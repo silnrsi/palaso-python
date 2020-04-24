@@ -120,6 +120,7 @@ def reduce_lookups(args, res, *a):
 def add_layers(args, outrules, *a):
     """ Create layered string matching lookups. One layer only """
     outrules.addLayers()
+    outrules.addIntoLayers()
     return (outrules, )
 
 fnindices = {k:i for i,k in enumerate(['graphite', 'strings', 'reduced', 'classes', 'lookups', 'layers'])}
@@ -155,6 +156,7 @@ if args.log:
 
 tt = ttLib.TTFont(args.font)
 cmap = tt.getGlyphOrder()
+String.cmap = cmap
 start = fnindices[args.start.lower()]
 end = fnindices[args.end.lower()]
 

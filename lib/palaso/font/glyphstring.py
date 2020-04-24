@@ -2,6 +2,7 @@
 
 from struct import pack
 from collections import namedtuple
+import itertools
 import re, struct, os, itertools
 import numpy as np
 from sklearn.cluster.hierarchical import ward_tree
@@ -22,6 +23,27 @@ def remove_duplicates(b):
         else:
             i += 1
     return b
+
+def listPrefix(a, b):
+    ''' Return the first index at which the alignments of the two lists don't match '''
+    c = list(zip(a, b))
+    for i, d in enumerate(c):
+        if d[0] != d[1]:
+            return i
+    return len(c)
+
+def myCombinations(pool):
+    n = len(pool)
+    indices = [len(p)-1 for p in pool]
+    yield [pool[j][i] for j, i in enumerate(indices)]
+    while True:
+        for i in reversed(range(n)):
+            if indices[i] > 0:
+                break
+        else:
+            return
+        indices[i] -= 1
+        yield [pool[j][i] for j, i in enumerate(indices)]
 
 class Collection(object):
     ''' Collections for one glyph '''
@@ -145,6 +167,8 @@ class Collection(object):
         return True
 
 class String(object):
+
+    cmap = []
     def __init__(self, pre=None, post=None, match=None, text=None):
         self.pre = pre or []
         self.post = post or []
@@ -251,7 +275,7 @@ class String(object):
                 self.gnps[i] = t
 
     def key(self):
-        return ([x.key() for x in self.match], [x.key() for x in reversed(self.pre)], [x.key() for x in self.post])
+        return [x.key() for x in self.pre + self.match + self.post]
 
     def __hash__(self):
         return hash(struct.pack("{}H".format(len(self)), *self.gids()))
@@ -268,12 +292,56 @@ class String(object):
     def asBytes(self):
         return b"".join(x.asBytes() for x in self.pre + self.match + self.post)
 
-    def asStr(self, cmap=[]):
+    def asStr(self, cmap=None):
+        if cmap is None:
+            cmap = self.cmap
         if self.text is not None:
             res = '"'+self.text+'" '
         else:
             res = ""
         return res + " ".join(x.asStr(cmap) for x in self.pre + self.match + self.post)
+
+    def subOverlap(self, other, eqok=True):
+        if len(self.match) > len(other.match):
+            return False
+        lpre = listPrefix(reversed(self.pre), reversed(other.pre))
+        lpost = listPrefix(self.post, other.post)
+        if (lpre != len(self.pre) and lpre != len(other.pre)) \
+                or (lpost != len(self.post) and lpost != len(other.post)):
+            return False
+        for z in zip(self.match, other.match):
+            if not z[1].contains(z[0], includepos=False):
+                return False
+        if not eqok and len(self.match) == len(other.match):     # if identical, say no
+            return False
+        return True
+
+    def differences(self, other):
+        if not self.subOverlap(other):
+            return [other]
+        pres = [(x[0], x[0].diff(x[1])) for x in zip(self.pre, other.pre)]
+        matches = [(x[0], x[0].diff(x[1], includepos=False)) for x in zip(self.match, other.match)]
+        posts = [(x[0], x[0].diff(x[1])) for x in zip(self.post, other.post)]
+        res = []
+        total = pres + matches + posts
+        for c in myCombinations(total):
+            if any(r is None for r in c):
+                continue
+            s = String(c[:len(pres)], c[len(pres)+len(matches):], c[len(pres):len(pres)+len(matches)])
+            if s == self:
+                continue
+            s.gnps = self.gnps[:]
+            res.append(s)
+        return res
+
+    def extractSubStringDiff(self, other):
+        newmatch = []
+        for z in zip(self.match, other.match):
+            d = z[0].diff(z[1])
+            if len(d) == len(z[0]):
+                return None
+            newmatch.append(d)
+        return String(self.pre, self.post, newmatch)
 
     def isSubstringOf(self, other):
         if len(self.match) != len(other.match):
@@ -462,6 +530,35 @@ class Node(object):
 
     def __contains__(self, gid):
         return gid in self.keys
+
+    def __len__(self):
+        return len(self.keys)
+
+    def _diff(self, other, includepos=True):
+        if includepos and self.hasPositions():
+            skp = set(zip(self.keys, self.positions))
+            okp = set(zip(other.keys, other.positions))
+        else:
+            skp = set(self.keys)
+            okp = set(other.keys)
+        return sorted(skp.difference(okp))
+
+    def contains(self, other, includepos=True):
+        reskp = other._diff(self, includepos=includepos)
+        return reskp is None or len(reskp) != len(other)
+
+    def diff(self, other, includepos=True):
+        reskp = self._diff(other, includepos=includepos)
+        if reskp is None or len(reskp) == 0:
+            return None
+        if includepos and self.hasPositions():
+            resk, resp = zip(*reskp)
+            return Node(resk, resp)
+        elif other.hasPositions():
+            poses = [self.positions[self.keys.index(g)] for g in reskp]
+            return Node(reskp, poses)
+        else:
+            return Node(reskp)
 
     def hasPositions(self):
         return len(self.positions) > 0
@@ -741,7 +838,31 @@ class RuleSet:
         return [l for l in layers.values() if l.reduce() > 10]
 
     def addLayers(self):
+        """ Create layers """
         self.layers = self._makeLayers()
+
+    def addIntoLayers(self):
+        newstrings = [set() for i in range(len(self.layers))]
+        for r in self.strings:
+            r.afterchain = False
+            if any(r in l for l in self.layers):
+                continue
+            for i, l in enumerate(self.layers):
+                for s in list(l.strings):
+                    for t in list(newstrings[i]):
+                        if t.subOverlap(s):
+                            newstrings[i].remove(t)
+                            d = t.differences(s)
+                            newstrings[i].update(d)
+                    if r.subOverlap(s):
+                        # import pdb; pdb.set_trace()
+                        d = r.differences(s)
+                        if d is not None and len(d):
+                            newstrings[i].update(d)
+                        r.afterchain = True
+        for i, l in enumerate(self.layers):
+            if len(newstrings[i]):
+                l.strings.update(newstrings[i])
 
     def learnClasses(self, keys, cmap, count=1):
         if len(keys) > 1:
@@ -792,11 +913,7 @@ class RuleSet:
                 outf.write("\n".join(poslkup) + "\n\n")
 
             for r in sorted(self.strings, key=lambda x:-len(x)):
-                for m in r.pre:
-                    self.learnClasses(m.keys, cmap)
-                for m in r.match:
-                    self.learnClasses(m.keys, cmap)
-                for m in r.post:
+                for m in r.pre + r.match + r.post:
                     self.learnClasses(m.keys, cmap)
             for l in self.layers:
                 l.makeSets(self, cmap)
@@ -807,10 +924,13 @@ class RuleSet:
                 rules = (l.outFeaLookup(i, cmap, self, lkupmap))
                 outf.write("\n".join(rules) + "\n")
             rules = []
+            for r in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
+                if not r.afterchain and not any(r in l for l in self.layers):
+                    rules.append(self.outFeaString(r, cmap, lkupmap))
             for i, l in enumerate(self.layers):
                 rules.extend(l.outFeaRef(i, cmap, self))
             for r in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
-                if not any(r in l for l in self.layers):
+                if r.afterchain:
                     rules.append(self.outFeaString(r, cmap, lkupmap))
             outf.write("lookup mainkern {\n    ")
             outf.write("\n    ".join(rules))
@@ -926,11 +1046,6 @@ class GNPSet:
         return results
 
     def moveto(self, allsets, currindex, newgnps, newindex):
-        #loopfind = set([currindex])
-        #while newgnps.movedto is not None and newgnps.movedto not in loopfind:
-        #    newgnps = allsets[newgnps.movedto]
-        #    newindex = newgnps.movedto
-        #    loopfind.add(newindex)
         log.debug("Moving {} to {}".format(currindex, newindex))
         for r in self.rules:
             for nr in newgnps.rules:
@@ -946,14 +1061,6 @@ class GNPSet:
 
     def rulecost(self):
         return sum(3 * len(r) + 2 * len(r.match) + 10 for r in self.rules)
-
-def listPrefix(a, b):
-    ''' Return the first index at which the alignments of the two lists don't match '''
-    c = list(zip(a, b))
-    for i, d in enumerate(c):
-        if d[0] != d[1]:
-            return i
-    return len(c)
 
 class Layer:
     def __init__(self):
@@ -995,7 +1102,9 @@ class Layer:
         ''' Iterates all the contexts that this string matches and the amount of trim for each one '''
         for c in self.contexts():
             res = (listPrefix(c[0], s.pre), listPrefix(reversed(c[1]), reversed(s.post)))
-            if res[0] == len(c[0]) and res[1] == len(c[1]):
+            # include any contexts we are a substring of
+            if (res[0] == len(s.pre) or res[0] == len(c[0])) \
+                    and (res[1] == len(s.post) or res[1] == len(c[1])):
                 yield (res, c)
 
     def addString(self, s):
@@ -1051,14 +1160,14 @@ class Layer:
             return getattr(x, 'gnps', [10000])
         # Use mark and sweep
         for r in self.strings:
-            r.keepme = False
+            r.keepme = 0
         # import pdb; pdb.set_trace()
         for g in itertools.groupby(sorted(self.strings, key=skey), key=skey):
             cache = {}
             strings = {}
             for r in g[1]:
                 for p, c  in self.findAllCLengths(r):
-                    k = " ".join(x.asStr() for x in r[p[0]:-p[1]])
+                    k = " ".join(x.asStr() for x in (r[p[0]:-p[1]] if p[1] else r[p[0]:]))
                     if k in cache:
                         if id(c) in cache[k]:
                             self.strings.remove(r)
@@ -1066,19 +1175,28 @@ class Layer:
                             count += 1
                         else:
                             cache[k].add(id(c))
-                            strings[k].append(r)
+                            strings[k].add(r)
                     else:
                         cache[k] = set([id(c)])
-                        strings[k] = [r]
+                        strings[k] = {r}
+            allvals = []
             for k, v in cache.items():
                 if len(v) == len(self.contextset):
                     count += len(strings[k])-1
-                    for r in strings[k]:
-                        r.keepme = True
+                    allvals.append(strings[k])
+            if len(allvals):
+                allrs = set.union(*allvals)
+                bestset = next(set(picks) for size in itertools.count(1)
+                    for picks in itertools.combinations(allrs, size)
+                    if all(any(i in s for i in picks) for s in allvals))
+                for r in allrs:
+                    r.keepme = 1 if r in bestset else 2
         if count > 0:
             for r in list(self.strings):
-                if not r.keepme:
+                if r.keepme != 1:
                     self.strings.remove(r)
+                if r.keepme == 2:
+                    self.covered_strings.add(r)
         return count
 
     def makeSets(self, parent, cmap):
@@ -1089,12 +1207,14 @@ class Layer:
         for s in self.strings:
             p = self.findCLengths(s)
             l = len(s) - p[0] - p[1]
+            if l == 0:          # this shouldn't happen
+                continue
             if l not in alllengths:
                 alllengths.add(l)
                 while l >= len(allsets):
                     allsets.append([])
                 allsets[l] = [set() for i in range(l)]
-            for i, r in enumerate(s[p[0]:-p[1]]):
+            for i, r in enumerate((s[p[0]:-p[1]] if p[1] else s[p[0]:])):
                 allsets[l][i].update(r.keys)
         self.sets = [[sorted(s) for s in a] for a in allsets]
         self.lengths = sorted(alllengths)
@@ -1128,7 +1248,9 @@ class Layer:
             rule = ["    pos"]
             rule.extend(parent.lookupClass(n.keys, cmap) for n in s.pre[p[0]:])
             rule.extend(parent.outFeaMatch(s, s.match, cmap, lkupmap))
-            rule.extend(parent.lookupClass(n.keys, cmap) for n in s.post[:-p[1]])
+            rule.extend(parent.lookupClass(n.keys, cmap) for n in (s.post[:-p[1]] if p[1] else s.post))
+            if getattr(s, 'afterchain', False):
+                print(rule, p, s.asStr(), (len(s.pre), len(s.match), len(s.post)))
             ruleset.add((-len(rule), " ".join(rule) + ";"))
         rules.extend(r[1] for r in sorted(ruleset))
         rules.append("}} kernposchain_{};".format(index))
