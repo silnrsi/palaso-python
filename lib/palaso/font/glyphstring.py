@@ -28,8 +28,10 @@ def listPrefix(a, b):
     ''' Return the first index at which the alignments of the two lists don't match '''
     c = list(zip(a, b))
     for i, d in enumerate(c):
-        if d[0] != d[1]:
+        if not d[0].contains(d[1]):
             return i
+        #if d[0] != d[1]:
+            #return i
     return len(c)
 
 def myCombinations(pool):
@@ -301,20 +303,25 @@ class String(object):
             res = ""
         return res + " ".join(x.asStr(cmap) for x in self.pre + self.match + self.post)
 
-    def subOverlap(self, other, eqok=True):
-        if len(self.match) > len(other.match):
-            return False
-        lpre = listPrefix(reversed(self.pre), reversed(other.pre))
-        lpost = listPrefix(self.post, other.post)
-        if (lpre != len(self.pre) and lpre != len(other.pre)) \
-                or (lpost != len(self.post) and lpost != len(other.post)):
-            return False
-        for z in zip(self.match, other.match):
-            if not z[1].contains(z[0], includepos=False):
-                return False
-        if not eqok and len(self.match) == len(other.match):     # if identical, say no
-            return False
-        return True
+    def subOverlap(self, other, layer=None, eqok=True):
+        if layer is None:
+            os = [other]
+        else:
+            os = [String(*layer.makeString(other, c)) for c in layer.contexts()]
+        for o in os:
+            if len(self.match) > len(o.match):
+                continue
+            lpre = listPrefix(reversed(self.pre), reversed(o.pre))
+            lpost = listPrefix(self.post, o.post)
+            if (lpre != len(self.pre) and lpre != len(o.pre)) \
+                    or (lpost != len(self.post) and lpost != len(o.post)):
+                continue
+            if any(not z[1].contains(z[0], includepos=False) for z in zip(self.match, o.match)):
+                continue
+            if not eqok and len(self.match) == len(o.match):    # if identical, say no
+                return False                                        # won't find another match
+            return True
+        return False
 
     def differences(self, other):
         if not self.subOverlap(other):
@@ -541,14 +548,15 @@ class Node(object):
         else:
             skp = set(self.keys)
             okp = set(other.keys)
-        return sorted(skp.difference(okp))
+        return (skp, okp)
 
     def contains(self, other, includepos=True):
-        reskp = other._diff(self, includepos=includepos)
-        return reskp is None or len(reskp) != len(other)
+        skp, okp = other._diff(self, includepos=includepos)
+        return not skp.isdisjoint(okp)
 
     def diff(self, other, includepos=True):
-        reskp = self._diff(other, includepos=includepos)
+        skp, okp = self._diff(other, includepos=includepos)
+        reskp = sorted(skp.difference(okp))
         if reskp is None or len(reskp) == 0:
             return None
         if includepos and self.hasPositions():
@@ -774,8 +782,12 @@ class RuleSet:
 
     def stringslength(self):
         c = sum(1 if not any(s in l for l in self.layers) else 0 for s in self.strings)
-        c += sum(len(l.strings) for l in self.layers)
-        return c 
+        c += sum(len(list(l.contexts())) for l in self.layers)
+        d = sum(len(l.strings) for l in self.layers)
+        if d > 0:
+            return "{}+{}".format(c, d)
+        else:
+            return c
 
     def rebuild_strings(self):
         ''' Merge rules in a set and recreate strings from sets '''
@@ -843,23 +855,28 @@ class RuleSet:
 
     def addIntoLayers(self):
         newstrings = [set() for i in range(len(self.layers))]
+        debug_count = 0
         for r in self.strings:
+            # if len(r.post) == 2 and r.cmap[r.post[1].gid] == "behVabove-ar.init":
+            #     import pdb; pdb.set_trace()
             r.afterchain = False
             if any(r in l for l in self.layers):
                 continue
             for i, l in enumerate(self.layers):
                 for s in list(l.strings):
                     for t in list(newstrings[i]):
-                        if t.subOverlap(s):
+                        if t.subOverlap(s, layer=l):
                             newstrings[i].remove(t)
                             d = t.differences(s)
                             newstrings[i].update(d)
-                    if r.subOverlap(s):
+                            debug_count += 1
+                    if r.subOverlap(s, layer=l):
                         # import pdb; pdb.set_trace()
                         d = r.differences(s)
                         if d is not None and len(d):
                             newstrings[i].update(d)
                         r.afterchain = True
+        print("Reworked {}".format(debug_count))
         for i, l in enumerate(self.layers):
             if len(newstrings[i]):
                 l.strings.update(newstrings[i])
@@ -891,6 +908,9 @@ class RuleSet:
         else:
             return cmap[keys[0]]
 
+    def sortkey(self, s):
+        return (-len(s.match), -len(s.pre), -len(s.post), getattr(s, 'gnps', [10000])[0])
+
     def outfea(self, outfile, cmap, rtl=False):
         self.classes = {}
         rules = []
@@ -905,7 +925,7 @@ class RuleSet:
                 poslkup = ["lookup kernpos_{} {{".format(count)]
                 for k in sorted(g):
                     p = g.parseKey(k)
-                    if p[0] != 0 or p[1] != 0:
+                    if p[1][0] != 0 or p[1][1] != 0:
                         poslkup.append(posfmt.format(cmap[p[0]], p[1]))
                 poslkup += ["}} kernpos_{};".format(count)]
                 lkupmap[i] = count
@@ -924,13 +944,13 @@ class RuleSet:
                 rules = (l.outFeaLookup(i, cmap, self, lkupmap))
                 outf.write("\n".join(rules) + "\n")
             rules = []
-            for r in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
-                if not r.afterchain and not any(r in l for l in self.layers):
+            for r in sorted(self.strings, key=self.sortkey):
+                if not getattr(r, 'afterchain', False) and not any(r in l for l in self.layers):
                     rules.append(self.outFeaString(r, cmap, lkupmap))
             for i, l in enumerate(self.layers):
                 rules.extend(l.outFeaRef(i, cmap, self))
-            for r in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
-                if r.afterchain:
+            for r in sorted(self.strings, key=self.sortkey):
+                if getattr(r, 'afterchain', False):
                     rules.append(self.outFeaString(r, cmap, lkupmap))
             outf.write("lookup mainkern {\n    ")
             outf.write("\n    ".join(rules))
@@ -1106,6 +1126,12 @@ class Layer:
             if (res[0] == len(s.pre) or res[0] == len(c[0])) \
                     and (res[1] == len(s.post) or res[1] == len(c[1])):
                 yield (res, c)
+
+    def makeString(self, s, c):
+        p = self.findCLengths(s)
+        pre = list(c[0]) + s.pre[p[0]:]
+        post = (s.post[:-p[1]] if p[1] else s.post) + list(c[1])
+        return (pre, post, s.match)
 
     def addString(self, s):
         ''' Adds a string if we can '''
