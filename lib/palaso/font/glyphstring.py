@@ -883,7 +883,7 @@ class RuleSet:
 
     def learnClasses(self, keys, cmap, count=1):
         if len(keys) > 1:
-            k = " ".join(cmap[x] for x in keys)
+            k = " ".join(cmap[x] for x in sorted(keys))
             if k not in self.classes:
                 self.classes[k] = count
             else:
@@ -903,7 +903,7 @@ class RuleSet:
 
     def lookupClass(self, keys, cmap):
         if len(keys) > 1:
-            k = " ".join(cmap[x] for x in keys)
+            k = " ".join(cmap[x] for x in sorted(keys))
             return self.classes.get(k, "["+k+"]")
         else:
             return cmap[keys[0]]
@@ -947,8 +947,10 @@ class RuleSet:
             for r in sorted(self.strings, key=self.sortkey):
                 if not getattr(r, 'afterchain', False) and not any(r in l for l in self.layers):
                     rules.append(self.outFeaString(r, cmap, lkupmap))
+            rules.append("")
             for i, l in enumerate(self.layers):
                 rules.extend(l.outFeaRef(i, cmap, self))
+            rules.append("")
             for r in sorted(self.strings, key=self.sortkey):
                 if getattr(r, 'afterchain', False):
                     rules.append(self.outFeaString(r, cmap, lkupmap))

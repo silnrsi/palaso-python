@@ -136,13 +136,16 @@ parser.add_argument("-d","--directory",action="append",default=['.'],help="Direc
 parser.add_argument("-R","--rtl",action="store_true",help="Render strings rtl")
 parser.add_argument("-r","--rounding",default=10,type=int,help="Cluster rounding")
 parser.add_argument("-F","--feature",default=[],action="append",help="Add feat=value to each string. Can repeat")
-parser.add_argument("-j","--jobs",default=cpu_count(),help="Number of parallel jobs to run")
+parser.add_argument("-j","--jobs",type=int,default=cpu_count(),help="Number of parallel jobs to run")
 parser.add_argument("-L","--log",default="INFO",help="Logging level [DEBUG, *INFO*, WARN, ERROR]")
 parser.add_argument("--logfile",help="Log to file")
 args = parser.parse_args()
 
 if len(args.feature):
-    args.feats = dict((x.strip() for x in y.split('=')) for y in args.feature)
+    args.feats = {}
+    for a in args.feature:
+        x = a.split('=')
+        args.feats[x[0].strip()] = int(x[1])
 else:
     args.feats = None
  
