@@ -239,7 +239,7 @@ class String(object):
         return curr
 
     def addString(self, r):
-        if len(self) != len(r):
+        if self == r or len(self) != len(r):
             return False
         mp = -1
         for i in range(len(self)):
@@ -304,27 +304,31 @@ class String(object):
         return res + " ".join(x.asStr(cmap) for x in self.pre + self.match + self.post)
 
     def subOverlap(self, other, layer=None, eqok=True):
-        if layer is None:
-            os = [other]
-        else:
-            os = [String(*layer.makeString(other, c)) for c in layer.contexts()]
-        for o in os:
-            if len(self.match) > len(o.match):
-                continue
-            lpre = listPrefix(reversed(self.pre), reversed(o.pre))
-            lpost = listPrefix(self.post, o.post)
-            if (lpre != len(self.pre) and lpre != len(o.pre)) \
-                    or (lpost != len(self.post) and lpost != len(o.post)):
-                continue
-            if any(not z[1].contains(z[0], includepos=False) for z in zip(self.match, o.match)):
-                continue
-            if not eqok and len(self.match) == len(o.match):    # if identical, say no
-                return False                                        # won't find another match
-            return True
-        return False
+        """ Would any string match self over other if sorted by length.
+            Given a layer, tests all strings with the contexts of the layer.
+            Returns True if any string would be masked unless self is in the
+            strings tested. """
+        if len(self.match) > len(other.match):
+            return False
+        lpre = listPrefix(reversed(self.pre), reversed(other.pre))
+        lpost = listPrefix(self.post, other.post)
+        if (lpost != len(self.post) and lpost != len(other.post)) \
+                or (lpre != len(self.pre) and lpre != len(other.pre)):
+            return False
+        if any(not z[1].contains(z[0], includepos=False) for z in zip(self.match, other.match)):
+            return False
+        if not eqok and len(self.match) == len(other.match):    # if identical, say no
+            return False
+        return True
 
-    def differences(self, other):
-        if not self.subOverlap(other):
+    def subOverlapLayer(self, other, layer, eqok=True):
+        if not self.subOverlap(other, eqok=eqok):
+            return False
+        return any(self.subOverlap(o, eqok=eqok) for o in layer.makeStrings(other))
+
+    def differences(self, other, assumeOverlap=False):
+        """ Returns a list of strings that are matched by other but not by self. """
+        if not assumeOverlap and not self.subOverlap(other):
             return [other]
         pres = [(x[0], x[0].diff(x[1])) for x in zip(self.pre, other.pre)]
         matches = [(x[0], x[0].diff(x[1], includepos=False)) for x in zip(self.match, other.match)]
@@ -800,8 +804,10 @@ class RuleSet:
                 ri += 1
             self.strings.extend(s.rules)
 
-    def _makeLayers(self):
+    def addLayers(self):
+        """ Create layers """
         layers = {}
+        # Find all context substrings and create lists of strings matching them
         for r in self.strings:
             for i in range(len(r.pre)+1):
                 prek = ":".join(x.asStr() for x in r.pre[0:i])
@@ -817,8 +823,10 @@ class RuleSet:
                     else:
                         l = layers[k]
                     l.addString(r)
+        log.debug("Start with {} layers".format(len(layers)))
         jobs = []
         keys = list(layers.keys())
+        # find all mergeable contexts
         for i in range(len(keys)):
             if len(layers[keys[i]].strings) < 5:
                 del layers[keys[i]]
@@ -829,14 +837,16 @@ class RuleSet:
                 s = layers[keys[i]].mergeScore(layers[keys[j]])
                 if s > 5:
                     jobs.append((s, keys[i], keys[j]))
+        log.debug("Start with {} jobs {}".format(len(jobs), jobs))
+        # merge context groups into layers finding maximum overlap
         while len(jobs):
             jobs.sort(reverse=True)
-            j = jobs[0]
+            j = jobs.pop(0)
             if j[0] < 10 or j[1] not in layers or j[2] not in layers:
                 break
             layers[j[1]].merge(layers[j[2]])
             del layers[j[2]]
-            for k in jobs[1:]:
+            for k in jobs:
                 if k[1] == j[2]:
                     l = 2
                 elif k[2] == j[2]:
@@ -847,36 +857,29 @@ class RuleSet:
                 if k[l] != j[1]:
                     s = layers[j[1]].mergeScore(layers[k[l]])
                     jobs.append((s, j[1], k[l]))
-        return [l for l in layers.values() if l.reduce() > 10]
-
-    def addLayers(self):
-        """ Create layers """
-        self.layers = self._makeLayers()
+        self.layers = [l for l in layers.values() if l.reduce() > 10]
 
     def addIntoLayers(self):
         newstrings = [set() for i in range(len(self.layers))]
         debug_count = 0
         for r in self.strings:
-            # if len(r.post) == 2 and r.cmap[r.post[1].gid] == "behVabove-ar.init":
-            #     import pdb; pdb.set_trace()
             r.afterchain = False
             if any(r in l for l in self.layers):
                 continue
             for i, l in enumerate(self.layers):
                 for s in list(l.strings):
                     for t in list(newstrings[i]):
-                        if t.subOverlap(s, layer=l):
+                        if t.subOverlap(s):
                             newstrings[i].remove(t)
                             d = t.differences(s)
                             newstrings[i].update(d)
                             debug_count += 1
-                    if r.subOverlap(s, layer=l):
-                        # import pdb; pdb.set_trace()
-                        d = r.differences(s)
+                    if r.subOverlap(s):
+                        d = r.differences(s, assumeOverlap=True)
                         if d is not None and len(d):
                             newstrings[i].update(d)
                         r.afterchain = True
-        print("Reworked {}".format(debug_count))
+        log.debug("Reworked {}".format(debug_count))
         for i, l in enumerate(self.layers):
             if len(newstrings[i]):
                 l.strings.update(newstrings[i])
@@ -916,20 +919,28 @@ class RuleSet:
         rules = []
         allPositions = {}
         lkupmap = {}
+        rlkupmap = [0] * len(self.sets)
         posfmt = "    pos {0} " + ("<{1[0]} 0 {1[0]} 0>;" if rtl else "{1[0]};")
         count = 0
         with open(outfile, "w") as outf:
+            poslkups = []
             for i, g in enumerate(self.sets):
                 if not len(g.rules):
                     continue
-                poslkup = ["lookup kernpos_{} {{".format(count)]
+                poslkup = []
                 for k in sorted(g):
                     p = g.parseKey(k)
                     if p[1][0] != 0 or p[1][1] != 0:
                         poslkup.append(posfmt.format(cmap[p[0]], p[1]))
-                poslkup += ["}} kernpos_{};".format(count)]
-                lkupmap[i] = count
+                poslkups.append(sorted(poslkup))
+                rlkupmap[count] = i
                 count += 1
+            print("Number of lookups {}".format(len(poslkups)))
+            for i, li in enumerate(sorted(range(len(poslkups)), 
+                        key=lambda x:(len(poslkups[x]), "\n".join(y.split()[1] for y in poslkups[x])))):
+                l = poslkups[li]
+                lkupmap[rlkupmap[li]] = i
+                poslkup = ["lookup kernpos_{} {{".format(i)] + l + ["}} kernpos_{};".format(i)]
                 outf.write("\n".join(poslkup) + "\n\n")
 
             for r in sorted(self.strings, key=lambda x:-len(x)):
@@ -1090,6 +1101,7 @@ class Layer:
         self.base_context = None
         self.strings = set()
         self.covered_strings = set()
+        self.all_contexts = []
 
     def __contains__(self, s):
         ''' Does this layer contain the given string '''
@@ -1097,14 +1109,18 @@ class Layer:
 
     def contexts(self):
         ''' Iterates over all the contexts shortest first '''
-        for c in sorted(self.contextset, key=lambda x:len(x[0])+len(x[1])):
-            yield c
+        return self.all_contexts
+
+    def calc_vals(self):
+        self.all_contexts = sorted(self.contextset, key=lambda x:len(x[0])+len(x[1]))
 
     def addContext(self, pre, post):
         c = (tuple(pre), tuple(post))
         if self.base_context == None or sum(self.base_context) < sum(c):
             self.base_context = c
-        self.contextset.add(c)
+        if c not in self.contextset:
+            self.contextset.add(c)
+            self.calc_vals()
 
     def findContext(self, s):
         ''' If we could add a string, return True '''
@@ -1129,12 +1145,14 @@ class Layer:
                     and (res[1] == len(s.post) or res[1] == len(c[1])):
                 yield (res, c)
 
-    def makeString(self, s, c):
-        p = self.findCLengths(s)
-        pre = list(c[0]) + s.pre[p[0]:]
-        post = (s.post[:-p[1]] if p[1] else s.post) + list(c[1])
-        return (pre, post, s.match)
-
+    def makeStrings(self, s):
+        for c in self.contexts():
+            pre = listPrefix(c[0], s.pre)
+            post = listPrefix(reversed(c[1]), reversed(s.post))
+            if pre == len(s.pre) and post == len(s.post):
+                yield ((c[0][:-pre] if pre else c[0]) + s.pre,
+                       s.post + c[1][post:], s.match)
+            
     def addString(self, s):
         ''' Adds a string if we can '''
         if self.findContext(s):
@@ -1178,6 +1196,7 @@ class Layer:
         for s in list(other.strings):
             if self.addString(s):
                 other.removeString(s)
+        self.calc_vals()
 
     def reduce(self):
         ''' Removes duplicate strings. Returns True if there is more than one unique string
@@ -1189,7 +1208,6 @@ class Layer:
         # Use mark and sweep
         for r in self.strings:
             r.keepme = 0
-        # import pdb; pdb.set_trace()
         for g in itertools.groupby(sorted(self.strings, key=skey), key=skey):
             cache = {}
             strings = {}

@@ -120,6 +120,7 @@ def reduce_lookups(args, res, *a):
 def add_layers(args, outrules, *a):
     """ Create layered string matching lookups. One layer only """
     outrules.addLayers()
+    logging.debug("Created {} layers of {} strings".format(len(outrules.layers), ["{}/{}".format(len(l.strings), len(l.contextset)) for l in outrules.layers]))
     outrules.addIntoLayers()
     return (outrules, )
 
@@ -129,8 +130,8 @@ fnmap = [run_graphite, run_strings, run_reduced, run_classes, reduce_lookups, ad
 parser=argparse.ArgumentParser()
 parser.add_argument("outfile",help="Output file of results")
 parser.add_argument("-i","--input",action="append",help="Input test text file")
-parser.add_argument("-s","--start",default='graphite',help="start with [graphite, strings, reduced, classes, lookups]")
-parser.add_argument("-e","--end",default='layers',help="end after given start value")
+parser.add_argument("-s","--start",default='graphite',help="start with [graphite, strings, reduced, classes, lookups, layers]")
+parser.add_argument("-e","--end",default='end',help="end after given start value")
 parser.add_argument("-f","--font",required=True,help="Path to font file")
 parser.add_argument("-d","--directory",action="append",default=['.'],help="Directories to search for input test files")
 parser.add_argument("-R","--rtl",action="store_true",help="Render strings rtl")
@@ -161,7 +162,10 @@ tt = ttLib.TTFont(args.font)
 cmap = tt.getGlyphOrder()
 String.cmap = cmap
 start = fnindices[args.start.lower()]
-end = fnindices[args.end.lower()]
+if args.end == "end":
+    end = len(fnindices) - 1
+else:
+    end = fnindices[args.end.lower()]
 
 if start > 0:
     res = read_stringsFile(args.input[0], cmap)
