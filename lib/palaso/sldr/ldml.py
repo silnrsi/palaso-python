@@ -805,7 +805,7 @@ class Ldml(ETWriter):
 
     def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}, nouid=True):
         """ Output this LDML to the given io stream """
-        if base is None and self.uid is not None and not nouid:
+        if base is None and getattr(self, 'uid', None) is not None and not nouid:
             dstatus = self.use_draft
             self.use_draft = None
             self.ensure_path('identity/special/sil:identity[@uid="{}"]'.format(self.uid))

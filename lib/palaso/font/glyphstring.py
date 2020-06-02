@@ -5,7 +5,7 @@ from collections import namedtuple
 import itertools
 import re, struct, os, itertools
 import numpy as np
-from sklearn.cluster.hierarchical import ward_tree
+from sklearn.cluster import ward_tree
 import logging as log
 
 def skipws(s, i):
@@ -315,7 +315,7 @@ class String(object):
         if (lpost != len(self.post) and lpost != len(other.post)) \
                 or (lpre != len(self.pre) and lpre != len(other.pre)):
             return False
-        if any(not z[1].contains(z[0], includepos=False) for z in zip(self.match, other.match)):
+        if any(not z[1].contains(z[0]) for z in zip(self.match, other.match)):
             return False
         if not eqok and len(self.match) == len(other.match):    # if identical, say no
             return False
@@ -331,7 +331,7 @@ class String(object):
         if not assumeOverlap and not self.subOverlap(other):
             return [other]
         pres = [(x[0], x[0].diff(x[1])) for x in zip(self.pre, other.pre)]
-        matches = [(x[0], x[0].diff(x[1], includepos=False)) for x in zip(self.match, other.match)]
+        matches = [(x[0], x[0].diff(x[1])) for x in zip(self.match, other.match)]
         posts = [(x[0], x[0].diff(x[1])) for x in zip(self.post, other.post)]
         res = []
         total = pres + matches + posts
@@ -867,7 +867,7 @@ class RuleSet:
             if any(r in l for l in self.layers):
                 continue
             for i, l in enumerate(self.layers):
-                for s in list(l.strings):
+                for s in sum((list(l.inAllContexts(x)) for x in list(l.strings)), []):
                     for t in list(newstrings[i]):
                         if t.subOverlap(s):
                             newstrings[i].remove(t)
@@ -1121,6 +1121,11 @@ class Layer:
         if c not in self.contextset:
             self.contextset.add(c)
             self.calc_vals()
+
+    def inAllContexts(self, s):
+        ''' Iterate returning a string expanded by all contexts '''
+        for c in self.contexts():
+            yield String(pre = c[0], post = c[1], match = (s[len(c[0]):-len(c[1])] if len(c[1]) else s[len(c[0]):]))
 
     def findContext(self, s):
         ''' If we could add a string, return True '''
