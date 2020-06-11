@@ -150,11 +150,11 @@ class parser(sfm.parser):
         metas = dict((k,super(parser,self).default_meta) for k in schema.fields)
         super(parser,self).__init__(source, 
                     metas, error_level=error_level)
-        self.__schema = schema
-        self.__base = base
+        self._schema = schema
+        self._base = base
     
     def __iter__(self):
-        start,fields = self.__schema
+        start,fields = self._schema
         proto = dict((k,dv) for k,(_,dv) in fields.items())
         default_field = (lambda x:x, None)
         def record(rec):

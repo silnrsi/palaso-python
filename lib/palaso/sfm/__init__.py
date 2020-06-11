@@ -261,25 +261,25 @@ class _put_back_iter(collections.Iterator):
     StopIteration
     '''
     def __init__(self, iterable):
-        self.__itr = iter(iterable)
-        self.__pbq = []
+        self._itr = iter(iterable)
+        self._pbq = []
 
     def __next__(self):
         return self.next()
 
     def next(self):
-        if self.__pbq:
+        if self._pbq:
             try:    return self.__pbq.pop()
             except: raise StopIteration
-        return next(self.__itr)
+        return next(self._itr)
 
     def put_back(self, value):
-        self.__pbq.append(value)
+        self._pbq.append(value)
 
     def peek(self):
-        if not self.__pbq:
-            self.__pbq.append(next(self.__itr))
-        return self.__pbq[-1]
+        if not self._pbq:
+            self._pbq.append(next(self.__itr))
+        return self._pbq[-1]
 
 
 _default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None, 'StyleType':None}
@@ -410,7 +410,7 @@ class parser(collections.Iterable):
     
     default_meta = _default_meta
     _eos = text("end-of-file")
-    __tokeniser = re.compile(r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',re.DOTALL | re.UNICODE)
+    _tokeniser = re.compile(r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',re.DOTALL | re.UNICODE)
     
     @classmethod
     def extend_stylesheet(cls, stylesheet, *names):
@@ -426,15 +426,15 @@ class parser(collections.Iterable):
         
         # Set simple attributes
         self.source = getattr(source, 'name', '<string>')
-        self.__default_meta = default_meta
-        self.__pua_prefix   = private_prefix
-        self._tokens        = _put_back_iter(self.__lexer(source))
+        self._default_meta = default_meta
+        self._pua_prefix   = private_prefix
+        self._tokens        = _put_back_iter(self._lexer(source))
         self._error_level   = error_level
         
         # Compute end marker stylesheet definitions
         em_def = {'TextType':None, 'Endmarker':None}
-        self.__sty = stylesheet.copy()
-        self.__sty.update((m['Endmarker'], dict(em_def, OccursUnder=set([k]))) 
+        self._sty = stylesheet.copy()
+        self._sty.update((m['Endmarker'], dict(em_def, OccursUnder=set([k]))) 
                                for k, m in stylesheet.items() if m['Endmarker'])
     
     
@@ -452,9 +452,9 @@ class parser(collections.Iterable):
     
     
     def __get_style(self, tag):
-        meta = self.__sty.get(tag)
+        meta = self._sty.get(tag)
         if not meta:
-            if self.__pua_prefix and tag.startswith(self.__pua_prefix):
+            if self._pua_prefix and tag.startswith(self._pua_prefix):
                 self._error(level.Note, 
                             'unknown private marker \\{token}: '
                             'not it stylesheet using default marker definition', 
@@ -462,7 +462,7 @@ class parser(collections.Iterable):
             else:
                 self._error(level.Marker, 'unknown marker \\{token}: not in styesheet', 
                             tag)
-            return self.__default_meta
+            return self._default_meta
 
         return meta
     
@@ -477,17 +477,17 @@ class parser(collections.Iterable):
     
     
     @staticmethod
-    def __lexer(lines):
+    def _lexer(lines):
         """ Return an iterator that returns tokens in a sequence:
             marker, text, marker, text, ...
         """
-        lmss = enumerate(imap(parser.__tokeniser.finditer, lines))
+        lmss = enumerate(imap(parser._tokeniser.finditer, lines))
         fs = (text(m.group(), position(l+1,m.start()+1)) for l,ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith','\\'))
         return chain.from_iterable(g if istag else (text.concat(g),) for istag,g in gs)
     
     
-    def __extract_tag(self, parent, tok):
+    def _extract_tag(self, parent, tok):
         # Check for the expected end markers with no separator and
         # break them apart
         if parent is not None:
@@ -512,7 +512,7 @@ class parser(collections.Iterable):
         get_meta = self.__get_style
         for tok in self._tokens:
             if tok[0] == u'\\':  # Parse markers.
-                tok  = self.__extract_tag(parent, tok)
+                tok  = self._extract_tag(parent, tok)
                 tag = tok[1:]
                 meta = get_meta(tag)
                 if not meta['OccursUnder'] or (parent is not None and parent.name or None) in meta['OccursUnder']:
