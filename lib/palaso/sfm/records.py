@@ -155,10 +155,11 @@ class parser(sfm.parser):
     
     def __iter__(self):
         start,fields = self._schema
-        proto = dict((k,dv) for k,(_,dv) in fields.items())
+        mapping = next(iter(self._base.values()), {}).__class__
+        proto = mapping((k,dv) for k,(_,dv) in fields.items())
         default_field = (lambda x:x, None)
         def record(rec):
-            rec = dict(rec)
+            rec = mapping(rec)
             rec_ = self._base.get(rec[start]) if self._base is not None and rec[start] in self._base else proto.copy()
             rec_.update(rec)
             for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):

@@ -19,6 +19,7 @@ __email__ = "tim_eves@sil.org"
 import re
 
 import palaso.sfm.records as records
+from collections import abc
 from palaso.sfm.records import sequence, flag, unique, level
 from palaso.sfm.records import UnrecoverableError
 from functools import partial
@@ -69,6 +70,39 @@ def _munge_record(r):
         ous.remove('NEST')
         ous.add(tag)
     return (tag, r)
+
+
+class marker(dict):
+    def __init__(self, iterable=(), **kwarg):
+        self.update(iterable)
+        self.update(kwarg)
+
+    def __getitem__(self, key):
+        return super().__getitem__(key.casefold())
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key.casefold(), value)
+
+    def __delitem__(self, key):
+        return super().__delitem__(key.casefold())
+
+    def __contains__(self, key):
+        return super().__contains__(key.casefold())
+
+    def copy(self):
+        return marker(self)
+
+    def pop(self, key, *args, **kwargs):
+        return super().pop(key.casefold(), *args, **kwargs)
+
+    def setdefault(self, key, default=None):
+        super().setdefault(key, default)
+
+    def update(self, iterable=(), **kwarg):
+        if isinstance(iterable, abc.Mapping):
+            iterable = iterable.items()
+        super().update((k.casefold(), v) for k, v in iterable)
+        super().update((k.casefold(), v) for k, v in kwarg.items())
 
 
 def parse(source, error_level=level.Content, base=None):
@@ -149,16 +183,12 @@ def parse(source, error_level=level.Content, base=None):
     ''' # noqa
     # strip comments out
     no_comments = map(partial(_comment.sub, ''), source)
-    # lowercase all markers
-    lower_source = map(partial(_markers.sub, _lower_match), no_comments)
-    # lowercase all field names.
-    lower_fields = {k.lower(): v for k, v in _fields.items()}
 
     rec_parser = records.parser(
-                    lower_source,
-                    records.schema('Marker', lower_fields),
+                    no_comments,
+                    records.schema('Marker', _fields),
                     error_level=error_level,
-                    base=base)
+                    base={None: marker()} if base is None else base)
     rec_parser.source = getattr(source, 'name', '<string>')
     recs = iter(rec_parser)
     next(recs, None)
