@@ -269,7 +269,7 @@ class _put_back_iter(collections.Iterator):
 
     def next(self):
         if self._pbq:
-            try:    return self.__pbq.pop()
+            try:    return self._pbq.pop()
             except: raise StopIteration
         return next(self._itr)
 
@@ -278,7 +278,7 @@ class _put_back_iter(collections.Iterator):
 
     def peek(self):
         if not self._pbq:
-            self._pbq.append(next(self.__itr))
+            self._pbq.append(next(self._itr))
         return self._pbq[-1]
 
 

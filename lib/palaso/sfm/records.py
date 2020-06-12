@@ -159,7 +159,7 @@ class parser(sfm.parser):
         default_field = (lambda x:x, None)
         def record(rec):
             rec = dict(rec)
-            rec_ = self.__base.get(rec[start]) if self.__base is not None and rec[start] in self.__base else proto.copy()
+            rec_ = self._base.get(rec[start]) if self._base is not None and rec[start] in self._base else proto.copy()
             rec_.update(rec)
             for fn,err in ifilter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
                 if err: 
