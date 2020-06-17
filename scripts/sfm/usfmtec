@@ -139,7 +139,7 @@ class usfm_transducer(object):
                 self.phrases[k] = e[outcol].strip()
             else:                              # dictionary entry
                 self.dict[k] = e[outcol].strip()
-            if tagcol is not None and e[tagcol]:  # has tag constraints
+            if tagcol >= 0 and e[tagcol]:  # has tag constraints
                 self.tags[k] = set(e[tagcol].split())
         morph_keys.sort(key=len)
         self.morph_keys = "|".join(morph_keys)

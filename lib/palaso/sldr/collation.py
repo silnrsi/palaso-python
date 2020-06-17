@@ -246,6 +246,7 @@ class CollElement(object):
         self.level = level
         self.exp = ""
         self.prefix = ""
+        self.shortkey = ""
         self.order = (0,)
 
     def __repr__(self):
