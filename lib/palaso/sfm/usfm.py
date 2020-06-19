@@ -324,6 +324,20 @@ class parser(sfm.parser):
         return self._canonicalise_footnote(self._default_(parent))
 
 
+    def _Unspecified_(self, parent):
+        orig_name = parent.name
+        if (parent.meta.get('StyleType') == 'Paragraph' 
+           or (parent.parent is not None 
+               and parent.parent.meta.get('StyleType') == 'Note' 
+               and 'Endmarker' not in parent.meta)):
+            parent.name = 'p'
+        subparse = self._default_(parent)
+        parent.name = orig_name
+        return subparse
+    _unspecified_ = _Unspecified_
+
+
+
 class reference(sfm.position):
     def __new__(cls, pos, ref):
         p = super(reference,cls).__new__(cls, *pos)
