@@ -4,8 +4,8 @@ Convert the publishable vernacular text in a USFM file according to a given
 .tec mapping file. In addition, support dictionary replacement, and automatic
 case generation.
 '''
-__version__ = '0.2.0'
-__date__ = '20 April 2020'
+__version__ = '0.2.1'
+__date__ = '5 March 2020'
 __author__ = 'Martin Hosken <martin_hosken@sil.org>'
 __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
@@ -29,6 +29,8 @@ class scrparser(usfm.parser):
     def _canonicalise_footnote(self, content):
         return content
 
+def uni_unescape(s):
+    return codecs.decode(s, 'raw_unicode_escape')
 
 word_cat = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Me', 'Pd', 'Cs',
                 'Co', 'Cn'])
@@ -85,10 +87,10 @@ class usfm_transducer(object):
 
     def __init__(self, case='', tec=notec(), opts={}):
         self.caps = [1]
-        self.oquotes = opts.openquotes.decode('raw_unicode_escape')
-        self.cquotes = opts.closequotes.decode('raw_unicode_escape')
-        self.punc = opts.sentencepunc.decode('raw_unicode_escape')
-        self.capquotes = (opts.capitalopenquotes.decode('raw_unicode_escape')
+        self.oquotes = uni_unescape(opts.openquotes)
+        self.cquotes = uni_unescape(opts.closequotes)
+        self.punc = uni_unescape(opts.sentencepunc)
+        self.capquotes = (uni_unescape(opts.capitalopenquotes)
                           if opts.capitalopenquotes else self.oquotes)
         self.case = case
         self.enc = tec
@@ -113,9 +115,9 @@ class usfm_transducer(object):
         else:
             self.normal = None
 
-    def load_dict(self, fname, incol, outcol, tagcol=-1):
+    def load_dict(self, fname, incol, outcol, tagcol=-1, binary=False):
         morph_keys = []
-        fh = open(fname, 'rt')
+        fh = open(fname, 'rt', encoding='latin_1' if binary else 'utf_8_sig')
         entries = csv.reader(fh, skipinitialspace=True)
         maxcol = max(incol, outcol, tagcol)
         for e in entries:
@@ -221,7 +223,7 @@ class usfm_transducer(object):
                     wd = self.dict[wd]
                     found = True
                 elif self.morph_keys and not found:
-                    wd = re.sub('((?iu)' + self.morph_keys + ')',
+                    wd = re.sub('(?iu)(' + self.morph_keys + ')',
                                 lambda m: self.morphs[m.group(1)] if m.group(1) not in self.tags or self.tnode.parent.name in self.tags[wd] else m.group(1), wd)
                 if case:
                     wd = wd[0].upper() + wd[1:]
@@ -253,7 +255,7 @@ def transduce(fname, opts):
         conv.enc = pyconverter(opts.python, opts.pythonfunc)
 
     if opts.dict:
-        conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, opts.dicttag)
+        conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, tagcol=opts.dicttag, binary=opts.binary)
 
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
@@ -330,8 +332,7 @@ if __name__ == '__main__':
     else:
         opts.stylesheet = usfm.default_stylesheet
 
-    if opts.letters:
-        isletters = opts.letters.decode('raw_unicode_escape')
+    if opts.letters : isletters = uni_unescape(opts.letters)
 
     work = []
     first_def = -1

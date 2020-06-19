@@ -254,19 +254,17 @@ class Buffer(object) :
         length = len(self.text)
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
-        if script and script[3]=='2' :
+        if script is not None and script != 0:
             tag = hbng.hb_tag_from_string(script.encode("utf_8"))
             script = hbng.hb_ot_tag_to_script(tag) or -1
-        else :
-            script = hbng.hb_script_from_string(script.encode("utf_8")) or -1
-        thislang = lang or 'dflt'
-        lang = hbng.hb_language_from_string(thislang.encode("utf_8"), len(thislang))
+            hbng.hb_buffer_set_script(self.buffer, script)
+        if lang is not None and lang != 0:
+            tlang = hbng.hb_language_from_string(lang.encode("utf_8"), len(lang))
+            hbng.hb_buffer_set_language(self.buffer, tlang)
         if 'rtl' in kwds :
             hbng.hb_buffer_set_direction(self.buffer, 5)
         else :
             hbng.hb_buffer_set_direction(self.buffer, 4)
-        hbng.hb_buffer_set_script(self.buffer, script)
-        hbng.hb_buffer_set_language(self.buffer, lang)
         (major, minor, macro) = map(int, version_string.split('.')) if version_string else (0, 0, 0)
         if unicodefuncs :
             hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
@@ -288,9 +286,9 @@ class Buffer(object) :
             featinit = []
             for k, v in feats.items() :
                 if not isinstance(v, tuple) :
-                    v = (v, 0, len(self.text))
-                featinit.append(Feature(hbng.hb_tag_from_string(k), v[0], v[1], v[2]))
-            featinfo = feattype(featinit)
+                    v = (v, 0, -1) # len(self.text))
+                featinit.append(Feature(hbng.hb_tag_from_string(k.encode("utf-8")), v[0], v[1], v[2]))
+            featinfo = feattype(*featinit)
         else :
             featinfo = None
             lenfeats = 0

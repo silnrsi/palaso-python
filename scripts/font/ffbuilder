@@ -24,7 +24,7 @@ def findGlyph(e) :
     try :
         font = fonts[int(e.get("font", 0))]
     except IndexError :
-        print "You need to specify at least {} extra fonts using -f".format(e.get("font"))
+        print("You need to specify at least {} extra fonts using -f".format(e.get("font")))
         sys.exit(1)
     name = e.get("PSName")
     if not name and e.get("UID") :
@@ -301,7 +301,7 @@ opts.font.insert(0, args.pop(0))
 for f in opts.font :
     fabs = os.path.abspath(f)
     if not os.path.exists(fabs) :
-        print "font {} at {} is missing".format(f, fabs)
+        print("font {} at {} is missing".format(f, fabs))
         sys.exit(1)
     font = fontforge.open(fabs)
     fonts.append(font)
@@ -377,7 +377,7 @@ for a, av in point_relations.items() :
 for g in glyphs :
     if g.glyph :
         g1 = f.createChar(int(g.uid, 16) if g.uid else -1, g.name if g.name is not None else "")
-        print g.name
+        print(g.name)
         copyglyph(g.glyph, g1)
         g1.transform(g.scale, ("round",))
         c = ""

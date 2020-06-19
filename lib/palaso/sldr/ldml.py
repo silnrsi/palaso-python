@@ -46,6 +46,21 @@ def iterate_files(root, ext=".xml"):
             ([os.path.join(w[0], f) for f in w[2] if f.endswith(ext)]
                     for w in os.walk(root)), []))
 
+def getldml(loc, indirs):
+    """ Given a langtag and list of root directories, seach for an LDML file and return the object """
+    foundit = False
+    for p in (".", loc[0].lower()):
+        for i in indirs:
+            filep = os.path.join(i, p, loc.replace("-", "_")+".xml")
+            if os.path.exists(filep):
+                foundit = True
+                break
+        if foundit:
+            break
+    else:
+        return None
+    return Ldml(filep)
+
 _elementprotect = {
     '&': '&amp;',
     '<': '&lt;',
@@ -154,7 +169,7 @@ class ETWriter(object):
         for c in getattr(base, 'commentsafter', []):
             write(u'{}<!--{}-->\n'.format(indent, c))
 
-    def save_as(self, fname, base = None, indent = '', topns = False, namespaces = {}):
+    def save_as(self, fname, base = None, indent = '', topns = True, namespaces = {}):
         """ A more comfortable serialize_xml using a filename"""
         with codecs.open(fname, "w", encoding="utf-8") as outf:
             self.serialize_xml(outf.write, base=base, indent=indent, topns=topns, namespaces=namespaces)
@@ -247,6 +262,8 @@ class Ldml(ETWriter):
     takesCData = set(('cr',))
     silns = "urn://www.sil.org/ldml/0.1"
     use_draft = None
+    nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
+    keyContexts = {}            # cls.keyContexts[element] = set(attributes)
 
     @classmethod
     def ReadMetadata(cls, fname = None):
@@ -264,8 +281,6 @@ class Ldml(ETWriter):
             elif v.text:
                 cls.variables[name] = v.text.strip()
         cls.blocks = set(base.find('blocking/blockingItems').get('elements', '').split())
-        cls.nonkeyContexts = {}         # cls.nonkeyContexts[element] = set(attributes)
-        cls.keyContexts = {}            # cls.keyContexts[element] = set(attributes)
         cls.keys = set()
         for e in base.findall('distinguishing/distinguishingItems'):
             if 'elements' in e.attrib:
@@ -283,6 +298,7 @@ class Ldml(ETWriter):
                 cls.keys.update(e.get('attributes').split())
         cls.keyContexts['{'+cls.silns+'}matched-pair'] = set(['open', 'close'])
         cls.keyContexts['{'+cls.silns+'}quotation'] = set(['level'])
+        cls.keyContexts['{'+cls.silns+'}punctuation-pattern'] = set(['context', 'pattern'])
 
     @classmethod
     def ReadSupplementalData(cls, fname = None):
@@ -303,7 +319,7 @@ class Ldml(ETWriter):
     def ReadDTD(cls, fname = None):
         """ Reads LDML DTD to get element and attribute orders"""
         if fname is None:
-            fname = os.path.join(os.path.dirname(__file__), 'ldml.dtd')
+            fname = os.path.join(os.path.dirname(__file__), 'sil.dtd')
         cls.elementCount = 0
         cls.attributeOrder = {}
         cls.elementOrder = {}
@@ -318,13 +334,30 @@ class Ldml(ETWriter):
                     elementCount = procmodel(name, n[3], cls, elementCount)
             return elementCount
         def elementDecl(name, model):
+            # model[]: 0: (EMPTY=1, ANY, MIXED, NAME, CHOICE, SEQ), 
+            #          1: (NONE=0, OPT, REP, PLUS), 
+            #          2: name,
+            #          3: children
             elementCount = procmodel(name, model[3], cls, 0)
             cls.maxEls = max(cls.maxEls, elementCount + 1)
             cls.attributeOrder[name] = {}
             attribCount[name] = 0
+            curAttrib = None
+            curEl = name
         def attlistDecl(elname, attname, xmltype, default, required):
             attribCount[elname] += 1
             cls.attributeOrder[elname][attname] = attribCount[elname]
+            cls.keyContexts.setdefault(elname, set()).add(attname)
+            curEl = elname
+            curAttrib = attname
+        def comment(txt):
+            m = re.match(r"^@([A-Z]+)(?:(.*?))?\s*$", txt)
+            if m is None:
+                return
+            if curAttrib is not None and (m.group(1) == "METADATA" or m.group(1) == "VALUE"):
+                cls.keyContexts[curEl].remove(curAttrib)
+                cls.nonkeyContexts.setdefault(curEl, set()).add(curAttrib)
+            
         parser = xml.parsers.expat.ParserCreate()
         parser.ElementDeclHandler = elementDecl
         parser.AttlistDeclHandler = attlistDecl
@@ -598,9 +631,9 @@ class Ldml(ETWriter):
             attrs = {}
             for p in parts:
                 if not len(p): continue
-                (k, v) = p.replace(' ','').split("=")
+                (k, v) = re.split(r'\s*=\s*', p)
                 if k.startswith("@") and v[0] in '"\'':
-                    attrs[k[1:]] = v[1:-1]
+                    attrs[self._reverselocalns(k[1:])] = v[1:-1]
             steps.append((tag, attrs))
         res = self._unify_path(steps, base=base, action=action, text=text, draft=draft, alt=alt, matchdraft=matchdraft, before=before)
         return (res, steps)
@@ -621,35 +654,36 @@ class Ldml(ETWriter):
                         if draft is not None and self.get_draft(j) > draftratings.get(draft, len(draftratings)):
                             self.change_draft(j, draft, alt=alt)
                         newcurr.append(j)
-            tag = steps[-1]
-            if not isinstance(tag, str):
-                tag = tag[0]
-                attrs = tag[1]
-            else:
-                attrs = {}
             if not len(newcurr):
+                tag = steps[-1]
+                if not isinstance(tag, str):
+                    attrs = tag[1]
+                    tag = tag[0]
+                else:
+                    attrs = {}
                 newcurr.append(self._add_inserted_node(before, draft, text, curr[0].parent, tag, 
                     attrib = attrs, alt=alt))
         return newcurr
 
     def remove_path(self, path, **kw):
         """ Finds the given nodes from the path and deletes them.
-            Takes same parameters as ensure_path. """
+            Takes same parameters as ensure_path. Returns nodes deleted. """
         newcurr, steps = self._process_path(path, action="remove", **kw)
-        if not len(newcurr):
-            return False
-        for c in newcurr:
-            c.parent.remove(c)
-        return True
+        if len(newcurr):
+            for c in newcurr:
+                c.parent.remove(c)
+        return newcurr
 
     def _invertns(self, ns):
         return {v:k for k, v in ns.items()}
 
     def find(self, path, elem=None, ns=None):
-        return (elem or self.root).find(path, self._invertns(ns or self.namespaces))
+        if elem is None: elem = self.root
+        return elem.find(path, self._invertns(ns or self.namespaces))
 
     def findall(self, path, elem=None, ns=None):
-        return (elem or self.root).findall(path, self._invertns(ns or self.namespaces))
+        if elem is None: elem = self.root
+        return elem.findall(path, self._invertns(ns or self.namespaces))
 
     def get_parent_locales(self, thislangtag):
         """ Find the parent locales for this ldml, given its langtag"""
@@ -769,10 +803,13 @@ class Ldml(ETWriter):
         res += n.tag + u"".join(u'[@{}="{}"]'.format(*x) for x in tests)
         return res
 
-    def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}):
+    def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}, nouid=True):
         """ Output this LDML to the given io stream """
-        if self.uid is not None:
+        if base is None and getattr(self, 'uid', None) is not None and not nouid:
+            dstatus = self.use_draft
+            self.use_draft = None
             self.ensure_path('identity/special/sil:identity[@uid="{}"]'.format(self.uid))
+            self.use_draft = dstatus
         if self.useDrafts:
             n = base if base is not None else self.root
             draft = n.get('draft', '')
