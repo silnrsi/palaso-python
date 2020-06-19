@@ -49,7 +49,6 @@ _fields = {
     'LeftMargin':      (float, 0),
     'RightMargin':     (float, 0),
     'Color':           (int,   0),
-    'color':           (int,   0)
 }
 
 _comment = re.compile(r'\s*#.*$')
@@ -89,10 +88,13 @@ class marker(dict):
     def copy(self):
         return marker(self)
 
+    def get(self, key, *args, **kwds):
+        return super().get(key.casefold(), *args, **kwds)
+
     def pop(self, key, *args, **kwargs):
         return super().pop(key.casefold(), *args, **kwargs)
 
-    def setdefault(self, key, default=None):
+    def setdefault(self, key, *args, **kwargs):
         super().setdefault(key, default)
 
     def update(self, iterable=(), **kwarg):

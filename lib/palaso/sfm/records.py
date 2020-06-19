@@ -142,25 +142,26 @@ class parser(sfm.parser):
     def __init__(self, source, schema, error_level=level.Content, base=None):
         if not isinstance(schema, _schema): 
             raise TypeError('arg 2 must a \'schema\' not {0!r}'.format(schema))
-        default_meta = super().default_meta
-        metas = {k: default_meta for k in schema.fields}
-        super(parser,self).__init__(source, 
-                    metas, error_level=error_level)
+        self._base = {None:{}} if base is None else base
+        self._mapping_type = type(next(iter(self._base.values()), {}))
         self._schema = schema
-        self._base = base
+        default_meta = self._mapping_type(super().default_meta)
+        metas = self._mapping_type({k: default_meta for k in schema.fields})
+        super(parser,self).__init__(source, 
+                    stylesheet=metas, 
+                    error_level=error_level)
     
     def __iter__(self):
         start,fields = self._schema
-        mapping = next(iter(self._base.values()), {}).__class__
-        proto = mapping((k,dv) for k,(_,dv) in fields.items())
+        proto = self._mapping_type((k,dv) for k,(_,dv) in fields.items())
         default_field = (lambda x:x, None)
-        def record(rec):
-            rec = mapping(rec)
+        def record(e):
+            rec = self._mapping_type(e)
             rec_ = self._base.get(rec[start]) if self._base is not None and rec[start] in self._base else proto.copy()
             rec_.update(rec)
             for fn,err in filter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
                 if err: 
-                    self._error(err.level, err.msg, rec, rec.name, fn)
+                    self._error(err.level, err.msg, e, e.name, fn)
                     rec_[fn] = None
             return rec_
         
