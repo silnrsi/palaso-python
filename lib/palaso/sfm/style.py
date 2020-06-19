@@ -28,15 +28,12 @@ _fields = {
     'Marker': (str, UnrecoverableError(
                         'Start of record marker: {0} missing')),
     'Endmarker':      (str, None),
-    # For Name and Description, a default
-    #  StructureError('Marker {0} defintion missing: {1}') causes
-    #  problems with real world STY files.
     'Name':            (str,   None),
     'Description':     (str,   None),
-    'OccursUnder':     (unique(sequence(str)), [None]),
+    'OccursUnder':     (unique(sequence(str)), {None}),
     'Rank':            (int,   None),
-    'TextProperties':  (unique(sequence(str)), []),
-    'TextType':        (str,   "Unspecified"),
+    'TextProperties':  (unique(sequence(str)), {}),
+    'TextType':        (str,   'Unspecified'),
     'StyleType':       (str,   None),
     'FontSize':        (int,   None),
     'Regular':         (flag,  False),
@@ -108,7 +105,7 @@ class marker(dict):
 def parse(source, error_level=level.Content, base=None):
     '''
     >>> from pprint import pprint
-    >>> pprint(parse("""
+    >>> r = parse(r"""
     ... \\Marker toc1
     ... \\Name toc1 - File - Long Table of Contents Text
     ... \\Description Long table of contents text
@@ -120,67 +117,70 @@ def parse(source, error_level=level.Content, base=None):
     ... \\FontSize 12
     ... \\Italic
     ... \\Bold
-    ... \\Color 16384""".splitlines(True)))
-    {'toc1': {'Bold': True,
-              'Color': 16384,
-              'Description': 'Long table of contents text',
-              'Endmarker': None,
-              'FirstLineIndent': 0,
-              'FontSize': 12,
-              'Italic': True,
-              'Justification': 'Left',
-              'LeftMargin': 0,
-              'Name': 'toc1 - File - Long Table of Contents Text',
-              'OccursUnder': set(['h', 'h1', 'h2', 'h3']),
-              'Rank': 1,
-              'Regular': False,
-              'RightMargin': 0,
-              'SpaceAfter': 0,
-              'SpaceBefore': 0,
-              'StyleType': 'Paragraph',
-              'Superscript': False,
-              'TextProperties': set(['paragraph', 'publishable', 'vernacular']),
-              'TextType': 'Other',
-              'Underline': False}}
-    >>> pprint(parse("""
+    ... \\Color 16384""".splitlines(True))
+    >>> pprint((r, 
+    ...         sorted(r['toc1']['OccursUnder']),
+    ...         sorted(r['toc1']['TextProperties'])))
+    ... # doctest: +ELLIPSIS
+    ({'toc1': {'bold': True,
+               'color': 16384,
+               'description': 'Long table of contents text',
+               'endmarker': None,
+               'firstlineindent': 0,
+               'fontsize': 12,
+               'italic': True,
+               'justification': 'Left',
+               'leftmargin': 0,
+               'name': 'toc1 - File - Long Table of Contents Text',
+               'occursunder': {...},
+               'rank': 1,
+               'regular': False,
+               'rightmargin': 0,
+               'smallcaps': False,
+               'spaceafter': 0,
+               'spacebefore': 0,
+               'styletype': 'Paragraph',
+               'superscript': False,
+               'textproperties': {...},
+               'texttype': 'Other',
+               'underline': False}},
+     ['h', 'h1', 'h2', 'h3'],
+     ['paragraph', 'publishable', 'vernacular'])
+    >>> r = parse(r"""
     ... \\Marker dummy1
     ... \\Name dummy1 - File - dummy marker definition
     ... \\Description A marker used for demos
     ... \\OccursUnder id NEST
     ... \\TextType Other
     ... \\Bold
-    ... \\Color 12345""".splitlines(True)))
-    {'dummy1': {'Bold': True,
-                'Color': 12345,
-                'Description': 'A marker used for demos',
-                'Endmarker': None,
-                'FirstLineIndent': 0,
-                'FontSize': None,
-                'Italic': False,
-                'Justification': 'Left',
-                'LeftMargin': 0,
-                'Name': 'dummy1 - File - dummy marker definition',
-                'OccursUnder': set(['dummy1', 'id']),
-                'Rank': None,
-                'Regular': False,
-                'RightMargin': 0,
-                'SpaceAfter': 0,
-                'SpaceBefore': 0,
-                'StyleType': None,
-                'Superscript': False,
-                'TextProperties': [],
-                'TextType': 'Other',
-                'Underline': False}}
-    >>> pprint(parse("""
-    ... \\Marker error
-    ... \\Name error - File - cause a marker definition parse error
-    ... \\Description A marker to demostrate error reporting
-    ... \\Bold
-    ... \\Color 12345""".splitlines(True)))
-    Traceback (most recent call last):
-    ...
-    SyntaxError: <string>: line 2,1: Marker error defintion missing: TextType
+    ... \\Color 12345""".splitlines(True))
+    >>> pprint((r, sorted(r['dummy1']['OccursUnder'])))
+    ... # doctest: +ELLIPSIS
+    ({'dummy1': {'bold': True,
+                 'color': 12345,
+                 'description': 'A marker used for demos',
+                 'endmarker': None,
+                 'firstlineindent': 0,
+                 'fontsize': None,
+                 'italic': False,
+                 'justification': 'Left',
+                 'leftmargin': 0,
+                 'name': 'dummy1 - File - dummy marker definition',
+                 'occursunder': {...},
+                 'rank': None,
+                 'regular': False,
+                 'rightmargin': 0,
+                 'smallcaps': False,
+                 'spaceafter': 0,
+                 'spacebefore': 0,
+                 'styletype': None,
+                 'superscript': False,
+                 'textproperties': {},
+                 'texttype': 'Other',
+                 'underline': False}},
+     ['dummy1', 'id'])
     ''' # noqa
+
     # strip comments out
     no_comments = map(partial(_comment.sub, ''), source)
 

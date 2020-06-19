@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 The SFM parser module. It provides the basic stylesheet guided sfm parser 
 and default TextType parser.  This parser provides detailed error and 
@@ -30,17 +29,6 @@ import collections, codecs, functools, operator, re, warnings, os, sys
 from itertools import chain, groupby
 from functools import partial
 
-try:
-    from itertools import imap, ifilter
-except ImportError:
-    imap = map
-    ifilter = filter
-
-try:
-    unicode
-except NameError:
-    unicode = str
-
 __all__ = ('usfm',                                           # Sub modules
            'position','element','text', 'level', 'parser',   # data types
            'sreduce','smap','sfilter','mpath',
@@ -57,7 +45,7 @@ class element(list):
     """
     A sequence type that for holding the a marker and it's child nodes
     >>> element('marker')
-    element(u'marker')
+    element('marker')
     
     >>> str(element('marker'))
     '\\\\marker'
@@ -74,12 +62,12 @@ class element(list):
     >>> len(e)
     5
     >>> e.name
-    u'marker'
+    'marker'
     >>> e.pos
     position(line=1, col=1)
     >>> e.meta
     {}
-    >>> print str(e)
+    >>> print(str(e))
     \\marker 1 some text \\marker2 more text
     \\blah
     \\blah
@@ -93,7 +81,7 @@ class element(list):
     
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
         super(element,self).__init__(content)
-        self.name = unicode(name) if name else None
+        self.name = str(name) if name else None
         self.pos = pos
         self.args = args
         self.parent = parent
@@ -117,9 +105,9 @@ class element(list):
            and super(element,self).__eq__(rhs)
     
     def __str__(self):
-        marker = (u'\\' + ' '.join([self.name] + self.args)) if self.name else ''
+        marker = ('\\' + ' '.join([self.name] + self.args)) if self.name else ''
         endmarker = self.meta.get('Endmarker',u'')
-        body = ''.join(imap(unicode, self))
+        body = ''.join(map(str, self))
         sep = ''
         if len(self) > 0:
             if isinstance(self[0], element) \
@@ -134,53 +122,53 @@ class element(list):
         return sep.join([marker, body])
 
 
-class text(unicode):
+class text(str):
     '''
     >>> from pprint import pprint
 
-    An extended unicode string type that tracks position and 
+    An extended string type that tracks position and 
     parent/child relationship.
     
     >>> text('a test')
-    text(u'a test')
+    text('a test')
     
     >>> text('prefix ',position(3,10)).pos, text('suffix',position(1,6)).pos
     (position(line=3, col=10), position(line=1, col=6))
     
     >>> t = text('prefix ',position(3,10)) + text('suffix',position(1,6))
     >>> t, t.pos
-    (text(u'prefix suffix'), position(line=3, col=10))
+    (text('prefix suffix'), position(line=3, col=10))
     
     >>> t = text('a few short words')[12:]
     >>> t, t.pos
-    (text(u'words'), position(line=1, col=13))
+    (text('words'), position(line=1, col=13))
     
     >>> t = text('   yuk spaces   ').lstrip()
     >>> t, t.pos
-    (text(u'yuk spaces   '), position(line=1, col=4))
+    (text('yuk spaces   '), position(line=1, col=4))
     
     >>> t = text('   yuk spaces   ').rstrip()
     >>> t, t.pos
-    (text(u'   yuk spaces'), position(line=1, col=1))
+    (text('   yuk spaces'), position(line=1, col=1))
     
     >>> text('   yuk spaces   ').strip()
-    text(u'yuk spaces')
+    text('yuk spaces')
     
     >>> pprint([(t,t.pos) for t in text('a few short words').split(' ')])
-    [(text(u'a'), position(line=1, col=1)),
-     (text(u'few'), position(line=1, col=3)),
-     (text(u'short'), position(line=1, col=7)),
-     (text(u'words'), position(line=1, col=13))]
+    [(text('a'), position(line=1, col=1)),
+     (text('few'), position(line=1, col=3)),
+     (text('short'), position(line=1, col=7)),
+     (text('words'), position(line=1, col=13))]
     
     >>> list(map(str, text('a few short words').split(' ')))
     ['a', 'few', 'short', 'words']
     
-    >>> t=text.concat([text(u'a ', pos=position(line=1, col=1)), 
-    ...                text(u'few ', pos=position(line=1, col=3)), 
-    ...                text(u'short ', pos=position(line=1, col=7)),
-    ...                text(u'words', pos=position(line=1, col=13))])
+    >>> t=text.concat([text('a ', pos=position(line=1, col=1)), 
+    ...                text('few ', pos=position(line=1, col=3)), 
+    ...                text('short ', pos=position(line=1, col=7)),
+    ...                text('words', pos=position(line=1, col=13))])
     >>> t, t.pos
-    (text(u'a few short words'), position(line=1, col=1))
+    (text('a few short words'), position(line=1, col=1))
     '''
     def __new__(cls, content, pos=position(1,1), parent=None):
         return super(text,cls).__new__(cls, content)
@@ -193,7 +181,7 @@ class text(unicode):
     def concat(iterable):
         i = iter(iterable)
         h = next(i)
-        return text(u''.join(chain([h],i)), h.pos, h.parent)
+        return text(''.join(chain([h],i)), h.pos, h.parent)
     
     def split(self, sep, maxsplit=-1):
         tail = self
@@ -202,7 +190,7 @@ class text(unicode):
             e = tail.find(sep)
             if e == -1:
                 result.append(tail)
-                tail=text(u'',position(self.pos.line, self.pos.col+len(tail)), self.parent)
+                tail=text('',position(self.pos.line, self.pos.col+len(tail)), self.parent)
                 break
             result.append(tail[:e])
             tail = tail[e+len(sep):]
@@ -302,7 +290,7 @@ class parser(collections.Iterable):
     ...     list(parser([])); list(parser([''])); list(parser('plain text'))
     []
     []
-    [text(u'plain text')]
+    [text('plain text')]
     
     Test mixed marker and text and cross line coalescing
     >>> with warnings.catch_warnings():
@@ -312,18 +300,18 @@ class parser(collections.Iterable):
     ... bare text
     ... \\more-sfm more text
     ... over a line break\\marker""".splitlines(True))))
-    [element(u'lonely', content=[text(u'\\n')]),
-     element(u'sfm', content=[text(u'text\\nbare text\\n')]),
-     element(u'more-sfm', content=[text(u'more text\\nover a line break')]),
-     element(u'marker')]
+    [element('lonely', content=[text('\\n')]),
+     element('sfm', content=[text('text\\nbare text\\n')]),
+     element('more-sfm', content=[text('more text\\nover a line break')]),
+     element('marker')]
     
     Backslash handling
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser([r"\\marker text",
     ...                         r"\\escaped backslash\\\\character"])))
-    [element(u'marker', content=[text(u'text')]),
-     element(u'escaped', content=[text(u'backslash\\\\\\\\character')])]
+    [element('marker', content=[text('text')]),
+     element('escaped', content=[text('backslash\\\\\\\\character')])]
     
     >>> doc=r"""
     ... \\id MAT EN
@@ -336,69 +324,69 @@ class parser(collections.Iterable):
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser(doc.splitlines(True))))
-    [text(u'\\n'),
-     element(u'id', content=[text(u'MAT EN\\n')]),
-     element(u'ide', content=[text(u'UTF-8\\n')]),
-     element(u'rem', content=[text(u'from MATTHEW\\n')]),
-     element(u'h', content=[text(u'Mathew\\n')]),
-     element(u'toc1', content=[text(u'Mathew\\n')]),
-     element(u'mt1', content=[text(u'Mathew\\n')]),
-     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
+    [text('\\n'),
+     element('id', content=[text('MAT EN\\n')]),
+     element('ide', content=[text('UTF-8\\n')]),
+     element('rem', content=[text('from MATTHEW\\n')]),
+     element('h', content=[text('Mathew\\n')]),
+     element('toc1', content=[text('Mathew\\n')]),
+     element('mt1', content=[text('Mathew\\n')]),
+     element('mt2', content=[text('Gospel Of Matthew')])]
 
     >>> tss = parser.extend_stylesheet({},'id','ide','rem','h','toc1','mt1','mt2')
     >>> pprint(tss)
     {'h': {'Endmarker': None,
-           'OccursUnder': set([None]),
+           'OccursUnder': {None},
            'StyleType': None,
            'TextType': 'default'},
      'id': {'Endmarker': None,
-            'OccursUnder': set([None]),
+            'OccursUnder': {None},
             'StyleType': None,
             'TextType': 'default'},
      'ide': {'Endmarker': None,
-             'OccursUnder': set([None]),
+             'OccursUnder': {None},
              'StyleType': None,
              'TextType': 'default'},
      'mt1': {'Endmarker': None,
-             'OccursUnder': set([None]),
+             'OccursUnder': {None},
              'StyleType': None,
              'TextType': 'default'},
      'mt2': {'Endmarker': None,
-             'OccursUnder': set([None]),
+             'OccursUnder': {None},
              'StyleType': None,
              'TextType': 'default'},
      'rem': {'Endmarker': None,
-             'OccursUnder': set([None]),
+             'OccursUnder': {None},
              'StyleType': None,
              'TextType': 'default'},
      'toc1': {'Endmarker': None,
-              'OccursUnder': set([None]),
+              'OccursUnder': {None},
               'StyleType': None,
               'TextType': 'default'}}
 
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
-    [text(u'\\n'),
-     element(u'id', content=[text(u'MAT EN\\n')]),
-     element(u'ide', content=[text(u'UTF-8\\n')]),
-     element(u'rem', content=[text(u'from MATTHEW\\n')]),
-     element(u'h', content=[text(u'Mathew\\n')]),
-     element(u'toc1', content=[text(u'Mathew\\n')]),
-     element(u'mt1', content=[text(u'Mathew\\n')]),
-     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
+    [text('\\n'),
+     element('id', content=[text('MAT EN\\n')]),
+     element('ide', content=[text('UTF-8\\n')]),
+     element('rem', content=[text('from MATTHEW\\n')]),
+     element('h', content=[text('Mathew\\n')]),
+     element('toc1', content=[text('Mathew\\n')]),
+     element('mt1', content=[text('Mathew\\n')]),
+     element('mt2', content=[text('Gospel Of Matthew')])]
     >>> tss['rem'] = tss['rem'].copy()
-    >>> tss['rem']['OccursUnder'] = set(['ide'])
+    >>> tss['rem']['OccursUnder'] = {'ide'}
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
-    [text(u'\\n'),
-     element(u'id', content=[text(u'MAT EN\\n')]),
-     element(u'ide', content=[text(u'UTF-8\\n'), element(u'rem', content=[text(u'from MATTHEW\\n')])]),
-     element(u'h', content=[text(u'Mathew\\n')]),
-     element(u'toc1', content=[text(u'Mathew\\n')]),
-     element(u'mt1', content=[text(u'Mathew\\n')]),
-     element(u'mt2', content=[text(u'Gospel Of Matthew')])]
+    [text('\\n'),
+     element('id', content=[text('MAT EN\\n')]),
+     element('ide', content=[text('UTF-8\\n'), element('rem', content=[text('from MATTHEW\\n')])]),
+     element('h', content=[text('Mathew\\n')]),
+     element('toc1', content=[text('Mathew\\n')]),
+     element('mt1', content=[text('Mathew\\n')]),
+     element('mt2', content=[text('Gospel Of Matthew')])]
     >>> del tss['mt1']
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
@@ -414,7 +402,7 @@ class parser(collections.Iterable):
     
     @classmethod
     def extend_stylesheet(cls, stylesheet, *names):
-        return dict(((m,cls.default_meta) for m in names), **stylesheet)
+        return dict({m: cls.default_meta for m in names}, **stylesheet)
     
     
     def __init__(self, source, stylesheet={}, 
@@ -440,13 +428,13 @@ class parser(collections.Iterable):
     
     def _error(self, severity, msg, ev, *args, **kwds):
         if severity >= 0  and severity >= self._error_level:
-            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
+            msg = ('{source}: line {token.pos.line},{token.pos.col}: ' + str(msg)).format(token=ev,source=self.source,
                                                                                                *args,**kwds)
             raise SyntaxError(msg)
         elif severity < 0 and severity < self._error_level: 
             pass
         else:
-            msg = (u'{source}: line {token.pos.line},{token.pos.col}: ' + unicode(msg)).format(token=ev,source=self.source,
+            msg = ('{source}: line {token.pos.line},{token.pos.col}: ' + str(msg)).format(token=ev,source=self.source,
                                                                                                *args,**kwds)
             warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
@@ -481,7 +469,7 @@ class parser(collections.Iterable):
         """ Return an iterator that returns tokens in a sequence:
             marker, text, marker, text, ...
         """
-        lmss = enumerate(imap(parser._tokeniser.finditer, lines))
+        lmss = enumerate(map(parser._tokeniser.finditer, lines))
         fs = (text(m.group(), position(l+1,m.start()+1)) for l,ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith','\\'))
         return chain.from_iterable(g if istag else (text.concat(g),) for istag,g in gs)
@@ -636,7 +624,7 @@ def text_properties(*props):
 
 
 def pprint(doc):
-    return ''.join(imap(unicode, doc))
+    return ''.join(map(str, doc))
 
 
 def copy(doc):

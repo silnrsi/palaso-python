@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 The USFM parser module, provides the default sytlesheet for USFM and
 USFM specific textype parsers to the palaso.sfm module.  These guide the 
@@ -28,17 +27,6 @@ from palaso.sfm import level
 from itertools import chain
 from functools import partial, reduce
 
-try:
-    from itertools import ifilter, imap
-except ImportError:
-    ifilter = filter
-    imap = map
-
-try:
-    unicode
-except NameError:
-    unicode = str
-
 _PALASO_DATA = os.path.join(
         os.path.expanduser(os.path.dirname(os.path.normpath(site.USER_SITE))),
         'palaso-python','sfm')
@@ -46,14 +34,14 @@ _PALASO_DATA = os.path.join(
 
 
 def _check_paths(pred, paths):
-    return next(ifilter(pred, imap(os.path.normpath, paths)),None)
+    return next(filter(pred, map(os.path.normpath, paths)),None)
 
 def _newer(cache, benchmark):
     return os.path.getmtime(benchmark) <= os.path.getmtime(cache)
 
 def _is_fresh(cached_path, benchmarks):
     return reduce(operator.and_, 
-                  imap(partial(_newer, cached_path), benchmarks))
+                  map(partial(_newer, cached_path), benchmarks))
 
 def _cached_stylesheet(path):
     package_dir = os.path.dirname(__file__)
@@ -114,35 +102,35 @@ class parser(sfm.parser):
     
     Tests for inline markers
     >>> list(parser([r'\\test']))
-    [element(u'test')]
+    [element('test')]
     >>> list(parser([r'\\test text']))
-    [element(u'test'), text(u' text')]
+    [element('test'), text(' text')]
     >>> list(parser([r'\\id JHN\\ior text\\ior*']))
-    [element(u'id', content=[text(u'JHN'), element(u'ior', content=[text(u'text')])])]
+    [element('id', content=[text('JHN'), element('ior', content=[text('text')])])]
     >>> list(parser([r'\\id MAT\\mt Text \\f + \\fk deep\\fk*\\f*more text.']))
-    [element(u'id', content=[text(u'MAT'), element(u'mt', content=[text(u'Text '), element(u'f', args=[u'+'], content=[element(u'fk', content=[text(u'deep')])]), text(u'more text.')])])]
+    [element('id', content=[text('MAT'), element('mt', content=[text('Text '), element('f', args=['+'], content=[element('fk', content=[text('deep')])]), text('more text.')])])]
 
     Test end marker recognition when it's a prefix
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     list(parser([r'\\id TEST\\mt \\f + text\\f*suffixed text']))
     ...     list(parser([r'\\id TEST\\mt \\f + \\fr ref \\ft text\\f*suffixed text']))
-    [element(u'id', content=[text(u'TEST'), element(u'mt', content=[element(u'f', args=[u'+'], content=[text(u'text')]), text(u'suffixed text')])])]
-    [element(u'id', content=[text(u'TEST'), element(u'mt', content=[element(u'f', args=[u'+'], content=[element(u'fr', content=[text(u'ref ')]), text(u'text')]), text(u'suffixed text')])])]
+    [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[text('text')]), text('suffixed text')])])]
+    [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[element('fr', content=[text('ref ')]), text('text')]), text('suffixed text')])])]
     
     Test marker parameters, particularly chapter and verse markers
     >>> list(parser([r'\\id TEST'         r'\\c 1']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'1'])])]
+    [element('id', content=[text('TEST'), element('c', args=['1'])])]
     >>> list(parser([r'\\id TEST'         r'\\c 2 \\s text']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'2'], content=[element(u's', content=[text(u'text')])])])]
+    [element('id', content=[text('TEST'), element('c', args=['2'], content=[element('s', content=[text('text')])])])]
     >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 1']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'1'])])])])]
+    [element('id', content=[text('TEST'), element('c', args=['0'], content=[element('p', content=[element('v', args=['1'])])])])]
     >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 1-3']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'1-3'])])])])]
+    [element('id', content=[text('TEST'), element('c', args=['0'], content=[element('p', content=[element('v', args=['1-3'])])])])]
     >>> list(parser([r'\\id TEST\\c 0\\p' r'\\v 2 text']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'0'], content=[element(u'p', content=[element(u'v', args=[u'2']), text(u'text')])])])]
+    [element('id', content=[text('TEST'), element('c', args=['0'], content=[element('p', content=[element('v', args=['2']), text('text')])])])]
     >>> list(parser([r'\\id TEST'         r'\\c 2 \\p \\v 3 text\\v 4 verse']))
-    [element(u'id', content=[text(u'TEST'), element(u'c', args=[u'2'], content=[element(u'p', content=[element(u'v', args=[u'3']), text(u'text'), element(u'v', args=[u'4']), text(u'verse')])])])]
+    [element('id', content=[text('TEST'), element('c', args=['2'], content=[element('p', content=[element('v', args=['3']), text('text'), element('v', args=['4']), text('verse')])])])]
 
     Test for error detection and reporting for structure
     >>> list(parser([r'\\id TEST\\mt text\\f*']))
@@ -238,10 +226,11 @@ class parser(sfm.parser):
                 kwds.get('stylesheet', default_stylesheet), *names)
     
     
-    def __init__(self, source, stylesheet=default_stylesheet,
-                               default_meta=_default_meta, *args, **kwds):
-        super(parser, self).__init__(source, stylesheet, default_meta,
-                                     private_prefix='z',*args, **kwds)
+    def __init__(self, source, 
+                 stylesheet=default_stylesheet,
+                 default_meta=_default_meta, 
+                 *args, **kwds):
+        super().__init__(source, stylesheet, default_meta, private_prefix='z',*args, **kwds)
     
     
     def _force_close(self, parent, tok):
@@ -260,9 +249,9 @@ class parser(sfm.parser):
         if not chapter:
             self._error(level.Content, 'missing chapter number after \\c', 
                                      chapter_marker)
-            chapter_marker.args = [u'\uFFFD']
+            chapter_marker.args = ['\uFFFD']
         else:
-            chapter_marker.args = [unicode(tok[chapter.start(1):chapter.end(1)])]
+            chapter_marker.args = [str(tok[chapter.start(1):chapter.end(1)])]
             tok = tok[chapter.end():]
         if tok and not self.sep_re.match(tok):
             self._error(level.Content, 'missing space after chapter number \'{chapter}\'',
@@ -288,9 +277,9 @@ class parser(sfm.parser):
         if not verse:
             self._error(level.Content, 'missing verse number after \\v', 
                                      verse_marker)
-            verse_marker.args = [u'\uFFFD']
+            verse_marker.args = ['\uFFFD']
         else:
-            verse_marker.args = [unicode(tok[verse.start(1):verse.end(1)])]
+            verse_marker.args = [str(tok[verse.start(1):verse.end(1)])]
             tok = tok[verse.end():]
         
         if not self.sep_re.match(tok):
@@ -311,7 +300,7 @@ class parser(sfm.parser):
                 return e
             else:
                 return [e]
-        return chain.from_iterable(imap(g, content))
+        return chain.from_iterable(map(g, content))
     
     
     def _NoteText_(self,parent):
@@ -322,9 +311,9 @@ class parser(sfm.parser):
         if not caller:
             self._error(level.Content, 'missing caller parameter after \\{token.name}',
                         parent)
-            parent.args = [u'\uFFFD']
+            parent.args = ['\uFFFD']
         else:
-            parent.args = [unicode(tok[caller.start(1):caller.end(1)])]
+            parent.args = [str(tok[caller.start(1):caller.end(1)])]
             tok = tok[caller.end():]
         
         if not self.sep_re.match(tok):
@@ -333,6 +322,7 @@ class parser(sfm.parser):
         
         if tok.lstrip(): self._tokens.put_back(tok)
         return self._canonicalise_footnote(self._default_(parent))
+
 
 class reference(sfm.position):
     def __new__(cls, pos, ref):
