@@ -167,7 +167,7 @@ def parse(source, error_level=ErrorLevel.Content):
     ''' # noqa
 
     # strip comments out
-    no_comments = (_comment.sub('', l) for l in source)
+    no_comments = (_comment.sub('', ln) for ln in source)
 
     with warnings.catch_warnings():
         warnings.simplefilter(

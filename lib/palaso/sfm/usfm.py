@@ -20,8 +20,8 @@ __history__ = '''
         changes.
 '''
 from . import ErrorLevel, style
-from itertools import chain
 from functools import reduce
+from itertools import chain
 from .. import sfm
 import bz2
 import contextlib
@@ -42,9 +42,11 @@ def _check_paths(pred, paths):
 
 
 def _source_path(path):
-    return _check_paths(os.path.exists,
-                        [os.path.join(_PALASO_DATA, path),
-                         os.path.join(_package_dir, path)])
+    sp = _check_paths(os.path.exists,
+                      [os.path.join(_PALASO_DATA, path),
+                       os.path.join(_package_dir, path)])
+    assert sp is not None
+    return sp
 
 
 def _newer(cache, benchmark):
@@ -225,21 +227,21 @@ class parser(sfm.parser):
     ...     list(parser([r'\\id TEST\\mt \\whoops']))
     Traceback (most recent call last):
     ...
-    SyntaxWarning: <string>: line 1,14: unknown marker \whoops: not in stylesheet
+    SyntaxWarning: <string>: line 1,14: unknown marker \\whoops: not in stylesheet
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error", SyntaxWarning)
     ...     list(parser([r'\\id TEST\\mt \\whoops'],
     ...                 error_level=sfm.ErrorLevel.Marker))
     Traceback (most recent call last):
     ...
-    SyntaxError: <string>: line 1,14: unknown marker \whoops: not in stylesheet
+    SyntaxError: <string>: line 1,14: unknown marker \\whoops: not in stylesheet
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error", SyntaxWarning)
     ...     list(parser([r'\\id TEST\\mt \\zwhoops'],
     ...                 error_level=sfm.ErrorLevel.Note))
     Traceback (most recent call last):
     ...
-    SyntaxWarning: <string>: line 1,14: unknown private marker \zwhoops: not it stylesheet using default marker definition
+    SyntaxWarning: <string>: line 1,14: unknown private marker \\zwhoops: not it stylesheet using default marker definition
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error", SyntaxWarning)
     ...     list(parser([r'\\id TEST\\c 1\\p a \\png b \\+w c \\+nd d \\png e \\png*']))
@@ -292,8 +294,9 @@ class parser(sfm.parser):
                  default_meta=_default_meta,
                  canonicalise_footnotes=True,
                  *args, **kwds):
-        if not canonicalise_footnotes:
-            self._canonicalise_footnote = lambda x: x
+        self._canonicalise_footnote = (self._canonicalise_footnote_default
+                                       if canonicalise_footnotes
+                                       else lambda x: x)
 
         stylesheet = self.__synthesise_private_meta(stylesheet, default_meta)
         for m in stylesheet.values():
@@ -389,7 +392,7 @@ class parser(sfm.parser):
     _versenumber_ = _VerseNumber_
 
     @staticmethod
-    def _canonicalise_footnote(content):
+    def _canonicalise_footnote_default(content):
         def g(e):
             if getattr(e, 'name', None) == 'ft':
                 e.parent.annotations['content-promoted'] = True
@@ -443,11 +446,13 @@ class parser(sfm.parser):
 
 class Reference(sfm.Position):
     def __new__(cls, pos, ref):
-        p = super().__new__(cls, *pos)
-        p.book = ref[0]
-        p.chapter = ref[1]
-        p.verse = ref[2]
-        return p
+        return super().__new__(cls, *pos)
+
+    def __init__(self, pos, ref):
+        super().__init__(*pos)
+        self.book = ref[0]
+        self.chapter = ref[1]
+        self.verse = ref[2]
 
     def advance(self, n):
         return Reference(super().advance(n),
@@ -455,7 +460,7 @@ class Reference(sfm.Position):
 
 
 def decorate_references(source):
-    ref = [None, None, None]
+    ref = ['', '', '']
 
     def _g(_, e):
         if isinstance(e, sfm.Element):

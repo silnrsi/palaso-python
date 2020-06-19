@@ -30,14 +30,12 @@ import operator
 import re
 import warnings
 import os
-from . import usfm
 from itertools import chain, groupby
 from enum import IntEnum
 from functools import reduce
 from typing import NamedTuple, Optional
 
-__all__ = ('usfm',                                            # Sub modules
-           'Position', 'Element', 'Text', 'ErrorLevel', 'parser',  # data types
+__all__ = ('Position', 'Element', 'Text', 'ErrorLevel', 'parser',  # data types
            'sreduce', 'smap', 'sfilter', 'mpath',
            'text_properties', 'generate', 'copy')               # functions
 
@@ -623,12 +621,10 @@ class parser(collections.Iterable):
 
         tok = tok[1:]
         tag = Tag(tok.lstrip('+'), tok[0] == '+')
-        if parent is not None:
-            return tag
 
         # Check for the expected end markers with no separator and
         # break them apart
-        while parent.meta['Endmarker']:
+        while parent is not None and parent.meta['Endmarker']:
             if tag.name.startswith(parent.meta['Endmarker']):
                 cut = len(parent.meta['Endmarker'])
                 rest = tag.name[cut:]
