@@ -59,14 +59,15 @@ def _lower_match(m):
     return m.group().lower()
 
 
-def _munge_record(r):
-    tag = r.pop('Marker').lstrip()
-    ous = r['OccursUnder']
-    if 'NEST' in ous:
-        ous.remove('NEST')
-        ous.add(tag)
-    return (tag, r)
-
+def _munge_records(rs):
+    for r in rs:
+        tag = r.pop('Marker').lstrip()
+        ous = r['OccursUnder']
+        if 'NEST' in ous:
+            ous.remove('NEST')
+            ntag = f'+{tag}*'
+            yield (ntag[:-1], marker(r, endmarker=ntag, occursunder=r['Occursunder'] | {ntag[:-1]}))
+        yield (tag, r)
 
 class marker(dict):
     def __init__(self, iterable=(), **kwarg):
@@ -156,31 +157,57 @@ def parse(source, error_level=level.Content, base=None):
     ... \\TextType Other
     ... \\Bold
     ... \\Color 12345""".splitlines(True))
-    >>> pprint((r, sorted(r['dummy1']['OccursUnder'])))
+    >>> pprint((sorted(r.items()), sorted(r['+dummy1']['OccursUnder']),
+    ...         sorted(r['dummy1']['OccursUnder'])))
     ... # doctest: +ELLIPSIS
-    ({'dummy1': {'bold': True,
-                 'color': 12345,
-                 'description': 'A marker used for demos',
-                 'endmarker': None,
-                 'firstlineindent': 0,
-                 'fontsize': None,
-                 'italic': False,
-                 'justification': 'Left',
-                 'leftmargin': 0,
-                 'name': 'dummy1 - File - dummy marker definition',
-                 'occursunder': {...},
-                 'rank': None,
-                 'regular': False,
-                 'rightmargin': 0,
-                 'smallcaps': False,
-                 'spaceafter': 0,
-                 'spacebefore': 0,
-                 'styletype': None,
-                 'superscript': False,
-                 'textproperties': {},
-                 'texttype': 'Other',
-                 'underline': False}},
-     ['dummy1', 'id'])
+    ([('+dummy1',
+       {'bold': True,
+        'color': 12345,
+        'description': 'A marker used for demos',
+        'endmarker': '+dummy1*',
+        'firstlineindent': 0,
+        'fontsize': None,
+        'italic': False,
+        'justification': 'Left',
+        'leftmargin': 0,
+        'name': 'dummy1 - File - dummy marker definition',
+        'occursunder': {...},
+        'rank': None,
+        'regular': False,
+        'rightmargin': 0,
+        'smallcaps': False,
+        'spaceafter': 0,
+        'spacebefore': 0,
+        'styletype': None,
+        'superscript': False,
+        'textproperties': {},
+        'texttype': 'Other',
+        'underline': False}),
+      ('dummy1',
+       {'bold': True,
+        'color': 12345,
+        'description': 'A marker used for demos',
+        'endmarker': None,
+        'firstlineindent': 0,
+        'fontsize': None,
+        'italic': False,
+        'justification': 'Left',
+        'leftmargin': 0,
+        'name': 'dummy1 - File - dummy marker definition',
+        'occursunder': {'id'},
+        'rank': None,
+        'regular': False,
+        'rightmargin': 0,
+        'smallcaps': False,
+        'spaceafter': 0,
+        'spacebefore': 0,
+        'styletype': None,
+        'superscript': False,
+        'textproperties': {},
+        'texttype': 'Other',
+        'underline': False})],
+     ['+dummy1', 'id'],
+     ['id'])
     ''' # noqa
 
     # strip comments out
@@ -194,7 +221,7 @@ def parse(source, error_level=level.Content, base=None):
     rec_parser.source = getattr(source, 'name', '<string>')
     recs = iter(rec_parser)
     next(recs, None)
-    res = dict(map(_munge_record, recs))
+    res = dict(_munge_records(recs))
     if base is not None:
         base.update(res)
         res = base
