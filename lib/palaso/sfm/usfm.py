@@ -65,7 +65,7 @@ def _cached_stylesheet(path):
     import pickletools
     with contextlib.closing(bz2.BZ2File(cached_path, 'wb')) as zf:
         zf.write(pickletools.optimize(
-            pickle.dumps(style.parse(open(source_path,'r'), error_level=sfm.level.Marker))))
+            pickle.dumps(style.parse(open(source_path,'r')))))
     return cached_path
 
 

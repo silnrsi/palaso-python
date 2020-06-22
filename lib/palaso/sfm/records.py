@@ -154,7 +154,7 @@ class parser(sfm.parser):
     def __iter__(self):
         start,fields = self._schema
         proto = self._mapping_type((k,dv) for k,(_,dv) in fields.items())
-        default_field = (lambda x:x, None)
+        default_field = (str, None)
         def record(e):
             rec = self._mapping_type(e)
             rec_ = self._base.get(rec[start]) if self._base is not None and rec[start] in self._base else proto.copy()

@@ -19,6 +19,7 @@ __email__ = "tim_eves@sil.org"
 import re
 
 import palaso.sfm.records as records
+import warnings
 from collections import abc
 from palaso.sfm.records import sequence, flag, unique, level
 from palaso.sfm.records import UnrecoverableError
@@ -31,24 +32,24 @@ _fields = {
     'Name':            (str,   None),
     'Description':     (str,   None),
     'OccursUnder':     (unique(sequence(str)), {None}),
-    'Rank':            (int,   None),
+    # 'Rank':            (int,   None),
     'TextProperties':  (unique(sequence(str)), {}),
     'TextType':        (str,   'Unspecified'),
     'StyleType':       (str,   None),
-    'FontSize':        (int,   None),
-    'Regular':         (flag,  False),
-    'Bold':            (flag,  False),
-    'Italic':          (flag,  False),
-    'Underline':       (flag,  False),
-    'Superscript':     (flag,  False),
-    'Smallcaps':       (flag,  False),
-    'Justification':   (str,   'Left'),
-    'SpaceBefore':     (int,   0),
-    'SpaceAfter':      (int,   0),
-    'FirstLineIndent': (float, 0),
-    'LeftMargin':      (float, 0),
-    'RightMargin':     (float, 0),
-    'Color':           (int,   0),
+    # 'FontSize':        (int,   None),
+    # 'Regular':         (flag,  False),
+    # 'Bold':            (flag,  False),
+    # 'Italic':          (flag,  False),
+    # 'Underline':       (flag,  False),
+    # 'Superscript':     (flag,  False),
+    # 'Smallcaps':       (flag,  False),
+    # 'Justification':   (str,   'Left'),
+    # 'SpaceBefore':     (int,   0),
+    # 'SpaceAfter':      (int,   0),
+    # 'FirstLineIndent': (float, 0),
+    # 'LeftMargin':      (float, 0),
+    # 'RightMargin':     (float, 0),
+    # 'Color':           (int,   0),
 }
 
 _comment = re.compile(r'\s*#.*$')
@@ -125,28 +126,18 @@ def parse(source, error_level=level.Content, base=None):
     ...         sorted(r['toc1']['OccursUnder']),
     ...         sorted(r['toc1']['TextProperties'])))
     ... # doctest: +ELLIPSIS
-    ({'toc1': {'bold': True,
-               'color': 16384,
+    ({'toc1': {'bold': '',
+               'color': '16384',
                'description': 'Long table of contents text',
                'endmarker': None,
-               'firstlineindent': 0,
-               'fontsize': 12,
-               'italic': True,
-               'justification': 'Left',
-               'leftmargin': 0,
+               'fontsize': '12',
+               'italic': '',
                'name': 'toc1 - File - Long Table of Contents Text',
                'occursunder': {...},
-               'rank': 1,
-               'regular': False,
-               'rightmargin': 0,
-               'smallcaps': False,
-               'spaceafter': 0,
-               'spacebefore': 0,
+               'rank': '1',
                'styletype': 'Paragraph',
-               'superscript': False,
                'textproperties': {...},
-               'texttype': 'Other',
-               'underline': False}},
+               'texttype': 'Other'}},
      ['h', 'h1', 'h2', 'h3'],
      ['paragraph', 'publishable', 'vernacular'])
     >>> r = parse(r"""
@@ -161,51 +152,25 @@ def parse(source, error_level=level.Content, base=None):
     ...         sorted(r['dummy1']['OccursUnder'])))
     ... # doctest: +ELLIPSIS
     ([('+dummy1',
-       {'bold': True,
-        'color': 12345,
+       {'bold': '',
+        'color': '12345',
         'description': 'A marker used for demos',
         'endmarker': '+dummy1*',
-        'firstlineindent': 0,
-        'fontsize': None,
-        'italic': False,
-        'justification': 'Left',
-        'leftmargin': 0,
         'name': 'dummy1 - File - dummy marker definition',
         'occursunder': {...},
-        'rank': None,
-        'regular': False,
-        'rightmargin': 0,
-        'smallcaps': False,
-        'spaceafter': 0,
-        'spacebefore': 0,
         'styletype': None,
-        'superscript': False,
         'textproperties': {},
-        'texttype': 'Other',
-        'underline': False}),
+        'texttype': 'Other'}),
       ('dummy1',
-       {'bold': True,
-        'color': 12345,
+       {'bold': '',
+        'color': '12345',
         'description': 'A marker used for demos',
         'endmarker': None,
-        'firstlineindent': 0,
-        'fontsize': None,
-        'italic': False,
-        'justification': 'Left',
-        'leftmargin': 0,
         'name': 'dummy1 - File - dummy marker definition',
         'occursunder': {'id'},
-        'rank': None,
-        'regular': False,
-        'rightmargin': 0,
-        'smallcaps': False,
-        'spaceafter': 0,
-        'spacebefore': 0,
         'styletype': None,
-        'superscript': False,
         'textproperties': {},
-        'texttype': 'Other',
-        'underline': False})],
+        'texttype': 'Other'})],
      ['+dummy1', 'id'],
      ['id'])
     ''' # noqa
@@ -213,15 +178,17 @@ def parse(source, error_level=level.Content, base=None):
     # strip comments out
     no_comments = map(partial(_comment.sub, ''), source)
 
-    rec_parser = records.parser(
-                    no_comments,
-                    records.schema('Marker', _fields),
-                    error_level=error_level,
-                    base={None: marker()} if base is None else base)
-    rec_parser.source = getattr(source, 'name', '<string>')
-    recs = iter(rec_parser)
-    next(recs, None)
-    res = dict(_munge_records(recs))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        rec_parser = records.parser(
+                        no_comments,
+                        records.schema('Marker', _fields),
+                        error_level=error_level,
+                        base={None: marker()} if base is None else base)
+        rec_parser.source = getattr(source, 'name', '<string>')
+        recs = iter(rec_parser)
+        next(recs, None)
+        res = dict(_munge_records(recs))
     if base is not None:
         base.update(res)
         res = base
