@@ -77,7 +77,7 @@ class element(list):
     >>> element('marker') == element('different')
     False
     """
-    __slots__ = ('pos', 'name', 'args', 'parent', 'meta', 'annotations')
+    # __slots__ = ('pos', 'name', 'args', 'parent', 'meta', 'annotations')
     
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
         super(element,self).__init__(content)
