@@ -96,7 +96,8 @@ class element(list):
     
     
     def __eq__(self, rhs):
-        assert isinstance(rhs, element), 'rhs must be an element type'
+        if not isinstance(rhs, element):
+            return False
         return self.name == rhs.name \
            and self.args == rhs.args \
            and (not self.meta or not rhs.meta or self.meta == rhs.meta) \
