@@ -25,17 +25,22 @@ from palaso.sfm.records import sequence, flag, unique, level
 from palaso.sfm.records import UnrecoverableError
 from functools import partial
 
+class _absent:
+    def __init__(self, def_val):
+        self.value = def_val
+
+
 _fields = {
     'Marker': (str, UnrecoverableError(
                         'Start of record marker: {0} missing')),
-    'Endmarker':      (str, None),
-    'Name':            (str,   None),
-    'Description':     (str,   None),
-    'OccursUnder':     (unique(sequence(str)), {None}),
+    'Endmarker':      (str, _absent(None)),
+    'Name':            (str,   _absent(None)),
+    'Description':     (str,   _absent(None)),
+    'OccursUnder':     (unique(sequence(str)), _absent({None})),
     # 'Rank':            (int,   None),
-    'TextProperties':  (unique(sequence(str)), {}),
-    'TextType':        (str,   'Unspecified'),
-    'StyleType':       (str,   None),
+    'TextProperties':  (unique(sequence(str)), _absent({})),
+    'TextType':        (str,   _absent('Unspecified')),
+    'StyleType':       (str,   _absent(None)),
     # 'FontSize':        (int,   None),
     # 'Regular':         (flag,  False),
     # 'Bold':            (flag,  False),
@@ -51,13 +56,9 @@ _fields = {
     # 'RightMargin':     (float, 0),
     # 'Color':           (int,   0),
 }
-
+    
 _comment = re.compile(r'\s*#.*$')
 _markers = re.compile(r'^\s*\\[^\s\\]+\s')
-
-
-def _lower_match(m):
-    return m.group().lower()
 
 
 def _munge_records(rs):
@@ -69,6 +70,7 @@ def _munge_records(rs):
             ntag = f'+{tag}*'
             yield (ntag[:-1], marker(r, endmarker=ntag, occursunder=r['Occursunder'] | {ntag[:-1]}))
         yield (tag, r)
+
 
 class marker(dict):
     def __init__(self, iterable=(), **kwarg):
@@ -102,8 +104,8 @@ class marker(dict):
     def update(self, iterable=(), **kwarg):
         if isinstance(iterable, abc.Mapping):
             iterable = iterable.items()
-        super().update((k.casefold(), v) for k, v in iterable)
-        super().update((k.casefold(), v) for k, v in kwarg.items())
+        super().update({k.casefold(): v for k, v in iterable})
+        super().update({k.casefold(): v for k, v in kwarg.items()})
 
 
 def parse(source, error_level=level.Content, base=None):
@@ -179,7 +181,7 @@ def parse(source, error_level=level.Content, base=None):
     no_comments = map(partial(_comment.sub, ''), source)
 
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.simplefilter("always" if error_level > level.Content else "ignore")
         rec_parser = records.parser(
                         no_comments,
                         records.schema('Marker', _fields),
@@ -190,6 +192,18 @@ def parse(source, error_level=level.Content, base=None):
         next(recs, None)
         res = dict(_munge_records(recs))
     if base is not None:
-        base.update(res)
+        base.update({n: (_merge_record(base[n], r) if n in base else r) for n,r in res.items()})
         res = base
+    _reify(res)
     return res
+
+def _merge_record(old, new):
+    old.update({f:v for f,v in new.items() if f not in old or not isinstance(v, _absent)})
+
+def _reify(sheet):
+    for r in sheet.values():
+        for f,v in r.items():
+            if isinstance(v, _absent):
+                r[f] = v.value
+            if isinstance(v, records.sfm.text):
+                r[f] = str(v)
