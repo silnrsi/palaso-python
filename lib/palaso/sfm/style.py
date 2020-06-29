@@ -65,7 +65,7 @@ def _munge_records(rs):
     for r in rs:
         tag = r.pop('Marker').lstrip()
         ous = r['OccursUnder']
-        if 'NEST' in ous:
+        if isinstance(ous, set) and 'NEST' in ous:
             ous.remove('NEST')
             ntag = f'+{tag}*'
             yield (ntag[:-1], marker(r, endmarker=ntag, occursunder=r['Occursunder'] | {ntag[:-1]}))
