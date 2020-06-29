@@ -153,16 +153,18 @@ class parser(sfm.parser):
     
     def __iter__(self):
         start,fields = self._schema
-        proto = self._mapping_type((k,dv) for k,(_,dv) in fields.items())
-        default_field = (str, None)
+        proto = self._mapping_type({k:dv for k,(_,dv) in fields.items()})
+        default_field = (lambda x: x, None)
         def record(e):
             rec = self._mapping_type(e)
-            rec_ = self._base.get(rec[start]) if self._base is not None and rec[start] in self._base else proto.copy()
+            rec_ = proto.copy()
+            if self._base is not None:
+                rec_ = self._base.get(rec[start], rec_)
             rec_.update(rec)
-            for fn,err in filter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
+            for field,err in filter(lambda i: isinstance(i[1], ErrorLevel), rec_.items()):
                 if err: 
-                    self._error(err.level, err.msg, e, e.name, fn)
-                    rec_[fn] = None
+                    self._error(err.level, err.msg, e, e.name, field)
+                    rec_[field] = None
             return rec_
         
         def accum(db, m):
@@ -170,7 +172,7 @@ class parser(sfm.parser):
             try:
                 field = (m.name, valuator[0](m[0].rstrip() if m else ''))
             except Exception as err:
-                self._error(level.Content, err.msg if hasattr(err,'msg') else str(err), m)
+                self._error(level.Content, str(getattr(err, 'msg', err)), m)
                 field = (m.name, valuator[1])
             if m.name == start:
                 if isinstance(field[1], ErrorLevel): 
