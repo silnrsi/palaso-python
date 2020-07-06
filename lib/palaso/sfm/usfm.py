@@ -230,6 +230,9 @@ class parser(sfm.parser):
                  stylesheet=default_stylesheet,
                  default_meta=_default_meta, 
                  *args, **kwds):
+        if 'purefootnotes' in kwds:
+            self.purefootnotes = kwds['purefootnotes']
+            del kwds['purefootnotes']
         super().__init__(source, stylesheet, default_meta, private_prefix='z',*args, **kwds)
     
     
@@ -321,7 +324,11 @@ class parser(sfm.parser):
                                     tok, caller=parent.args[0])
         
         if tok.lstrip(): self._tokens.put_back(tok)
-        return self._canonicalise_footnote(self._default_(parent))
+
+        if self.purefootnotes:
+            return self._default_(parent)
+        else:
+            return self._canonicalise_footnote(self._default_(parent))
 
 
     def _Unspecified_(self, parent):

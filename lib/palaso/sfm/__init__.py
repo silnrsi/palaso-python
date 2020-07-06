@@ -118,6 +118,8 @@ class element(list):
                 sep = u' '
         elif self.meta.get('StyleType') == 'Character' :
             body = ' '
+        else:
+            body = "\n"
         if endmarker and 'implicit-closed' not in self.annotations:
             body += u'\\' + endmarker
         return sep.join([marker, body])
