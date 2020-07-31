@@ -77,7 +77,7 @@ def make_trans_matrix(tgt, ref, pos, scale):
     """ construct a transformation matrix based on the glyph bounding boxes 
         and constraints supplied """
     t = Box(*tgt.boundingBox()); r = Box(*ref.boundingBox())
-    if scale is 'auto': 
+    if scale == 'auto':
         scale = 'height' if r.aspect < t.aspect else 'width'
     sf = getattr(r,scale)/getattr(t,scale) if scale else 1.0
     (tx,ty) = t.pos(pos); (rx,ry) = r.pos(pos)
