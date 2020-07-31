@@ -195,10 +195,10 @@ class Templater(object) :
     def fn_default(self, control, *vals) :
         for v in vals :
             x = asstr(v)
-            if x is not '' :
+            if x != '':
                 return x
         return ''
-        
+
 if __name__ == '__main__' :
     import sys, os
     template = sys.argv[1]
