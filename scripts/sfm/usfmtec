@@ -11,7 +11,7 @@ __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
 '''
 
-from palaso.sfm import usfm, style, pprint, element, text
+from palaso.sfm import usfm, style, element, text
 from palaso.teckit.engine import Converter, Mapping
 from itertools import groupby, chain
 import csv
@@ -19,6 +19,7 @@ import codecs
 import glob
 import optparse
 import os.path
+import palaso.sfm as sfm
 import re
 import warnings
 import sys
@@ -355,7 +356,7 @@ if __name__ == '__main__':
             warnings.simplefilter("always" if opts.warnings
                                   else "ignore", SyntaxWarning)
             for job in work:
-                res = pprint(transduce(job[0], opts))
+                res = sfm.format(transduce(job[0], opts))
                 ofh = codecs.open(job[1], "w", "utf-8")
                 ofh.write(res)
                 ofh.close()
