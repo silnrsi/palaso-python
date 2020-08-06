@@ -117,7 +117,15 @@ class parser(sfm.parser):
     ...     list(parser([r'\\id TEST\\mt \\f + \\fr ref \\ft text\\f*suffixed text']))
     [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[text('text')]), text('suffixed text')])])]
     [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[element('fr', content=[text('ref ')]), text('text')]), text('suffixed text')])])]
-    
+
+    Test footnote canonicalisation flag
+    >>> with warnings.catch_warnings():
+    ...     warnings.simplefilter("error")
+    ...     list(parser([r'\\id TEST\\mt \\f + text\\f*suffixed text'], canonicalise_footnotes=False))
+    ...     list(parser([r'\\id TEST\\mt \\f + \\fr ref \\ft text\\f*suffixed text'], canonicalise_footnotes=False))
+    [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[text('text')]), text('suffixed text')])])]
+    [element('id', content=[text('TEST'), element('mt', content=[element('f', args=['+'], content=[element('fr', content=[text('ref ')]), element('ft', content=[text('text')])]), text('suffixed text')])])]
+
     Test marker parameters, particularly chapter and verse markers
     >>> list(parser([r'\\id TEST'         r'\\c 1']))
     [element('id', content=[text('TEST'), element('c', args=['1'])])]
@@ -229,10 +237,13 @@ class parser(sfm.parser):
     def __init__(self, source, 
                  stylesheet=default_stylesheet,
                  default_meta=_default_meta, 
+                 canonicalise_footnotes=True,
                  *args, **kwds):
-        if 'purefootnotes' in kwds:
-            self.purefootnotes = kwds['purefootnotes']
-            del kwds['purefootnotes']
+        if canonicalise_footnotes:
+            self._canonicalise_footnote = parser._canonicalise_footnote
+        else:
+            self._canonicalise_footnote = lambda x: x
+        
         super().__init__(source, stylesheet, default_meta, private_prefix='z',*args, **kwds)
     
     
@@ -325,10 +336,7 @@ class parser(sfm.parser):
         
         if tok.lstrip(): self._tokens.put_back(tok)
 
-        if self.purefootnotes:
-            return self._default_(parent)
-        else:
-            return self._canonicalise_footnote(self._default_(parent))
+        return self._canonicalise_footnote(self._default_(parent))
 
 
     def _Unspecified_(self, parent):
