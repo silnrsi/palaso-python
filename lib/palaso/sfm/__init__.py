@@ -620,7 +620,7 @@ def text_properties(*props):
     return _props
 
 
-def format(doc):
+def generate(doc):
     """
     Format a document inserting line separtors after paragraph markers where the 
     first element has children.
@@ -632,7 +632,7 @@ def format(doc):
     >>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
     \\id TEST
     \\mt \\p A paragraph
-    >>> print(format(parser(doc.splitlines(True), tss)))
+    >>> print(generate(parser(doc.splitlines(True), tss)))
     \\id TEST
     \\mt
     \\p A paragraph
