@@ -27,12 +27,12 @@ __history__ = '''
 '''
 import collections, codecs, functools, operator, re, warnings, os, sys
 from itertools import chain, groupby
-from functools import partial
+from functools import partial, reduce
 
 __all__ = ('usfm',                                           # Sub modules
            'position','element','text', 'level', 'parser',   # data types
            'sreduce','smap','sfilter','mpath',
-           'text_properties','pprint', 'copy')               # functions
+           'text_properties','format', 'copy')               # functions
 
 
 '''Immutable position data that attach to tokens'''
@@ -111,15 +111,11 @@ class element(list):
         body = ''.join(map(str, self))
         sep = ''
         if len(self) > 0:
-            if isinstance(self[0], element) \
-               and self.meta.get('StyleType') == 'Paragraph':
-                sep = os.linesep
-            elif not body.startswith(('\r\n','\n')):
+            if not body.startswith(('\r\n','\n')):
                 sep = u' '
         elif self.meta.get('StyleType') == 'Character':
             body = ' '
-        elif self.meta.get('StyleType') == 'Paragraph':
-            body = os.linesep
+
         if endmarker and 'implicit-closed' not in self.annotations:
             body += u'\\' + endmarker
         return sep.join([marker, body])
@@ -378,8 +374,7 @@ class parser(collections.Iterable):
      element('toc1', content=[text('Mathew\\n')]),
      element('mt1', content=[text('Mathew\\n')]),
      element('mt2', content=[text('Gospel Of Matthew')])]
-    >>> tss['rem'] = tss['rem'].copy()
-    >>> tss['rem']['OccursUnder'] = {'ide'}
+    >>> tss['rem'].update(OccursUnder={'ide'})
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error")
     ...     pprint(list(parser(doc.splitlines(True), tss)))
@@ -405,7 +400,7 @@ class parser(collections.Iterable):
     
     @classmethod
     def extend_stylesheet(cls, stylesheet, *names):
-        return dict({m: cls.default_meta for m in names}, **stylesheet)
+        return dict({m: cls.default_meta.copy() for m in names}, **stylesheet)
     
     
     def __init__(self, source, stylesheet={}, 
@@ -566,7 +561,7 @@ class parser(collections.Iterable):
 
 def sreduce(elementf, textf, trees, initial=None):
     def _g(a, e):
-        if isinstance(e, basestring): return textf(e,a)
+        if isinstance(e, str): return textf(e,a)
         return elementf(e, a, reduce(_g, e, initial))
     return reduce(_g, trees, initial)
 
@@ -625,9 +620,46 @@ def text_properties(*props):
     return _props
 
 
+def format(doc):
+    """
+    Format a document inserting line separtors after paragraph markers where the 
+    first element has children.
+    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph'
+    >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p')
+    >>> tss['mt'].update(StyleType='Paragraph')
+    >>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
+    >>> tree = list(parser(doc.splitlines(True), tss))
+    >>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
+    \\id TEST
+    \\mt \\p A paragraph
+    >>> print(format(parser(doc.splitlines(True), tss)))
+    \\id TEST
+    \\mt
+    \\p A paragraph
+    """
 
-def pprint(doc):
-    return ''.join(map(str, doc))
+    def ge(e, a, body):
+        styletype = e.meta.get('StyleType')
+        sep = ''
+        if len(e) > 0:
+            if styletype == 'Paragraph' and isinstance(e[0], element):
+                sep = os.linesep
+            elif not body.startswith(('\r\n','\n')):
+                sep = u' '
+        elif styletype == 'Character':
+             body = ' '
+        elif styletype == 'Paragraph':
+             body = os.linesep 
+        end = 'implicit-closed' in e.annotations or e.meta.get('Endmarker','') or ''
+        end = end and '\\'+end
+
+        return f"{a}\\{' '.join([e.name] + e.args)}{sep}{body}{end}" if e.name else ''
+
+    def gt(t, a):
+        return a + t
+    
+    return sreduce(ge, gt, doc, '')
+
 
 
 def copy(doc):

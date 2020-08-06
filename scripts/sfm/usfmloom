@@ -107,7 +107,7 @@ if __name__ == '__main__':
                       imap(partial(codecs.open, mode='r', encoding='utf_8_sig'), sfms)))
             validate_structure(*docs)
 
-            output.write(sfm.pprint(merge(opts.tags, *docs)))
+            output.write(sfm.format(merge(opts.tags, *docs)))
         
     except IOError, err:
         sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
