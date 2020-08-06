@@ -101,9 +101,9 @@ class parser(sfm.parser):
     >>> import warnings
     
     Tests for inline markers
-    >>> list(parser([r'\\test']))
+    >>> list(parser([r'\\test'], parser.extend_stylesheet('test')))
     [element('test')]
-    >>> list(parser([r'\\test text']))
+    >>> list(parser([r'\\test text'], parser.extend_stylesheet('test')))
     [element('test'), text(' text')]
     >>> list(parser([r'\\id JHN\\ior text\\ior*']))
     [element('id', content=[text('JHN'), element('ior', content=[text('text')])])]
