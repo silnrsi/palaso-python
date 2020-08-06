@@ -39,7 +39,7 @@ def _test_round_trip_parse(self, source, parser, *args, **kwds):
 #    src_encoding = getattr(source, 'encoding', None)
     source = list(source)
     doc = list(parser(source, *args, **kwds))
-    rt_doc = list(parser(sfm.format(doc).splitlines(True),*args,**kwds))
+    rt_doc = list(parser(sfm.generate(doc).splitlines(True),*args,**kwds))
     # Check for equivilent parse.
     self.assertEqual(doc, rt_doc, 'roundtrip parse unequal')
 
