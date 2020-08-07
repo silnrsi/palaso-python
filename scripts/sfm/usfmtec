@@ -29,6 +29,7 @@ class scrparser(usfm.parser):
     def _canonicalise_footnote(self, content):
         return content
 
+
 def uni_unescape(s):
     return codecs.decode(s, 'raw_unicode_escape')
 
@@ -180,7 +181,10 @@ class usfm_transducer(object):
         if tnode.parent and not (set(tnode.parent.meta['TextProperties'])
                                  & set(('publishable', 'vernacular'))):
             return tnode
-        if tnode.parent and ((tnode.parent.meta.get('StyleType') == 'Paragraph' and tnode is tnode.parent[0]) or tnode.parent.name in self.ctags):
+        if (tnode.parent
+            and ((tnode.parent.meta.get('StyleType') == 'Paragraph'
+                  and tnode is tnode.parent[0])
+                 or tnode.parent.name in self.ctags)):
             self.caps[-1] = 1
         self.tnode = tnode
         res = re.sub(r'[^\x00-\x1f]+', self.convert, tnode)
@@ -205,10 +209,11 @@ class usfm_transducer(object):
             pass
         elif re.match(r'^\s*\S', res):
             self.caps[-1] = 0
+        parent_node = self.tnode.parent
         rlist = aswords(res)
         res = ""
-        while len(rlist):
-            l = len(rlist)
+        while len(rlist) > 0:
+            rlen = len(rlist)
             wd = rlist.pop(0)
             if wd:
                 case = wd[0].isupper()
@@ -216,20 +221,31 @@ class usfm_transducer(object):
                 found = False
                 if wd in self.phrase_keys:
                     for p in self.phrase_keys[wd]:
-                        if len(p) <= l and p[1:] == rlist[0:len(p)-1]:
+                        if len(p) <= rlen and p[1:] == rlist[0:len(p)-1]:
                             s = "".join(p)
-                            if s in self.tags and self.tnode.parent.name not in self.tags[s]:
+
+                            if s in self.tags \
+                                    and parent_node.name not in self.tags[s]:
                                 continue
                             del rlist[0:len(p)-1]
                             wd = self.phrases[s]
                             found = True
                             break
-                if not found and wd in self.dict and (wd not in self.tags or self.tnode.parent.name in self.tags[wd]):
+                if (not found
+                    and wd in self.dict
+                    and (wd not in self.tags
+                         or parent_node.name in self.tags[wd])):
                     wd = self.dict[wd]
                     found = True
                 elif self.morph_keys and not found:
-                    wd = re.sub(f'(?iu)({self.morph_keys})',
-                                lambda m: self.morphs[m.group(1)] if m.group(1) not in self.tags or self.tnode.parent.name in self.tags[wd] else m.group(1), wd)
+                    def _g(m):
+                        g = m.group(1)
+                        if g not in self.tags \
+                                or parent_node.name in self.tags[wd]:
+                            g = self.morphs[g]
+                        return g
+
+                    wd = re.sub(f'(?iu)({self.morph_keys})', _g, wd)
                 if case:
                     wd = wd[0].upper() + wd[1:]
             if len(rlist):
@@ -237,15 +253,36 @@ class usfm_transducer(object):
             else:
                 res += wd
 
-        res = re.sub(f'([{self.punc}][{self.cquotes}\\s]*[{self.oquotes}\\s]*)(.)', lambda m: m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
+        res = re.sub(
+            '([{self.punc}][{self.cquotes}\\s]*[{self.oquotes}\\s]*)(.)',
+            lambda m: (m.group(1) + (m.group(2).upper()
+                       if isword(m.group(2)[0])
+                       else m.group(2))),
+            res)
 
-        if self.tnode.parent and (self.tnode.parent.meta['TextType'] == 'Title' or self.tnode.parent.name in self.calltags) and self.capquotes:
-            res = re.sub(r'(^\s*|\s)([' + self.capquotes + r']*)(.)', lambda m: m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
+        if parent_node \
+           and (parent_node.meta['TextType'] == 'Title'
+                or parent_node.name in self.calltags) \
+           and self.capquotes:
+            res = re.sub(
+                f'(^\\s*|\\s)([{self.capquotes}]*)(.)',
+                lambda m: (m.group(1) + m.group(2) + (m.group(3).upper()
+                           if isword(m.group(3)[0])
+                           else m.group(3))),
+                res)
         elif self.capquotes:
-            res = re.sub('(?<=[' + self.capquotes + r'])([' + self.oquotes + ']*)(.)', lambda m: m.group(1) + m.group(2).upper() if isword(m.group(2)[0]) else m.group(1) + m.group(2), res)
+            res = re.sub(
+                f'(?<=[{self.capquotes}])([{self.oquotes}]*)(.)',
+                lambda m: (m.group(1) + m.group(2).upper()
+                           if isword(m.group(2)[0])
+                           else m.group(1) + m.group(2)),
+                res)
 
         if self.case:
-            res = re.sub(self.case, lambda m: m.group(0)[0].upper() + m.group(0)[1:], res)
+            res = re.sub(
+                self.case,
+                lambda m: m.group(0)[0].upper() + m.group(0)[1:],
+                res)
         return res
 
 
@@ -260,13 +297,18 @@ def transduce(fname, opts):
         conv.enc = pyconverter(opts.python, opts.pythonfunc)
 
     if opts.dict:
-        conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput, tagcol=opts.dicttag, binary=opts.binary)
+        conv.load_dict(opts.dict, opts.dictinput, opts.dictoutput,
+                       tagcol=opts.dicttag, binary=opts.binary)
 
     infh = codecs.open(fname, 'r', 'latin_1' if opts.binary else 'utf_8_sig')
     try:
-        doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
+        doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node,
+                     scrparser(infh,
+                               stylesheet=opts.stylesheet,
+                               error_level=opts.error_level))
     except SyntaxError as err:
-        sys.stderr.write(parser.expand_prog_name(f'%prog: failed to parse USFM: {err!s}\n'))
+        sys.stderr.write(parser.expand_prog_name(
+            f'%prog: failed to parse USFM: {err!s}\n'))
         sys.exit(1)
     finally:
         infh.close()
@@ -280,40 +322,86 @@ if __name__ == '__main__':
         sentencepunc=b".!?",
         openquotes=b"'\"\\u2018\\u201C\\[{(<\\u00AB",
         closequotes=b"'\"\\u2019\\u201D\\]})>\\u00BB")
-    parser.add_option("-b", "--binary", action="store_true", help="Input is legacy encoded, not Unicode")
-    parser.add_option("-c", "--capitalise", action="store", help="regular expression match which is capitalised")
-    parser.add_option("--capitaltags", action="store", help="list of tags to capitalise their contents")
-    parser.add_option("--capitalalltags", action="store", help="list of tags to capitalise each word in their contents")
-    parser.add_option("--openquotes", action="store", help="list of opening quote chars as a string with \\u escaping [default: %default]")
-    parser.add_option("--closequotes", action="store", help="list of closing quote chars as a string with \\u escaping [default: %default]")
-    parser.add_option("--sentencepunc", action="store", help="list of sentence final punctuation with \\u escaping [default: %default]")
-    parser.add_option("--capitalopenquotes", action="store", help="list of chars that force a new sentence [default value of --openquotes]")
-    parser.add_option("--letters", action="store", help="more word forming characters, with \\u escaping")
-    parser.add_option("-d", "--dict", action="store", metavar='PATH', help="CSV dictionary of input output replacements")
-    parser.add_option("--dict-input", action="store", type="int", dest="dictinput", default=0, help="Input column number (from 0) of CSV dictionary [%default]")
-    parser.add_option("--dict-output", action="store", type="int", default=1, dest="dictoutput", help="Output column number (from 0) of CSV dictionary [%default]")
-    parser.add_option("--dict-context", action="store", type="int", dest="dicttag", default=-1, help="Marker context column number (from o) of CSV dictionary. Cells contain a space separated list of required markers.")
-    parser.add_option("-n", "--lines", action="store_true", help="Don't parse as USFM, just as plain text")
-    parser.add_option("-o", "--output", action="store", metavar='PATH', help="Specify output file or directory")
-    parser.add_option("-p", "--python", action="store", metavar='PATH', help="Python file containing converter code")
-    parser.add_option("--pythonfunc", action="store", help="Function name within python file, to call to convert text")
-    parser.add_option("-t", "--tec", action="store", metavar='PATH', help="TECKit .tec file to use for conversion")
-    parser.add_option("-r", "--reverse", action="store_true", help="Run .tec file in reverse")
-    parser.add_option("--normalize", action="store", help="Unicode normalize converted text [c, d, kc, kd]")
+    parser.add_option("-b", "--binary", action="store_true",
+                      help="Input is legacy encoded, not Unicode")
+    parser.add_option("-c", "--capitalise", action="store",
+                      help="regular expression match which is capitalised")
+    parser.add_option("--capitaltags", action="store",
+                      help="list of tags to capitalise their contents")
+    parser.add_option(
+        "--capitalalltags", action="store",
+        help="list of tags to capitalise each word in their contents")
+    parser.add_option(
+        "--openquotes", action="store",
+        help="list of opening quote chars as a string with \\u escaping"
+             " [default: %default]")
+    parser.add_option(
+        "--closequotes", action="store",
+        help="list of closing quote chars as a string with \\u escaping"
+             " [default: %default]")
+    parser.add_option(
+        "--sentencepunc", action="store",
+        help="list of sentence final punctuation with \\u escaping"
+             " [default: %default]")
+    parser.add_option(
+        "--capitalopenquotes", action="store",
+        help="list of chars that force a new sentence"
+             " [default value of --openquotes]")
+    parser.add_option("--letters", action="store",
+                      help="more word forming characters, with \\u escaping")
+    parser.add_option("-d", "--dict", action="store", metavar='PATH',
+                      help="CSV dictionary of input output replacements")
+    parser.add_option(
+        "--dict-input", action="store", type="int", dest="dictinput",
+        default=0,
+        help="Input column number (from 0) of CSV dictionary [%default]")
+    parser.add_option(
+        "--dict-output", action="store", type="int", dest="dictoutput",
+        default=1,
+        help="Output column number (from 0) of CSV dictionary [%default]")
+    parser.add_option(
+        "--dict-context", action="store", type="int", dest="dicttag",
+        default=-1,
+        help="Marker context column number (from o) of CSV dictionary. Cells"
+             " contain a space separated list of required markers.")
+    parser.add_option("-n", "--lines", action="store_true",
+                      help="Don't parse as USFM, just as plain text")
+    parser.add_option("-o", "--output", action="store", metavar='PATH',
+                      help="Specify output file or directory")
+    parser.add_option("-p", "--python", action="store", metavar='PATH',
+                      help="Python file containing converter code")
+    parser.add_option(
+        "--pythonfunc", action="store",
+        help="Function name within python file, to call to convert text")
+    parser.add_option("-t", "--tec", action="store", metavar='PATH',
+                      help="TECKit .tec file to use for conversion")
+    parser.add_option("-r", "--reverse", action="store_true",
+                      help="Run .tec file in reverse")
+    parser.add_option("--normalize", action="store",
+                      help="Unicode normalize converted text [c, d, kc, kd]")
     parser.add_option("-v", "--verbose", action='store_true', default=False,
                       help='Print out statistics and progress info')
-    parser.add_option("", "--no-warnings", action='store_false', dest='warnings', default=True,
-                      help='Silence syntax warnings discovered during SFM parsing')
-    parser.add_option("-s", "--strict", action='store_const', dest='error_level', const=usfm.level.Marker,
-                      default=usfm.level.Content,
-                      help='Turn on strict parsing mode. Markers not in the stylesheet or private name space will cause an error')
-    parser.add_option("-l", "--loose", action='store_const', dest='error_level', const=usfm.level.Unrecoverable,
-                      default=usfm.level.Content,
-                      help='Turn on loose parsing mode. Nothing short of orphan markers or unterminated inlines will halt the parser.')
-    parser.add_option("-S", "--stylesheet", action='store', type='string',
-                      metavar='PATH', default=None,
-                      help='User stylesheet to add/override marker definitions to the default USFM stylesheet')
-    parser.add_option("-V", "--version", action="store_true", help="Print program version and exit")
+    parser.add_option(
+        "", "--no-warnings", action='store_false', dest='warnings',
+        default=True,
+        help='Silence syntax warnings discovered during SFM parsing')
+    parser.add_option(
+        "-s", "--strict", action='store_const', dest='error_level',
+        const=usfm.level.Marker, default=usfm.level.Content,
+        help='Turn on strict parsing mode. Markers not in the stylesheet or'
+             ' private name space will cause an error')
+    parser.add_option(
+        "-l", "--loose", action='store_const', dest='error_level',
+        const=usfm.level.Unrecoverable, default=usfm.level.Content,
+        help='Turn on loose parsing mode. Nothing short of orphan markers or'
+             ' unterminated inlines will halt the parser.')
+    parser.add_option(
+        "-S", "--stylesheet", action='store', type='string',
+        metavar='PATH', default=None,
+        help='User stylesheet to add/override marker definitions to the'
+             ' default USFM stylesheet')
+    parser.add_option("-V", "--version", action="store_true",
+                      help="Print program version and exit")
 
     opts, sfms = parser.parse_args()
 
@@ -338,7 +426,8 @@ if __name__ == '__main__':
     else:
         opts.stylesheet = usfm.default_stylesheet
 
-    if opts.letters : isletters = uni_unescape(opts.letters)
+    if opts.letters:
+        isletters = uni_unescape(opts.letters)
 
     work = []
     first_def = -1

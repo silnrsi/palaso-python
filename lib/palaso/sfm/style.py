@@ -21,7 +21,7 @@ import re
 import palaso.sfm.records as records
 import warnings
 from collections import abc
-from palaso.sfm.records import sequence, flag, unique, level
+from palaso.sfm.records import sequence, unique, level
 from palaso.sfm.records import UnrecoverableError
 
 
@@ -52,7 +52,7 @@ _fields = {
     # 'RightMargin':     (float, 0),
     # 'Color':           (int,   0),
 }
-    
+
 _comment = re.compile(r'\s*#.*$')
 _markers = re.compile(r'^\s*\\[^\s\\]+\s')
 
@@ -95,7 +95,7 @@ class marker(dict):
         return super().pop(key.casefold(), *args, **kwargs)
 
     def setdefault(self, key, *args, **kwargs):
-        super().setdefault(key, default)
+        super().setdefault(key, *args, **kwargs)
 
     def update(self, iterable=(), **kwarg):
         if isinstance(iterable, abc.Mapping):
@@ -177,7 +177,8 @@ def parse(source, error_level=level.Content, base=None):
     no_comments = (_comment.sub('', l) for l in source)
 
     with warnings.catch_warnings():
-        warnings.simplefilter("always" if error_level > level.Content else "ignore")
+        warnings.simplefilter(
+            "always" if error_level > level.Content else "ignore")
         rec_parser = records.parser(
                         no_comments,
                         records.schema('Marker', _fields),
@@ -188,9 +189,9 @@ def parse(source, error_level=level.Content, base=None):
         next(recs, None)
         res = dict(_munge_records(recs))
     if base is not None:
-        base.update({n: (_merge_record(base[n], r) if n in base else r) for n,r in res.items()})
+        base.update({n: (_merge_record(base[n], r) if n in base else r)
+                     for n, r in res.items()})
         res = base
-    _reify(res)
     return res
 
 def _merge_record(old, new):

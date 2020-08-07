@@ -6,11 +6,10 @@ errors found for each SFM file in the project.
 Automatically load the usfm.sty and custom.sty stylesheets if present
 '''
 from palaso.sfm import usfm, style
+from pathlib import Path
 from itertools import chain
 import argparse
 import codecs
-import functools
-from pathlib import Path
 import warnings
 
 __version__ = '0.1'
@@ -59,7 +58,8 @@ if __name__ == '__main__':
     try:
         stylesheet = usfm.default_stylesheet.copy()
         for p in args.stylesheet:
-            stylesheet = style.parse((args.project / p).open(), base=stylesheet)
+            stylesheet = style.parse((args.project / p).open(),
+                                     base=stylesheet)
     except SyntaxError as err:
         parser.exit(3, f'{parser.prog}: Style sheet parsing error: {err!s}\n')
 
