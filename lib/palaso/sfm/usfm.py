@@ -25,7 +25,7 @@ import palaso.sfm.style as style
 import palaso.sfm as sfm
 from palaso.sfm import level
 from itertools import chain
-from functools import partial, reduce
+from functools import reduce
 
 _PALASO_DATA = os.path.join(
         os.path.expanduser(os.path.dirname(os.path.normpath(site.USER_SITE))),
@@ -40,8 +40,7 @@ def _newer(cache, benchmark):
     return os.path.getmtime(benchmark) <= os.path.getmtime(cache)
 
 def _is_fresh(cached_path, benchmarks):
-    return reduce(operator.and_, 
-                  map(partial(_newer, cached_path), benchmarks))
+    return reduce(operator.and_, (_newer(cached_path, b) for b in benchmarks))
 
 def _cached_stylesheet(path):
     package_dir = os.path.dirname(__file__)
@@ -230,7 +229,7 @@ class parser(sfm.parser):
     
     @classmethod
     def extend_stylesheet(cls, *names, **kwds):
-        return super(parser,cls).extend_stylesheet(
+        return super().extend_stylesheet(
                 kwds.get('stylesheet', default_stylesheet), *names)
     
     
@@ -254,7 +253,7 @@ class parser(sfm.parser):
                 '(line {0.pos.line},{0.pos.col}) '
                 'should be closed with \\{1}', tok, parent,
                 parent.meta['Endmarker'])
-        else: super(parser, self)._force_close(parent, tok)                          
+        else: super()._force_close(parent, tok)
     
     
     def _ChapterNumber_(self, chapter_marker):
@@ -355,7 +354,7 @@ class parser(sfm.parser):
 
 class reference(sfm.position):
     def __new__(cls, pos, ref):
-        p = super(reference,cls).__new__(cls, *pos)
+        p = super().__new__(cls, *pos)
         p.book = ref[0]
         p.chapter = ref[1]
         p.verse = ref[2]

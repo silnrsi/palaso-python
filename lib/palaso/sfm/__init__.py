@@ -38,7 +38,7 @@ __all__ = ('usfm',                                           # Sub modules
 '''Immutable position data that attach to tokens'''
 class position(collections.namedtuple('position', ['line', 'col'])):
     def __str__(self):
-        return 'line {0.line},{0.col}'.format(self)
+        return f'line {self.line},{self.col}'
 
 
 class element(list):
@@ -80,7 +80,7 @@ class element(list):
     # __slots__ = ('pos', 'name', 'args', 'parent', 'meta', 'annotations')
     
     def __init__(self, name, pos=position(1,1), args=[], parent=None, meta={}, content=[]):
-        super(element,self).__init__(content)
+        super().__init__(content)
         self.name = str(name) if name else None
         self.pos = pos
         self.args = args
@@ -90,11 +90,10 @@ class element(list):
     
     def __repr__(self):
         args = [repr(self.name)] \
-            + (self.args and [u'args=' + repr(self.args)]) \
-            + (self   and [u'content=' + super(element,self).__repr__()])
-        return u'element({0!s})'.format(', '.join(args))
-    
-    
+            + (self.args and [f'args={self.args!r}']) \
+            + (self and [f'content={super().__repr__()}'])
+        return f"element({', '.join(args)!s})"
+
     def __eq__(self, rhs):
         if not isinstance(rhs, element):
             return False
@@ -103,21 +102,23 @@ class element(list):
            and (not self.meta or not rhs.meta or self.meta == rhs.meta) \
            and (not self.annotations or not rhs.annotations 
                                      or self.meta == rhs.meta) \
-           and super(element,self).__eq__(rhs)
+          and super().__eq__(rhs))
     
     def __str__(self):
-        marker = ('\\' + ' '.join([self.name] + self.args)) if self.name else ''
-        endmarker = self.meta.get('Endmarker',u'')
+        marker = ''
+        if self.name:
+            marker = f"\\{' '.join([self.name] + self.args)}"
+        endmarker = self.meta.get('Endmarker','')
         body = ''.join(map(str, self))
         sep = ''
         if len(self) > 0:
             if not body.startswith(('\r\n','\n')):
-                sep = u' '
+                sep = ' '
         elif self.meta.get('StyleType') == 'Character':
             body = ' '
 
         if endmarker and 'implicit-closed' not in self.annotations:
-            body += u'\\' + endmarker
+            body += f'\\{endmarker}'
         return sep.join([marker, body])
 
 
@@ -170,7 +171,7 @@ class text(str):
     (text('a few short words'), position(line=1, col=1))
     '''
     def __new__(cls, content, pos=position(1,1), parent=None):
-        return super(text,cls).__new__(cls, content)
+        return super().__new__(cls, content)
     
     def __init__(self, content, pos=position(1,1), parent=None):
         self.pos = pos
@@ -199,26 +200,26 @@ class text(str):
     
     def lstrip(self,*args,**kwds):
         l = len(self)
-        s_ = super(text,self).lstrip(*args,**kwds)
+        s_ = super().lstrip(*args, **kwds)
         return text(s_, position(self.pos.line, self.pos.col + l-len(s_)), self.parent)
     
     def rstrip(self,*args,**kwds):
-        s_ = super(text,self).rstrip(*args, **kwds)
+        s_ = super().rstrip(*args, **kwds)
         return text(s_, self.pos, self.parent)
     
     def strip(self,*args,**kwds):
         return self.lstrip(*args, **kwds).rstrip(*args, **kwds)
     
     def __repr__(self):
-        return u'text({0!s})'.format(super(text,self).__repr__())
+        return f'text({super().__repr__()!s})'
     
     def __add__(self, rhs):
-        return text(super(text,self).__add__(rhs), self.pos,self.parent)
+        return text(super().__add__(rhs), self.pos,self.parent)
     
     def __getslice__(self, i, j): return self.__getitem__(slice(i, j))
     
     def __getitem__(self,i):
-        return text(super(text,self).__getitem__(i), 
+        return text(super().__getitem__(i),
                     position(self.pos.line, self.pos.col \
                                             + (i.start or 0 if isinstance(i, slice) else i)),
                     self.parent)
@@ -269,14 +270,19 @@ class _put_back_iter(collections.Iterator):
         return self._pbq[-1]
 
 
-_default_meta = {'TextType':'default', 'OccursUnder':set([None]), 'Endmarker':None, 'StyleType':None}
+_default_meta = {'TextType': 'default',
+                 'OccursUnder': {None},
+                 'Endmarker': None,
+                 'StyleType': None}
 
-class level:
-    Note            = -1
-    Marker          =  0
-    Content         =  1
-    Structure       =  2
-    Unrecoverable   =  100
+
+class level(IntEnum):
+    Note = -1
+    Marker = 0
+    Content = 1
+    Structure = 2
+    Unrecoverable = 100
+
 
 class parser(collections.Iterable):
     '''
@@ -420,20 +426,18 @@ class parser(collections.Iterable):
         # Compute end marker stylesheet definitions
         em_def = {'TextType':None, 'Endmarker':None}
         self._sty = stylesheet.copy()
-        self._sty.update((m['Endmarker'], dict(em_def, OccursUnder=set([k]))) 
+        self._sty.update((m['Endmarker'], dict(em_def, OccursUnder={k}))
                                for k, m in stylesheet.items() if m['Endmarker'])
     
     
     def _error(self, severity, msg, ev, *args, **kwds):
-        if severity >= 0  and severity >= self._error_level:
-            msg = ('{source}: line {token.pos.line},{token.pos.col}: ' + str(msg)).format(token=ev,source=self.source,
-                                                                                               *args,**kwds)
+        msg = (f'{self.source}: line {ev.pos.line},{ev.pos.col}: '
+               f'{str(msg).format(token=ev,source=self.source, *args,**kwds)}')
+        if severity >= 0 and severity >= self._error_level:
             raise SyntaxError(msg)
-        elif severity < 0 and severity < self._error_level: 
+        elif severity < 0 and severity < self._error_level:
             pass
         else:
-            msg = ('{source}: line {token.pos.line},{token.pos.col}: ' + str(msg)).format(token=ev,source=self.source,
-                                                                                               *args,**kwds)
             warnings.warn_explicit(msg, SyntaxWarning, self.source, ev.pos.line)
     
     
@@ -482,7 +486,7 @@ class parser(collections.Iterable):
                 if tag.startswith(parent.meta['Endmarker']):
                     cut = len(parent.meta['Endmarker'])
                     if cut != len(tag):
-                        if self._tokens.peek()[0] == u'\\':
+                        if self._tokens.peek()[0] == '\\':
                             self._tokens.put_back(tag[cut:])
                         else:
                             # If the next token isn't a marker coaleces the 
@@ -497,7 +501,7 @@ class parser(collections.Iterable):
     def _default_(self, parent):
         get_meta = self.__get_style
         for tok in self._tokens:
-            if tok[0] == u'\\':  # Parse markers.
+            if tok[0] == '\\':  # Parse markers.
                 tok  = self._extract_tag(parent, tok)
                 tag = tok[1:]
                 meta = get_meta(tag)
@@ -645,7 +649,7 @@ def generate(doc):
             if styletype == 'Paragraph' and isinstance(e[0], element):
                 sep = os.linesep
             elif not body.startswith(('\r\n','\n')):
-                sep = u' '
+                sep = ' '
         elif styletype == 'Character':
              body = ' '
         elif styletype == 'Paragraph':

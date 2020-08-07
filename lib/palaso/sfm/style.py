@@ -23,11 +23,7 @@ import warnings
 from collections import abc
 from palaso.sfm.records import sequence, flag, unique, level
 from palaso.sfm.records import UnrecoverableError
-from functools import partial
 
-class _absent:
-    def __init__(self, def_val):
-        self.value = def_val
 
 
 _fields = {
@@ -178,7 +174,7 @@ def parse(source, error_level=level.Content, base=None):
     ''' # noqa
 
     # strip comments out
-    no_comments = map(partial(_comment.sub, ''), source)
+    no_comments = (_comment.sub('', l) for l in source)
 
     with warnings.catch_warnings():
         warnings.simplefilter("always" if error_level > level.Content else "ignore")
