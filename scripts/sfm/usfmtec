@@ -11,7 +11,7 @@ __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
 '''
 
-from palaso.sfm import usfm, style, element, text
+from palaso.sfm import usfm, style, element, text, generate
 from palaso.teckit.engine import Converter, Mapping
 from itertools import groupby, chain
 import csv
@@ -32,8 +32,13 @@ class scrparser(usfm.parser):
 def uni_unescape(s):
     return codecs.decode(s, 'raw_unicode_escape')
 
-word_cat = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Me', 'Pd', 'Cs',
-                'Co', 'Cn'])
+
+word_cat = {
+    'Lu', 'Ll', 'Lt', 'Lm', 'Lo',
+    'Mn', 'Mc', 'Me', 'Pd', 'Cs',
+    'Co', 'Cn'
+}
+
 isletters = ""
 
 
@@ -194,9 +199,9 @@ class usfm_transducer(object):
         if self.caps[-1]:
             res = re.sub(r'^([\s' + self.oquotes + r']*)(.)',
                          lambda m: m.group(1) + m.group(2).upper(), res)
-        if re.search(r'[{1}][{0}]*\s*$'.format(self.cquotes, self.punc), res):
+        if re.search(f'[{self.punc}][{self.cquotes}]*\\s*$', res):
             self.caps[-1] = 1
-        elif re.search(r'[{0}]+\s*$'.format(self.cquotes), res):
+        elif re.search(f'[{self.cquotes}]+\\s*$', res):
             pass
         elif re.match(r'^\s*\S', res):
             self.caps[-1] = 0
@@ -223,7 +228,7 @@ class usfm_transducer(object):
                     wd = self.dict[wd]
                     found = True
                 elif self.morph_keys and not found:
-                    wd = re.sub('(?iu)(' + self.morph_keys + ')',
+                    wd = re.sub(f'(?iu)({self.morph_keys})',
                                 lambda m: self.morphs[m.group(1)] if m.group(1) not in self.tags or self.tnode.parent.name in self.tags[wd] else m.group(1), wd)
                 if case:
                     wd = wd[0].upper() + wd[1:]
@@ -232,7 +237,7 @@ class usfm_transducer(object):
             else:
                 res += wd
 
-        res = re.sub(r'([{0}][{1}\s]*[{2}\s]*)(.)'.format(self.punc, self.cquotes, self.oquotes), lambda m: m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
+        res = re.sub(f'([{self.punc}][{self.cquotes}\\s]*[{self.oquotes}\\s]*)(.)', lambda m: m.group(1) + (m.group(2).upper() if isword(m.group(2)[0]) else m.group(2)), res)
 
         if self.tnode.parent and (self.tnode.parent.meta['TextType'] == 'Title' or self.tnode.parent.name in self.calltags) and self.capquotes:
             res = re.sub(r'(^\s*|\s)([' + self.capquotes + r']*)(.)', lambda m: m.group(1) + m.group(2) + (m.group(3).upper() if isword(m.group(3)[0]) else m.group(3)), res)
@@ -261,7 +266,7 @@ def transduce(fname, opts):
     try:
         doc = sfmmap(conv.element_start, conv.element_end, conv.convert_node, scrparser(infh, stylesheet=opts.stylesheet, error_level=opts.error_level))
     except SyntaxError as err:
-        sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
+        sys.stderr.write(parser.expand_prog_name(f'%prog: failed to parse USFM: {err!s}\n'))
         sys.exit(1)
     finally:
         infh.close()
@@ -269,7 +274,8 @@ def transduce(fname, opts):
 
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser(usage='%prog [options] <SFM FILE>\n' + __doc__)
+    parser = optparse.OptionParser(
+        usage=f'%prog [options] <SFM FILE>\n{__doc__}')
     parser.set_defaults(
         sentencepunc=b".!?",
         openquotes=b"'\"\\u2018\\u201C\\[{(<\\u00AB",

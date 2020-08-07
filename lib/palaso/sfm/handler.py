@@ -36,11 +36,12 @@ def transduce(parser, handler, source):
         if isinstance(e, basestring): 
             return line + handler.text(e.pos, e.parent, e)
         
-        line += u'\\' + handler.start(e.pos, e.parent and e.parent.name, e.name, e.args)
-        body = reduce(_g, e, u'')
-        line += body if not body or not body.startswith('\\\\') and body.startswith(('\r\n','\n','\\')) else u' ' + body
+        line += '\\' + handler.start(e.pos, e.parent and e.parent.name, e.name, e.args)
+        body = reduce(_g, e, '')
+        line += body if not body or not body.startswith('\\\\') and body.startswith(('\r\n','\n','\\')) else ' ' + body
         tag = handler.end(e.pos, e.parent and e.parent.name, e.name)
-        if tag: line += u'\\' + tag
+        if tag:
+            line += f'\\{tag}'
         return line
     
     
@@ -50,7 +51,7 @@ def transduce(parser, handler, source):
         warnings.simplefilter("always", SyntaxWarning)
         
         doc = parser(source)
-        return reduce(_g, doc, u'').splitlines(True)
+        return reduce(_g, doc, '').splitlines(True)
 
 
 
@@ -60,7 +61,7 @@ def parse(parser,handler,source):
             handler.text(e.pos, e.parent, e)
         else:
             handler.start(e.pos, e.parent.name, e.name, e.args)
-            reduce(_g, e, u'')
+            reduce(_g, e, '')
             handler.end(e.pos, e.parent.name, e.name)
     
     
@@ -70,8 +71,7 @@ def parse(parser,handler,source):
         warnings.simplefilter("always", SyntaxWarning)
         
         doc = parser(source)
-        return reduce(_g, doc, u'').splitlines(True)
-
+        return reduce(_g, doc, '').splitlines(True)
 
 
 if __name__ == '__main__':

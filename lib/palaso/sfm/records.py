@@ -61,7 +61,7 @@ def unique(p):
 class ErrorLevel(object):
     __slots__ = ('msg','level')
     def __new__(cls, level, msg):
-        el = super(ErrorLevel, cls).__new__(cls)
+        el = super().__new__(cls)
         el.msg = msg
         el.level = level
         return el
@@ -141,16 +141,14 @@ class parser(sfm.parser):
     '''
     def __init__(self, source, schema, error_level=level.Content, base=None):
         if not isinstance(schema, _schema): 
-            raise TypeError('arg 2 must a \'schema\' not {0!r}'.format(schema))
+            raise TypeError(f"arg 2 must a \'schema\' not {schema!r}")
         self._base = {None:{}} if base is None else base
         self._mapping_type = type(next(iter(self._base.values()), {}))
         self._schema = schema
         default_meta = self._mapping_type(super().default_meta)
         metas = self._mapping_type({k: default_meta for k in schema.fields})
-        super(parser,self).__init__(source, 
-                    stylesheet=metas, 
-                    error_level=error_level)
-    
+        super().__init__(source, stylesheet=metas, error_level=error_level)
+
     def __iter__(self):
         start,fields = self._schema
         proto = self._mapping_type({k:dv for k,(_,dv) in fields.items()})
@@ -183,7 +181,7 @@ class parser(sfm.parser):
                 db[-1].append(field)
             return db
         
-        es = super(parser,self).__iter__()
+        es = super().__iter__()
         fs = filter(lambda v: isinstance(v, sfm.element), es)
         fgs = reduce(accum, fs, [sfm.element('header')])
         return chain((dict(fgs[0]),), map(record, fgs[1:]))

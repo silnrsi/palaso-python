@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Count the words in a USFM file skipping punctuation and non-publication 
 markers updating a master concordance CSV file with any new references 
@@ -15,9 +15,10 @@ can be done.
 
 import palaso.sfm as sfm
 from palaso.sfm import usfm, style
-from itertools import chain,ifilter,groupby,imap
+from itertools import chain, groupby, starmap
+from functools import reduce
 import palaso.unicsv as csv
-import codecs, collections, glob, operator, optparse, os.path, \
+import codecs, collections, glob, optparse, os.path, \
         warnings, shutil, sys, tempfile, unicodedata
 
 
@@ -29,21 +30,26 @@ class references(set):
     def __init__(self,iterable=[]):
         if isinstance(iterable,basestring):
             iterable = [r.strip() for r in iterable.split(',')]
-        super(references,self).__init__(iterable)
+        super().__init__(iterable)
     
     def __str__(self): return ', '.join(sorted(self))
 
 
 class reference(sfm.position):
     def __new__(cls, pos, ref):
-        p = super(reference,cls).__new__(cls, *pos)
+        p = super().__new__(cls, *pos)
         p.book = ref[0]
         p.chapter = ref[1]
         p.verse = ref[2]
         return p
 
 
-word_cat = set(['Lu','Ll','Lt','Lm','Lo','Mn','Mc','Me','Pd','Cs','Co','Cn'])
+word_cat = {
+    'Lu', 'Ll', 'Lt', 'Lm', 'Lo',
+    'Mn', 'Mc', 'Me',
+    'Pd',
+    'Cs', 'Co', 'Cn'
+}
 '''Define a word character as being one of:
      Letter
      Mark
@@ -51,7 +57,13 @@ word_cat = set(['Lu','Ll','Lt','Lm','Lo','Mn','Mc','Me','Pd','Cs','Co','Cn'])
      Other,{Surrogate,Private Use,Not Assigned}'''
 
 
-nonword_cat = set(['Nd','Nl','No','Pc','Ps','Pe','Pi','Pf','Po','Sm','Sc','Sk','So','Zs','Zl','Zp','Cc','Cf'])
+nonword_cat = {
+    'Nd', 'Nl', 'No',
+    'Pc', 'Ps', 'Pe', 'Pi', 'Pf', 'Po',
+    'Sm', 'Sc', 'Sk', 'So',
+    'Zs', 'Zl', 'Zp',
+    'Cc', 'Cf'
+}
 '''Define a word character as not being any of:
          Number
          Punctuation (all except Dash)
@@ -73,11 +85,7 @@ def word_char(char, __ucd_category=unicodedata.category):
 def words(text):
     '''Split a text string into words.
        Words are defined as groups of characters that satisfy word_char'''
-    joiner = unicode().join
-    return imap(joiner, 
-                imap(operator.itemgetter(1),
-                     ifilter(operator.itemgetter(0),
-                             groupby(text, word_char))))
+    return (''.join(g[1]) for g in groupby(text, word_char) if g[0])
 
 
 def _flatten(doc):
@@ -101,36 +109,37 @@ def decorate_references(source):
 
 
 def concordance(refs, source_path):
-    opts.verbose and sys.stdout.write('processing file: {0!r}\n'.format(source_path))
+    opts.verbose and sys.stdout.write(f'processing file: {source_path!r}\n')
     try:
         with codecs.open(source_path, 'r', encoding='utf_8_sig') as source:
             doc = sfm.sfilter(sfm.text_properties('publishable','vernacular'), 
                         decorate_references(
                                 usfm.parser(source, stylesheet=opts.stylesheet, 
                                                     error_level=opts.error_level)))
-    except SyntaxError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: failed to parse USFM: {0!s}\n').format(err))
+    except SyntaxError as err:
+        sys.stderr.write(parser.expand_prog_name(
+            f'%prog: failed to parse USFM: {err!s}\n'))
         return refs
     
     for txt in _flatten(doc):
         for word in words(txt):
             assert '\n' not in word, 'carriage return in word'
-            refs[word].add('{r.book} {r.chapter}:{r.verse}'.format(r=txt.pos))
+            refs[word].add(f'{txt.pos.book} {txt.pos.chapter}:{txt.pos.verse}')
     return refs
 
 
 def update_row(wordrefs):
     wordlog={}
-    def _g((ln,row)):
+    def _g(ln, row):
         word = row['Word']
         if word in wordlog:
-            raise ValueError, 'duplicates: Word "{0}" at row {1} is repeated at row {2} of master file'.format(word.encode('utf-8'),wordlog[word]+2,ln+2)
+            raise ValueError, f'duplicates: Word "{word.encode('utf-8')}" at row {wordlog[word]+2} is repeated at row {ln+2} of master file'
         wordlog[word] = ln
         try:
             newrefs = wordrefs.pop(word)
         except KeyError:
             if opts.unused_warning: 
-                sys.stderr.write(parser.expand_prog_name('%prog: CSV merge warning: possible unused word "{0}" at row {1} of master file\n'.format(word.encode('utf_8'), ln+2)))
+                sys.stderr.write(parser.expand_prog_name(f'%prog: CSV merge warning: possible unused word "{word.encode('utf_8')}" at row {ln+2} of master file\n'))
             newrefs = set()
         oldrefs = references(row['References'])
         if newrefs - oldrefs: row['References'] = oldrefs | newrefs 
@@ -147,20 +156,21 @@ def merge_master_file_with_book(infile, outfile, refs):
         # write out the header row
         writer.writerow(dict(zip(fieldnames,fieldnames)))
         # write out an updated list
-        writer.writerows(imap(update_row(refs), enumerate(reader)))
+        writer.writerows(starmap(update_row(refs), enumerate(reader)))
         # write out any new words
         writer.writerows({'Word':w,'References':r} for (w,r) in refs.items())
         
         infile.flush()
         outfile.flush()
     except ValueError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: CSV parse error: {0!s}\n').format(err))
+        sys.stderr.write(parser.expand_prog_name(f'%prog: CSV parse error: {err!s}\n'))
         sys.exit(3)
 
 
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser(usage='%prog [options] <SFM FILE> <MASTER CSV FILE>\n' + __doc__)
+    parser = optparse.OptionParser(
+        usage=f'%prog [options] <SFM FILE> <MASTER CSV FILE>\n{__doc__}')
     parser.add_option("-v","--verbose",action='store_true',default=False,
                       help='Print out statistics and progress info')
     parser.add_option("","--no-warnings",action='store_false',dest='warnings', default=True,
@@ -199,12 +209,12 @@ if __name__ == '__main__':
         parser.print_help(file=sys.stderr)
         sys.exit(1)
     master_path = sfms.pop()
-    sfms = chain.from_iterable(imap(glob.iglob, sfms))
-    
+    sfms = chain.from_iterable(map(glob.iglob, sfms))
+
     opts.word = set(opts.word.decode('unicode_escape'))
     opts.nonword = set(opts.nonword.decode('unicode_escape'))
     if opts.word & opts.nonword:
-        sys.stderr.write(parser.expand_prog_name('%prog: overlapping word/non-word characters "{0!s}"\n'.format(u''.join(opts.word & opts.nonword).encode('unicode_escape'))))
+        sys.stderr.write(parser.expand_prog_name(f'%prog: overlapping word/non-word characters "{''.join(opts.word & opts.nonword).encode('unicode_escape')!s}"\n'))
         sys.exit(1)
     if opts.stylesheet:
         stylesheet_path = os.path.expanduser(opts.stylesheet)
@@ -239,13 +249,13 @@ if __name__ == '__main__':
         shutil.copyfileobj(master_out,master_src)
         master_src.close()
         master_out.close()
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
         sys.exit(2)
 
     if opts.verbose:
         num_words = len(words_refs)
-        num_refs  = sum(imap(len, words_refs.itervalues()))
+        num_refs = sum(map(len, words_refs.itervalues()))
         sys.stdout.write(#'{1} references to {0} existing words updated\n'
                          '{3} references to {2} new words added\n'.format(
                                                 prev_num_words - num_words,

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Interleave 2 or more USFM files renaming tags with per source document suffices.
 '''
@@ -9,15 +9,13 @@ __credits__ = ''''''
 
 import palaso.sfm as sfm
 from palaso.sfm import usfm, style
-from itertools import chain,imap
-from functools import partial
+from itertools import chain
+from functools import reduce
 import codecs, glob, optparse, operator, os.path, warnings, sys
 
-def foreach(f, *xs):
-    def __id(_,__): return None
-    reduce(__id, imap(f, *xs), None)
-    
-class StructureError(StandardError): pass
+
+class StructureError(Exception):
+    pass
 
 def validate_structure(*docs):
     def iselement(e): return isinstance(e, sfm.element)
@@ -35,8 +33,9 @@ def merge(tags, *docs):
     
     def _relabel(tag, e):
         if isinstance(e, sfm.element):
-            foreach(partial(_relabel,tag), e)
-            e.name += u'{0!s}{1!s}'.format(opts.seperator,tag)
+            for child in e:
+                _relabel(tag, child)
+            e.name += f'{opts.seperator!s}{tag!s}'
         else:
             return e
 
@@ -44,11 +43,13 @@ def merge(tags, *docs):
         if isinstance(e, sfm.element):
             if pred(e):
                 cs = (e,) + es
-                foreach(_relabel, tags, cs)
+                for child in cs:
+                    _relabel(tags, child)
                 return cs
             else:
                 e = sfm.element(e.name, e.pos, e.args, content=chain.from_iterable(imap(_merge,e,*es)), meta=e.meta)
-                foreach(lambda e_: setattr(e_,'parent',e), e)
+                for child in e:
+                    setattr(child, 'parent', e)
                 return [e]
         else:
             return [e]
@@ -57,7 +58,9 @@ def merge(tags, *docs):
         
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser(usage='%prog [options] <OUTPUT> <USFM FILE> <USFM FILE> [<USFM FILE> ...]\n' + __doc__)
+    parser = optparse.OptionParser(
+        usage='%prog [options] <OUTPUT> <USFM FILE> <USFM FILE>'
+              f' [<USFM FILE> ...]\n{__doc__}')
     parser.add_option("-v","--verbose",action='store_true',default=False,
                       help='Print out statistics and progress info')
     parser.add_option("","--no-warnings",action='store_false',dest='warnings', default=True,
@@ -80,8 +83,8 @@ if __name__ == '__main__':
                      metavar='TAG1,TAG2[,...,TAGN]', default=None,
                      help='Comma separated list of postfix document tags for marker renaming: \'L,[M],R\'')
     
-    opts,sfms = parser.parse_args()
-    if len(sfms) < 3:
+    opts, args = parser.parse_args()
+    if len(args) < 3:
         sys.stderr.write(parser.expand_prog_name('%prog: you need at an output file and least 2 USFMs\n'))
         parser.print_help(file=sys.stderr)
         sys.exit(1)
@@ -92,27 +95,35 @@ if __name__ == '__main__':
     else:
         opts.stylesheet = usfm.default_stylesheet    
     if not opts.tags:
-        if   len(sfms) == 3: opts.tags = ['L','R']
-        elif len(sfms) == 4: opts.tags = ['L','M','R']
-        else:                opts.tags = range(1,len(sfms))
+        if len(args) == 3:
+            opts.tags = ['L', 'R']
+        elif len(args) == 4:
+            opts.tags = ['L', 'M', 'R']
+        else:
+            opts.tags = range(1, len(args))
     else:
-        opts.tags = map(operator.methodcaller('strip'), opts.tags.split(','))
-    output = codecs.open(os.path.expanduser(sfms[0]), mode='w', encoding='utf_8_sig')
-    sfms = chain.from_iterable(imap(glob.iglob, sfms[1:]))  
-
+        opts.tags = [tag.strip() for tag in opts.tags.split(', ')]
+    output = codecs.open(os.path.expanduser(args[0]),
+                         mode='w',
+                         encoding='utf_8_sig')
+    paths = chain.from_iterable(map(glob.iglob, args[1:]))
+    files = (codecs.open(p, mode='r', encoding='utf_8_sig') for p in paths)
     try:
         with warnings.catch_warnings():
-            warnings.simplefilter("always" if opts.warnings else "ignore", SyntaxWarning)
-            docs = map(list, imap(partial(usfm.parser, stylesheet=opts.stylesheet, error_level=opts.error_level),
-                      imap(partial(codecs.open, mode='r', encoding='utf_8_sig'), sfms)))
+            warnings.simplefilter(
+                "always" if opts.warnings else "ignore",
+                SyntaxWarning)
+            docs = [list(usfm.parser(stylesheet=opts.stylesheet,
+                                     error_level=opts.error_level))
+                    for f in files]
+
             validate_structure(*docs)
 
             output.write(sfm.generate(merge(opts.tags, *docs)))
-        
-    except IOError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: IO error: {0!s}\n').format(err))
+    except IOError as err:
+        sys.stderr.write(parser.expand_prog_name(f'%prog: IO error: {err!s}\n'))
         sys.exit(2)
-    except StructureError, err:
-        sys.stderr.write(parser.expand_prog_name('%prog: Structure error: A USFM file does not match the others\n').format(err.args[0]))
+    except StructureError:
+        sys.stderr.write(parser.expand_prog_name('%prog: Structure error: A USFM file does not match the others\n')
         sys.exit(3)
         
