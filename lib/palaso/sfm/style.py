@@ -25,6 +25,10 @@ from palaso.sfm.records import sequence, unique, level
 from palaso.sfm.records import UnrecoverableError
 
 
+class _absent:
+    def __init__(self, def_val):
+        self.value = def_val
+
 
 _fields = {
     'Marker': (str, UnrecoverableError(
@@ -52,7 +56,6 @@ _fields = {
     # 'RightMargin':     (float, 0),
     # 'Color':           (int,   0),
 }
-
 _comment = re.compile(r'\s*#.*$')
 _markers = re.compile(r'^\s*\\[^\s\\]+\s')
 
@@ -176,6 +179,7 @@ def parse(source, error_level=level.Content, base=None):
         base.update({n: (_merge_record(base[n], r) if n in base else r)
                      for n, r in res.items()})
         res = base
+    _reify(res)
     return res
 
 def _merge_record(old, new):
