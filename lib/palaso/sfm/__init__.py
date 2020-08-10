@@ -425,6 +425,7 @@ class parser(collections.Iterable):
 
     default_meta = _default_meta
     _eos = text("end-of-file")
+    _tag_recogniser = r'[^\s\\]+'
     _tokeniser = re.compile(
         r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',
         re.DOTALL | re.UNICODE)
@@ -550,7 +551,9 @@ class parser(collections.Iterable):
                 tok = self._extract_tag(parent, tok)
                 tag = tok[1:]
                 meta = get_meta(tag)
-                if self._need_subnode(parent, meta, nesting=tag[0] == '+' and tag[-1] != '*'):
+                if self._need_subnode(
+                        parent, meta,
+                        nesting=tag[0] == '+' and tag[-1] != '*'):
                     sub_parser = meta.get('TextType')
                     if not sub_parser:
                         return
@@ -675,11 +678,14 @@ def generate(doc):
     """
     Format a document inserting line separtors after paragraph markers where
     the first element has children.
-    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph \\\\qt A \\\\+qt quote\\\\+qt*\\\\qt*'
+    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph' \\
+    ...       ' \\\\qt A \\\\+qt quote\\\\+qt*\\\\qt*'
     >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p', 'qt')
     >>> tss['mt'].update(StyleType='Paragraph')
     >>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
-    >>> tss['qt'].update(OccursUnder={'p'}, StyleType='Character', Endmarker='qt*')
+    >>> tss['qt'].update(OccursUnder={'p'},
+    ...                  StyleType='Character',
+    ...                  Endmarker='qt*')
     >>> tree = list(parser(doc.splitlines(True), tss))
     >>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
     \\id TEST

@@ -60,11 +60,6 @@ _markers = re.compile(r'^\s*\\[^\s\\]+\s')
 def _munge_records(rs):
     for r in rs:
         tag = r.pop('Marker').lstrip()
-        ous = r['OccursUnder']
-        if isinstance(ous, set) and 'NEST' in ous:
-            ous.remove('NEST')
-            ntag = f'+{tag}*'
-            yield (ntag[:-1], marker(r, endmarker=ntag, occursunder=r['Occursunder'] | {ntag[:-1]}))
         yield (tag, r)
 
 
@@ -146,31 +141,20 @@ def parse(source, error_level=level.Content, base=None):
     ... \\TextType Other
     ... \\Bold
     ... \\Color 12345""".splitlines(True))
-    >>> pprint((sorted(r.items()), sorted(r['+dummy1']['OccursUnder']),
+    >>> pprint((sorted(r.items()),
     ...         sorted(r['dummy1']['OccursUnder'])))
     ... # doctest: +ELLIPSIS
-    ([('+dummy1',
-       {'bold': '',
-        'color': '12345',
-        'description': 'A marker used for demos',
-        'endmarker': '+dummy1*',
-        'name': 'dummy1 - File - dummy marker definition',
-        'occursunder': {...},
-        'styletype': None,
-        'textproperties': {},
-        'texttype': 'Other'}),
-      ('dummy1',
+    ([('dummy1',
        {'bold': '',
         'color': '12345',
         'description': 'A marker used for demos',
         'endmarker': None,
         'name': 'dummy1 - File - dummy marker definition',
-        'occursunder': {'id'},
+        'occursunder': {...},
         'styletype': None,
         'textproperties': {},
         'texttype': 'Other'})],
-     ['+dummy1', 'id'],
-     ['id'])
+     ['NEST', 'id'])
     ''' # noqa
 
     # strip comments out
