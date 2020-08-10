@@ -114,7 +114,7 @@ class parser(sfm.parser):
     >>> list(parser([r'\\id MAT\\mt Text \\f + \\fk deep\\fk*\\f*more text.']))
     [element('id', content=[text('MAT'), element('mt', content=[text('Text '), element('f', args=['+'], content=[element('fk', content=[text('deep')])]), text('more text.')])])]
     >>> list(parser([r'\\id MAT\\mt Text \\f + \\fk deep \\+qt A quote\\+qt* more\\fk*\\f*more text.']))
-    [element('id', content=[text('MAT'), element('mt', content=[text('Text '), element('f', args=['+'], content=[element('fk', content=[text('deep')])]), text('more text.')])])]
+    [element('id', content=[text('MAT'), element('mt', content=[text('Text '), element('f', args=['+'], content=[element('fk', content=[text('deep '), element('+qt', content=[text('A quote')]), text(' more')])]), text('more text.')])])]
 
     Test end marker recognition when it's a prefix
     >>> with warnings.catch_warnings():
