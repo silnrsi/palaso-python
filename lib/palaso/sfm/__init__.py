@@ -130,7 +130,7 @@ class element(list):
             body = ' '
 
         if endmarker and 'implicit-closed' not in self.annotations:
-            body += f'\\{endmarker}'
+            body += f"\\{'+' if self.name[0]=='+' else ''}{endmarker}"
         return sep.join([marker, body])
 
 
@@ -508,7 +508,7 @@ class parser(collections.Iterable):
         # Check for the expected end markers with no separator and
         # break them apart
         if parent is not None:
-            tag = tok[1:]
+            tag = tok[1:].lstrip('+')
             while parent.meta['Endmarker']:
                 if tag.startswith(parent.meta['Endmarker']):
                     cut = len(parent.meta['Endmarker'])
@@ -526,6 +526,23 @@ class parser(collections.Iterable):
                 parent = parent.parent
         return tok
 
+    @staticmethod
+    def _need_subnode(parent, meta, nesting=False):
+        occurs = meta['OccursUnder']
+        if not occurs:  # No occurs under means it can occur anywhere.
+            return True
+
+        parent_tag = None
+        if parent is not None:
+            if nesting:
+                if not parent.meta['StyleType'] == 'Character':
+                    return False
+                while parent.meta['StyleType'] == 'Character':
+                    parent = parent.parent
+            parent_tag = getattr(parent, 'name', None).lstrip('+')
+
+        return parent_tag in occurs
+
     def _default_(self, parent):
         get_meta = self.__get_style
         for tok in self._tokens:
@@ -533,8 +550,8 @@ class parser(collections.Iterable):
                 tok = self._extract_tag(parent, tok)
                 tag = tok[1:]
                 meta = get_meta(tag)
-                if not meta['OccursUnder'] or (parent is not None and parent.name or None) in meta['OccursUnder']:
-                    sub_parser = meta['TextType']
+                if self._need_subnode(parent, meta, nesting=tag[0] == '+' and tag[-1] != '*'):
+                    sub_parser = meta.get('TextType')
                     if not sub_parser:
                         return
 
@@ -579,6 +596,7 @@ class parser(collections.Iterable):
             if parent.meta['Endmarker']:
                 self._force_close(parent, self._eos)
                 parent.annotations['implicit-closed'] = True
+        return
 
     def _Milestone_(self, parent):
         return tuple()
@@ -657,18 +675,19 @@ def generate(doc):
     """
     Format a document inserting line separtors after paragraph markers where
     the first element has children.
-    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph'
-    >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p')
+    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph \\\\qt A \\\\+qt quote\\\\+qt*\\\\qt*'
+    >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p', 'qt')
     >>> tss['mt'].update(StyleType='Paragraph')
     >>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
+    >>> tss['qt'].update(OccursUnder={'p'}, StyleType='Character', Endmarker='qt*')
     >>> tree = list(parser(doc.splitlines(True), tss))
     >>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
     \\id TEST
-    \\mt \\p A paragraph
+    \\mt \\p A paragraph \\qt A \\+qt quote\\+qt*\\qt*
     >>> print(generate(parser(doc.splitlines(True), tss)))
     \\id TEST
     \\mt
-    \\p A paragraph
+    \\p A paragraph \\qt A \\+qt quote\\+qt*\\qt*
     """
 
     def ge(e, a, body):
@@ -686,7 +705,7 @@ def generate(doc):
         end = 'implicit-closed' in e.annotations \
               or e.meta.get('Endmarker', '') \
               or ''
-        end = end and '\\'+end
+        end = end and f"\\{'+' if e.name[0]=='+' else ''}{end}"
 
         return f"{a}\\{' '.join([e.name] + e.args)}{sep}{body}{end}" \
                if e.name else ''
