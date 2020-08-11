@@ -199,7 +199,7 @@ class parser(sfm.parser):
     >>> list(parser([r'\\id TEST\\c 1\\p \\v 1text']))
     Traceback (most recent call last):
     ...
-    SyntaxError: <string>: line 1,20: missing space after verse number '1'
+    SyntaxError: <string>: line 1,21: missing space after verse number '1t'
 
     Note text parsing
     >>> list(parser([r'\\id TEST\\mt \\f \\fk key\\fk* text.\\f*']))
@@ -236,7 +236,7 @@ class parser(sfm.parser):
 
     default_meta = _default_meta
     numeric_re = re.compile(r'\s*(\d+(:?[-\u2010\2011]\d+)?)', re.UNICODE)
-    verse_re = re.compile(r'\s*(\d+(:?[-,\u2010\2011]\d+)?)', re.UNICODE)
+    verse_re = re.compile(r'\s*(\d+\w?(:?[-,\u200B-\u2011]+\d+\w?)?)',re.UNICODE)
     caller_re = re.compile(r'\s*([^\s\\])', re.UNICODE)
     sep_re = re.compile(r'\s|$', re.UNICODE)
 
