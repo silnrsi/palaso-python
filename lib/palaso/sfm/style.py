@@ -182,12 +182,15 @@ def parse(source, error_level=level.Content, base=None):
     _reify(res)
     return res
 
+
 def _merge_record(old, new):
-    old.update({f:v for f,v in new.items() if f not in old or not isinstance(v, _absent)})
+    old.update({f: v for f, v in new.items()
+               if f not in old or not isinstance(v, _absent)})
+
 
 def _reify(sheet):
     for r in sheet.values():
-        for f,v in r.items():
+        for f, v in r.items():
             if isinstance(v, _absent):
                 r[f] = v.value
             if isinstance(v, records.sfm.text):
