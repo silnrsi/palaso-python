@@ -33,7 +33,7 @@ import os
 from itertools import chain, groupby
 from enum import IntEnum
 from functools import reduce
-
+from typing import NamedTuple
 
 __all__ = ('usfm',                                            # Sub modules
            'position', 'element', 'text', 'level', 'parser',  # data types
@@ -41,9 +41,12 @@ __all__ = ('usfm',                                            # Sub modules
            'text_properties', 'format', 'copy')               # functions
 
 
-class position(collections.namedtuple('position', ['line', 'col'])):
+class position(NamedTuple):
+    line: int
+    col: int
+
     '''Immutable position data that attach to tokens'''
-    def __str__(self):
+    def __str__(self) -> str:
         return f'line {self.line},{self.col}'
 
 
@@ -118,8 +121,9 @@ class element(list):
 
     def __str__(self):
         marker = ''
+        nested = '+' if 'nested' in self.annotations else ''
         if self.name:
-            marker = f"\\{' '.join([self.name] + self.args)}"
+            marker = f"\\{nested}{' '.join([self.name] + self.args)}"
         endmarker = self.meta.get('Endmarker', '')
         body = ''.join(map(str, self))
         sep = ''
@@ -130,7 +134,7 @@ class element(list):
             body = ' '
 
         if endmarker and 'implicit-closed' not in self.annotations:
-            body += f"\\{'+' if self.name[0]=='+' else ''}{endmarker}"
+            body += f"\\{nested}{endmarker}"
         return sep.join([marker, body])
 
 
@@ -301,6 +305,18 @@ class level(IntEnum):
     Content = 1
     Structure = 2
     Unrecoverable = 100
+
+
+class Tag(NamedTuple):
+    name: str
+    nested: bool = False
+
+    def __str__(self) -> str:
+        return f"\\{'+' if self.nested else ''}{self.name}"
+
+    @property
+    def endmarker(self) -> bool:
+        return self.name[-1] == '*'
 
 
 class parser(collections.Iterable):
@@ -505,68 +521,69 @@ class parser(collections.Iterable):
         return chain.from_iterable(g if istag else (text.concat(g),)
                                    for istag, g in gs)
 
-    def _extract_tag(self, parent, tok):
+    def _get_tag(self, parent: element, tok: str):
+        if tok[0] != '\\':
+            return None
+
+        tok = tok[1:]
+        tag = Tag(tok.lstrip('+'), tok[0] == '+')
+        if parent is None:
+            return tag
+
         # Check for the expected end markers with no separator and
         # break them apart
-        if parent is not None:
-            tag = tok[1:].lstrip('+')
-            while parent.meta['Endmarker']:
-                if tag.startswith(parent.meta['Endmarker']):
-                    cut = len(parent.meta['Endmarker'])
-                    if cut != len(tag):
-                        if self._tokens.peek()[0] == '\\':
-                            self._tokens.put_back(tag[cut:])
-                        else:
-                            # If the next token isn't a marker coaleces the
-                            # remainder with it into a single text node.
-                            self._tokens.put_back(tag[cut:]
-                                                  + next(self._tokens, ''))
-                        return tok[:cut+1]
-                    # TODO: what happens if cut == len(tag), why doesn't it
-                    # return here?
-                parent = parent.parent
-        return tok
+        while parent.meta['Endmarker']:
+            if tag.name.startswith(parent.meta['Endmarker']):
+                cut = len(parent.meta['Endmarker'])
+                rest = tag.name[cut:]
+                if rest:
+                    tag = Tag(tag.name[:cut], tag.nested)
+                    if self._tokens.peek()[0] != '\\':
+                        # If the next token isn't a marker, coaleces the
+                        # remainder with it into a single text node.
+                        rest += next(self._tokens, '')
+                    self._tokens.put_back(rest)
+                return tag
+            parent = parent.parent
+        return tag
 
     @staticmethod
-    def _need_subnode(parent, meta, nesting=False):
+    def _need_subnode(parent, tag, meta):
         occurs = meta['OccursUnder']
         if not occurs:  # No occurs under means it can occur anywhere.
             return True
 
         parent_tag = None
         if parent is not None:
-            if nesting:
+            if tag.nested and not tag.endmarker:
                 if not parent.meta['StyleType'] == 'Character':
                     return False
                 while parent.meta['StyleType'] == 'Character':
                     parent = parent.parent
-            parent_tag = getattr(parent, 'name', None).lstrip('+')
-
+            parent_tag = getattr(parent, 'name', None)
         return parent_tag in occurs
 
     def _default_(self, parent):
         get_meta = self.__get_style
         for tok in self._tokens:
-            if tok[0] == '\\':  # Parse markers.
-                tok = self._extract_tag(parent, tok)
-                tag = tok[1:]
-                meta = get_meta(tag)
-                if self._need_subnode(
-                        parent, meta,
-                        nesting=tag[0] == '+' and tag[-1] != '*'):
+            tag = self._get_tag(parent, tok)
+            if tag:  # Parse markers.
+                meta = get_meta(tag.name)
+                if self._need_subnode(parent, tag, meta):
                     sub_parser = meta.get('TextType')
                     if not sub_parser:
                         return
-
                     sub_parser = getattr(self, '_'+sub_parser+'_',
                                          self._default_)
-
                     # Spawn a sub-node
-                    e = element(tag, tok.pos, parent=parent, meta=meta)
+                    e = element(tag.name, tok.pos, parent=parent, meta=meta)
                     # and recurse
+                    if tag.nested:
+                        e.annotations['nested'] = True
                     e.extend(sub_parser(e))
                     yield e
                 elif parent is None:
+                    tok = text(tag, tok.pos, tok.parent)
                     # We've failed to find a home for marker tag, poor thing.
                     if not meta['TextType']:
                         assert len(meta['OccursUnder']) == 1
@@ -580,6 +597,7 @@ class parser(collections.Iterable):
                                     'may only occur under {0}', tok,
                                     self._pp_marker_list(meta['OccursUnder']))
                 else:
+                    tok = text(tag, tok.pos, tok.parent)
                     # Do implicit closure only for non-inline markers or
                     # markers inside NoteText type markers'.
                     if parent.meta['Endmarker']:
@@ -681,7 +699,7 @@ def generate(doc):
     >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph' \\
     ...       ' \\\\qt A \\\\+qt quote\\\\+qt*\\\\qt*'
     >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p', 'qt')
-    >>> tss['mt'].update(StyleType='Paragraph')
+    >>> tss['mt'].update(OccursUnder={'id'},StyleType='Paragraph')
     >>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
     >>> tss['qt'].update(OccursUnder={'p'},
     ...                  StyleType='Character',
@@ -708,12 +726,13 @@ def generate(doc):
             body = ' '
         elif styletype == 'Paragraph':
             body = os.linesep
-        end = 'implicit-closed' in e.annotations \
-              or e.meta.get('Endmarker', '') \
+        nested = '+' if 'nested' in e.annotations else ''
+        end = 'implicit-closed' in e.annotations    \
+              or e.meta.get('Endmarker', '')        \
               or ''
-        end = end and f"\\{'+' if e.name[0]=='+' else ''}{end}"
+        end = end and f"\\{nested}{end}"
 
-        return f"{a}\\{' '.join([e.name] + e.args)}{sep}{body}{end}" \
+        return f"{a}\\{nested}{' '.join([e.name] + e.args)}{sep}{body}{end}" \
                if e.name else ''
 
     def gt(t, a):
