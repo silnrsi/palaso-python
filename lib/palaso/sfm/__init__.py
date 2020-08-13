@@ -348,7 +348,8 @@ class parser(collections.Iterable):
     structure can be extracted from a source, such as a USFM document.
 
     Various options allow customisation of the strictness of error checking,
-    private tag space prefix.
+    private tag space prefix or even what constitutes a marker, beyond just
+    starting with a '\\'.
 
     >>> from pprint import pprint
     >>> import warnings
@@ -470,9 +471,6 @@ class parser(collections.Iterable):
 
     default_meta = _default_meta
     _eos = text("end-of-file")
-    _tokeniser = re.compile(
-        r'(?<!\\)\\[^\s\\]+|(?:\\\\|[^\\])+',
-        re.DOTALL | re.UNICODE)
 
     @classmethod
     def extend_stylesheet(cls, stylesheet, *names):
@@ -481,7 +479,8 @@ class parser(collections.Iterable):
     def __init__(self, source,
                  stylesheet={},
                  default_meta=_default_meta,
-                 private_prefix=None, error_level=level.Content):
+                 private_prefix=None, error_level=level.Content,
+                 tag_escapes=r'\\'):
         """
         Create a SFM parser object. This object is an interator over SFM
         element trees. For simple unstructured documents this is one element
@@ -504,6 +503,10 @@ class parser(collections.Iterable):
             Optional: If not passed there is no private namespace defined.
         error_level: The level at which or above the parser should report
             issues as Errors instead of Warnings.
+        tag_escapes: A regular expression which defines the set of marker
+            names that are treated as text instead or parsed as markers. This
+            is matched against the marker name after the initial slash.
+            Optional, defaults to r'\\\\' to allow for escaping the backslash.
         """
         # Pick the marker lookup failure mode.
         assert default_meta or not private_prefix, 'default_meta must be provided when using private_prefix'  # noqa: E501
@@ -513,7 +516,10 @@ class parser(collections.Iterable):
         self.source = getattr(source, 'name', '<string>')
         self._default_meta = default_meta
         self._pua_prefix = private_prefix
-        self._tokens = _put_back_iter(self._lexer(source))
+        self._tokens = _put_back_iter(self.__lexer(
+            source,
+            re.compile(rf'(?:\\(?:{tag_escapes})|[^\\])+|(?<!\\)\\[^\s\\]+',
+                       re.DOTALL | re.UNICODE)))
         self._error_level = error_level
 
         # Compute end marker stylesheet definitions
@@ -576,11 +582,11 @@ class parser(collections.Iterable):
         return ', '.join('\\'+c if c else 'toplevel' for c in sorted(tags))
 
     @staticmethod
-    def __lexer(lines):
+    def __lexer(lines, tokeniser):
         """ Return an iterator that returns tokens in a sequence:
             marker, text, marker, text, ...
         """
-        lmss = enumerate(map(parser._tokeniser.finditer, lines))
+        lmss = enumerate(map(tokeniser.finditer, lines))
         fs = (text(m.group(), position(l+1, m.start()+1))
               for l, ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith', '\\'))
