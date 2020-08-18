@@ -56,8 +56,14 @@ if __name__ == '__main__':
 
     try:
         stylesheet = usfm.default_stylesheet.copy()
+<<<<<<< HEAD
         if args.load_project_sty and (args.project / 'custom.sty').exists():
             args.stylesheet.insert(0, 'custom.sty')
+=======
+        custom_sty_path = args.project / "custom.sty"
+        if args.load_project_sty and custom_sty_path.exists():
+            args.stylesheet.insert(custom_sty_path)
+>>>>>>> 27ea8c3 (usfmlint: Fix dumb defaults for stylesheet list)
         for p in args.stylesheet:
             stylesheet = style.update_sheet(
                 stylesheet,
