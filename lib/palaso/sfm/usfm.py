@@ -225,14 +225,14 @@ class parser(sfm.parser):
     ...     list(parser([r'\\id TEST\\mt \\whoops']))
     Traceback (most recent call last):
     ...
-    SyntaxWarning: <string>: line 1,14: unknown marker \whoops: not in styesheet
+    SyntaxWarning: <string>: line 1,14: unknown marker \whoops: not in stylesheet
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error", SyntaxWarning)
     ...     list(parser([r'\\id TEST\\mt \\whoops'],
     ...                 error_level=sfm.level.Marker))
     Traceback (most recent call last):
     ...
-    SyntaxError: <string>: line 1,14: unknown marker \whoops: not in styesheet
+    SyntaxError: <string>: line 1,14: unknown marker \whoops: not in stylesheet
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("error", SyntaxWarning)
     ...     list(parser([r'\\id TEST\\mt \\zwhoops'],

@@ -466,7 +466,7 @@ class parser(collections.Iterable):
     ...     pprint(list(parser(doc.splitlines(True), tss)))
     Traceback (most recent call last):
     ...
-    SyntaxWarning: <string>: line 7,2: unknown marker \\mt1: not in styesheet
+    SyntaxWarning: <string>: line 7,2: unknown marker \\mt1: not in stylesheet
     '''
 
     default_meta = _default_meta
@@ -568,7 +568,7 @@ class parser(collections.Iterable):
             else:
                 self._error(
                     level.Marker,
-                    'unknown marker \\{token}: not in styesheet',
+                    'unknown marker \\{token}: not in stylesheet',
                     tag)
             return self._default_meta
 
@@ -765,7 +765,7 @@ def smap(elementf, textf, trees):
     takes 2 functions for handling nodes and leaves idependantly.
 
     elementf: A callable that accepts 3 parameters and returns a tuple of
-            (name, args, children)      
+            (name, args, children)
         name: The current element name
         args: The current element argument list
         body: The elements mapped children.
@@ -870,8 +870,9 @@ def generate(doc):
     """
     Format a document inserting line separtors after paragraph markers where
     the first element has children.
-    >>> doc = '\\\\id TEST\\n\\\\mt \\\\p A paragraph' \\
-    ...       ' \\\\qt A \\\\+qt quote\\\\+qt*\\\\qt*'
+    >>> doc = r'\\id TEST' '\\n' \\
+    ...       r'\\mt \\p A paragraph' \\
+    ...       r' \\qt A \\+qt quote\\+qt*\\qt*'
     >>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p', 'qt')
     >>> tss['mt'].update(OccursUnder={'id'},StyleType='Paragraph')
     >>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
