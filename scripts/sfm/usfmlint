@@ -39,6 +39,7 @@ if __name__ == '__main__':
              "custom.sty if present")
     parser.add_argument(
         "-S", "--stylesheet", metavar='STY-FILE', type=Path, action='append',
+        default=[],
         help='Add this stylesheet to add/override marker definitions to the '
              'default USFM, project or custom stylesheets. Multiple uses of '
              'this option will see stylesheets applied in the order '
