@@ -870,6 +870,9 @@ def generate(doc):
     """
     Format a document inserting line separtors after paragraph markers where
     the first element has children.
+
+    trees: An iterable over element trees, such as the output of parser().
+
     >>> doc = r'\\id TEST' '\\n' \\
     ...       r'\\mt \\p A paragraph' \\
     ...       r' \\qt A \\+qt quote\\+qt*\\qt*'

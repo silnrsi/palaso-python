@@ -254,7 +254,7 @@ class usfm_transducer(object):
                 res += wd
 
         res = re.sub(
-            '([{self.punc}][{self.cquotes}\\s]*[{self.oquotes}\\s]*)(.)',
+            rf'([{self.punc}][{self.cquotes}\s]*[{self.oquotes}\s]*)(.)',
             lambda m: (m.group(1) + (m.group(2).upper()
                        if isword(m.group(2)[0])
                        else m.group(2))),
@@ -265,7 +265,7 @@ class usfm_transducer(object):
                 or parent_node.name in self.calltags) \
            and self.capquotes:
             res = re.sub(
-                f'(^\\s*|\\s)([{self.capquotes}]*)(.)',
+                rf'(^\s*|\s)([{self.capquotes}]*)(.)',
                 lambda m: (m.group(1) + m.group(2) + (m.group(3).upper()
                            if isword(m.group(3)[0])
                            else m.group(3))),
