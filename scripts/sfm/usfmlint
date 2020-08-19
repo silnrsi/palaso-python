@@ -60,8 +60,9 @@ if __name__ == '__main__':
         if args.load_project_sty and custom_sty_path.exists():
             args.stylesheet.insert(custom_sty_path)
         for p in args.stylesheet:
-            stylesheet = style.parse((args.project / p).open(),
-                                     base=stylesheet)
+            stylesheet = style.update_sheet(
+                stylesheet,
+                style.parse((args.project / p).open()))
     except SyntaxError as err:
         parser.exit(3, f'{parser.prog}: Style sheet parsing error: {err!s}\n')
 
