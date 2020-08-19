@@ -207,14 +207,18 @@ def update_sheet(sheet, ammendments={}, **kwds):
               'styletype': None,
               'textproperties': {},
               'texttype': 'Unspecified'}}
-    >>> pprint(update_sheet(base, test={'OccursUnder': {'p'}}))
+    >>> pprint(update_sheet(base,
+    ...        test={'OccursUnder': {'p'}, 'FontSize': '12'},
+    ...        test2={'Name': 'test2 - new marker'}))
     {'test': {'description': None,
               'endmarker': None,
+              'fontsize': '12',
               'name': 'test - A test',
               'occursunder': {'p'},
               'styletype': None,
               'textproperties': {},
-              'texttype': 'Unspecified'}}
+              'texttype': 'Unspecified'},
+     'test2': {'Name': 'test2 - new marker'}}
     >>> update = parse(r'''
     ...                \\Marker test
     ...                \\Name test - A test
@@ -230,18 +234,22 @@ def update_sheet(sheet, ammendments={}, **kwds):
     >>> pprint(update_sheet(base, update))
     {'test': {'description': None,
               'endmarker': None,
+              'fontsize': '12',
               'name': 'test - A test',
               'occursunder': {'p'},
               'styletype': None,
               'textproperties': {},
-              'texttype': 'Note'}}
+              'texttype': 'Note'},
+     'test2': {'Name': 'test2 - new marker'}}
     """
     ammendments.update(**kwds)
     for marker, new_meta in ammendments.items():
         try:
             meta = sheet[marker]
-            meta.update(fv for fv in new_meta.items()
-                        if fv[1] != _fields[fv[0]][1])
+            meta.update(
+                fv for fv in new_meta.items()
+                if fv[0] not in _fields or fv[1] != _fields[fv[0]][1])
         except KeyError:
-            pass
+            sheet[marker] = new_meta
+            
     return sheet
