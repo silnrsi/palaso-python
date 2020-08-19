@@ -23,7 +23,7 @@ if __name__ == '__main__':
         help="Path to Paratext project folder")
     parser.add_argument(
         "sfms", metavar="SFM", type=str, nargs='*',
-        default=['*.SFM'],
+        default=['*.SFM', '*.sfm'],
         help="SFMs to be parsed. default: %(default)s")
     parser.add_argument(
         "-s", "--strict", dest='error_level',
@@ -56,9 +56,8 @@ if __name__ == '__main__':
 
     try:
         stylesheet = usfm.default_stylesheet.copy()
-        custom_sty_path = args.project / "custom.sty"
-        if args.load_project_sty and custom_sty_path.exists():
-            args.stylesheet.insert(custom_sty_path)
+        if args.load_project_sty and (args.project / 'custom.sty').exists():
+            args.stylesheet.insert(0, 'custom.sty')
         for p in args.stylesheet:
             stylesheet = style.update_sheet(
                 stylesheet,
