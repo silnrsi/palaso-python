@@ -251,5 +251,5 @@ def update_sheet(sheet, ammendments={}, **kwds):
                 if fv[0] not in _fields or fv[1] != _fields[fv[0]][1])
         except KeyError:
             sheet[marker] = new_meta
-            
+
     return sheet
