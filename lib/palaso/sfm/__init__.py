@@ -905,9 +905,9 @@ def generate(doc):
         elif styletype == 'Paragraph':
             body = os.linesep
         nested = '+' if 'nested' in e.annotations else ''
-        end = 'implicit-closed' in e.annotations    \
-              or e.meta.get('Endmarker', '')        \
-              or ''
+        end = ''
+        if 'implicit-closed' not in e.annotations:
+            end = e.meta.get('Endmarker', '') or ''
         end = end and f"\\{nested}{end}"
 
         return f"{a}\\{nested}{' '.join([e.name] + e.args)}{sep}{body}{end}" \
