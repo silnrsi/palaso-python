@@ -330,7 +330,7 @@ class parser(sfm.parser):
             self._error(level.Content,
                         'missing space after verse number \'{verse}\'',
                         tok, verse=verse_marker.args[0])
-        tok = tok.lstrip()
+        tok = tok[1:]
 
         if tok:
             self._tokens.put_back(tok)
