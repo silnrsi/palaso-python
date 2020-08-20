@@ -30,9 +30,7 @@ _markers = re.compile(r'^\s*\\[^\s\\]+\s')
 
 
 def _munge_records(rs):
-    for r in rs:
-        tag = r.pop('Marker').lstrip()
-        yield (tag, r)
+    yield from ((r.pop('Marker').lstrip(), r) for r in rs)
 
 
 class marker(dict):
