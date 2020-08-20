@@ -125,9 +125,7 @@ class element(list):
             return False
         return (self.name == rhs.name
                 and self.args == rhs.args
-                and (not self.meta or not rhs.meta or self.meta == rhs.meta)
-                and (not self.annotations or not rhs.annotations
-                     or self.meta == rhs.meta)
+                and (not (self.meta and rhs.meta) or self.meta == rhs.meta)
                 and super().__eq__(rhs))
 
     def __str__(self):
