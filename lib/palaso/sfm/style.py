@@ -18,11 +18,11 @@ __email__ = "tim_eves@sil.org"
 
 import re
 
-from palaso.sfm import records
+from . import records
 import warnings
 from collections import abc
-from palaso.sfm.records import sequence, unique, level
-from palaso.sfm.records import UnrecoverableError
+from .records import sequence, unique, level
+from .records import UnrecoverableError
 
 
 _comment = re.compile(r'\s*#.*$')
