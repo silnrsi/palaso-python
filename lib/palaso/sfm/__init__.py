@@ -893,10 +893,12 @@ def generate(doc):
     """
 
     def ge(e, a, body):
-        styletype = e.meta.get('StyleType')
+        styletype = e.meta['StyleType']
         sep = ''
         if len(e) > 0:
-            if styletype == 'Paragraph' and isinstance(e[0], element):
+            if styletype == 'Paragraph' \
+                    and isinstance(e[0], element) \
+                    and e[0].meta['StyleType'] == 'Paragraph':
                 sep = os.linesep
             elif not body.startswith(('\r\n', '\n')):
                 sep = ' '
