@@ -780,9 +780,10 @@ def smap(elementf, textf, trees):
     ... over a line break\\marker'''.splitlines(True)
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
-    ...     print(generate(smap(lambda n, a, b: (n.upper(), [x.upper() for x in a], b),
-    ...                         lambda t: t.upper(),
-    ...                         parser(doc))))
+    ...     print(generate(smap(
+    ...         lambda n, a, b: (n.upper(), [x.upper() for x in a], b),
+    ...         lambda t: t.upper(),
+    ...         parser(doc))))
     \\LONELY
     \\SFM TEXT
     BARE TEXT

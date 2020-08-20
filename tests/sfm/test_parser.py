@@ -6,12 +6,11 @@ Created on Nov 2, 2009
 '''
 import copy
 import unittest
-import itertools
-import operator
 import warnings
 import palaso.sfm as sfm
 from palaso.sfm import usfm, text
 from pathlib import Path
+from itertools import chain
 
 
 def elem(name, *content):
@@ -43,7 +42,7 @@ def flatten(doc):
             yield e_
             yield from flatten(e)
 
-    return itertools.chain.from_iterable(map(_g, doc))
+    return chain.from_iterable(map(_g, doc))
 
 
 class SFMTestCase(unittest.TestCase):
@@ -148,8 +147,10 @@ class USFMTestCase(unittest.TestCase):
 
         self.assertEqual(source, rt_src, 'roundtriped source not equal')
 
-    def _test_round_trip_parse(self, source, parser, leave_file=False, *args, **kwds):
-        src_name = Path(getattr(source, 'name', None))
+    def _test_round_trip_parse(self, source, parser,
+                               leave_file=False,
+                               *args, **kwds):
+        src_name = getattr(source, 'name', None)
         src_encoding = getattr(source, 'encoding', None)
         doc = list(parser(source, *args, **kwds))
         regenerated = sfm.generate(doc)
@@ -164,7 +165,8 @@ class USFMTestCase(unittest.TestCase):
                              'roundtrip parse unequal')
         except (SyntaxError, AssertionError) as se:
             if leave_file and src_name:
-                with Path(src_name + '.regenerated').open('w', encoding=src_encoding) as f:
+                out_path = Path(src_name + '.regenerated')
+                with out_path.open('w', encoding=src_encoding) as f:
                     f.write(regenerated)
                     se.filename = f.name
             if isinstance(se, AssertionError):
@@ -234,14 +236,14 @@ class USFMTestCase(unittest.TestCase):
         data_dir = Path(__file__).parent / 'data'
         self._test_round_trip_parse(
             (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser, 
+            usfm.parser,
             leave_file=True)
 
     def test_round_trip_src(self):
         data_dir = Path(__file__).parent / 'data'
         self._test_round_trip_source(
             (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser, 
+            usfm.parser,
             leave_file=True)
 
 
