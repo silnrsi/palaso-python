@@ -342,6 +342,10 @@ class parser(sfm.parser):
         def g(e):
             if getattr(e, 'name', None) == 'ft':
                 e.parent.annotations['content-promoted'] = True
+                if len(e.parent) > 0:
+                    prev = e.parent[-1]
+                    if prev.meta['StyleType'] == 'Character':
+                        del prev.annotations['implicit-closed']
                 return e
             else:
                 return [e]
