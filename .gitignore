@@ -8,3 +8,4 @@ __pycache__
 lib/palaso.kmfl.[ch]
 /.vscode
 *.code-workspace
+/tests/sfm/data/**
