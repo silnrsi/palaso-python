@@ -295,8 +295,8 @@ class parser(sfm.parser):
 
     def _force_close(self, parent, tok):
         if tok is not sfm.parser._eos \
-                and ('NoteText' in parent.meta.get('TextType', []) \
-                or parent.meta.get('StyleType', None) == 'Character'):
+                and ('NoteText' in parent.meta.get('TextType', [])
+                     or parent.meta.get('StyleType', None) == 'Character'):
             self._error(level.Note,
                         'implicit end marker before {token}: \\{0.name} '
                         '(line {0.pos.line},{0.pos.col}) '
