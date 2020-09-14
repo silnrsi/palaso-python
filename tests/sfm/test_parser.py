@@ -114,6 +114,34 @@ class SFMTestCase(unittest.TestCase):
               getattr(e, 'meta', None),
               getattr(e, 'annotations', None)) for e in flatten(trans_parse)))
 
+    def test_escaping(self):
+        # Test without special escaping. Only \ is escaped
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.assertEqual(
+                list(sfm.parser([
+                    r"\marker text",
+                    r"\escaped backslash\\character",
+                    r"\test1 \test2 \\backslash \^hat \%\test3\\\^"])),
+                [elem('marker', text('text')),
+                 elem('escaped', text(r'backslash\\character')),
+                 elem('test1'),
+                 elem('test2', text(r'\\backslash ')),
+                 elem('^hat'),
+                 elem('%'),
+                 elem('test3', text(r'\\')),
+                 elem('^')])
+        # Test with extended escaping rules.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.assertEqual(
+                list(sfm.parser([
+                    "\\test1 \\test2 \\\\backslash \\^hat \\%\\test3\\\\\\^"],
+                    tag_escapes="[\\\\^%]")),
+                [elem('test1'),
+                 elem('test2', text('\\\\backslash \\^hat \\%')),
+                 elem('test3', text('\\\\\\^'))])
+
 
 class USFMTestCase(unittest.TestCase):
     def _test_round_trip_source(self, source, parser, leave_file=False,
