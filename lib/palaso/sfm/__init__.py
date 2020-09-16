@@ -388,16 +388,17 @@ class parser(collections.Iterable):
      element('%'),
      element('t3', content=[text('\\\\\\\\')]),
      element('^')]
-    
-    Specify extra escapable characters or tokens
+
+    Specify extra escapable characters or tokens, in this case everything that
+    doesn't start with a number or letter isn't a tag.
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     pprint(list(parser([
     ...         r"\\t1 \\t2 \\\\backslash \\^hat \\%\\t3\\\\\\^"],
-    ...         tag_escapes=r"[\\\\^%]")))
+    ...         tag_escapes=r"[^0-9a-zA-Z]")))
     [element('t1'),
      element('t2', content=[text('\\\\\\\\backslash \\\\^hat \\\\%')]),
-     element('t3', content=[text('\\\\\\\\\\\^')])]
+     element('t3', content=[text('\\\\\\\\\\\\^')])]
 
 
     >>> doc=r"""
