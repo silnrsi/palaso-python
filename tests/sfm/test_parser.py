@@ -23,15 +23,6 @@ def elem(name, *content):
     return e
 
 
-def depos(doc):
-    doc = list(doc)
-    for e in doc:
-        e.pos = sfm.position(1, 1)
-        if isinstance(e, sfm.element):
-            depos(e)
-    return doc
-
-
 def flatten(doc):
     def _g(e):
         if isinstance(e, sfm.text):
@@ -93,26 +84,24 @@ class SFMTestCase(unittest.TestCase):
             warnings.simplefilter("always", SyntaxWarning)
             trans_parse = list(sfm.parser(trans_src))
 
-        # Check pretty printer output matches input, skip the last 2
-        map(self.assertEqual, src[:10], trans_src[:10])
         # Check the parsed pretty printed doc matches the reference
-        self.assertEqual(ref_parse, trans_parse)
+        self.assertEqual(trans_parse, ref_parse)
+        # Check pretty printer output matches input, skip the last 2
+        self.assertEqual(trans_src[:10], src[:10])
         # Check the errors match
-        map(self.assertEqual,
-            map(str, ref_parse_errors[:10]),
-            map(str, trans_parse_errors[:10]))
-        # Check the positions line up for the first 10 items
-        map(self.assertEqual,
-            (e.pos for e in flatten(ref_parse[:16])),
-            (e.pos for e in flatten(trans_parse[:16])))
+        for a, e in zip(trans_parse_errors[:31], ref_parse_errors):
+            with self.subTest(warning=str(e)):
+                self.assertEqual(a.message.args, e.message.args)
+
         # Check all the line positions, meta data and annotations line up
-        map(self.assertEqual,
-            ((e.pos.line,
-              getattr(e, 'meta', None),
-              getattr(e, 'annotations', None)) for e in flatten(ref_parse)),
-            ((e.pos.line,
-              getattr(e, 'meta', None),
-              getattr(e, 'annotations', None)) for e in flatten(trans_parse)))
+        for a, e in zip(flatten(trans_parse), flatten(ref_parse)):
+            with self.subTest():
+                self.assertEqual(a.pos.line, e.pos.line)
+                self.assertAlmostEqual(a.pos.col, e.pos.col, delta=1)
+                self.assertEqual(getattr(a, 'meta', None),
+                                 getattr(e, 'meta', None))
+                self.assertEqual(getattr(a, 'annotations', None),
+                                 getattr(e, 'annotations', None))
 
     def test_escaping(self):
         # Test without special escaping. Only \ is escaped
@@ -137,7 +126,7 @@ class SFMTestCase(unittest.TestCase):
             self.assertEqual(
                 list(sfm.parser([
                     "\\test1 \\test2 \\\\backslash \\^hat \\%\\test3\\\\\\^"],
-                    tag_escapes="[\\\\^%]")),
+                    tag_escapes="[^0-9a-zA-Z]")),
                 [elem('test1'),
                  elem('test2', text('\\\\backslash \\^hat \\%')),
                  elem('test3', text('\\\\\\^'))])
