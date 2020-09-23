@@ -27,8 +27,8 @@ if __name__ == '__main__':
         help="SFMs to be parsed. default: %(default)s")
     parser.add_argument(
         "-s", "--strict", dest='error_level',
-        action='store_const', const=usfm.level.Marker,
-        default=usfm.level.Unrecoverable,
+        action='store_const', const=usfm.ErrorLevel.Marker,
+        default=usfm.ErrorLevel.Unrecoverable,
         help='Turn on strict parsing mode. Markers not in the stylesheet or '
              'private name space will cause an error')
     parser.add_argument(

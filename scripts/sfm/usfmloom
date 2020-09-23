@@ -25,7 +25,7 @@ class StructureError(Exception):
 
 
 def validate_structure(*docs):
-    def iselement(e): return isinstance(e, sfm.element)
+    def iselement(e): return isinstance(e, sfm.Element)
 
     def _e(name, args, children):
         return (name, [], filter(iselement, children))
@@ -44,7 +44,7 @@ def merge(tags, *docs):
     assert len(tags) == len(docs), 'not enough tags for supplied documents'
 
     def _relabel(tag, e):
-        if isinstance(e, sfm.element):
+        if isinstance(e, sfm.Element):
             for child in e:
                 _relabel(tag, child)
             e.name += f'{opts.seperator!s}{tag!s}'
@@ -52,14 +52,14 @@ def merge(tags, *docs):
             return e
 
     def _merge(e, *es):
-        if isinstance(e, sfm.element):
+        if isinstance(e, sfm.Element):
             if pred(e):
                 cs = (e, ) + es
                 for child in cs:
                     _relabel(tags, child)
                 return cs
             else:
-                e = sfm.element(
+                e = sfm.Element(
                     e.name, e.pos, e.args,
                     content=chain.from_iterable(map(_merge, e, *es)),
                     meta=e.meta)
@@ -87,14 +87,14 @@ if __name__ == '__main__':
         help='Print out warnings when possibly unsused words are found.')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
-        const=usfm.level.Marker,
-        default=usfm.level.Content,
+        const=usfm.ErrorLevel.Marker,
+        default=usfm.ErrorLevel.Content,
         help='Turn on strict parsing mode. Markers not in the stylesheet or'
              ' private name space will cause an error')
     parser.add_option(
         "-l", "--loose", action='store_const', dest='error_level',
-        const=usfm.level.Unrecoverable,
-        default=usfm.level.Content,
+        const=usfm.ErrorLevel.Unrecoverable,
+        default=usfm.ErrorLevel.Content,
         help='Turn on loose parsing mode. Nothing short of orphan markers or'
              ' unterminated inlines will halt the parser.')
     parser.add_option(
