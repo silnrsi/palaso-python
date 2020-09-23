@@ -8,7 +8,7 @@ import copy
 import unittest
 import warnings
 import palaso.sfm as sfm
-from palaso.sfm import usfm, text
+from palaso.sfm import usfm, Text
 from pathlib import Path
 from itertools import chain
 
@@ -17,7 +17,7 @@ def elem(name, *content):
     args = []
     if isinstance(name, tuple):
         name, args = name[0], list(name[1:])
-    e = sfm.element(name, args=args,
+    e = sfm.Element(name, args=args,
                     meta=usfm.default_stylesheet.get(name, {}))
     e.extend(content)
     return e
@@ -25,9 +25,9 @@ def elem(name, *content):
 
 def flatten(doc):
     def _g(e):
-        if isinstance(e, sfm.text):
+        if isinstance(e, sfm.Text):
             yield e
-        elif isinstance(e, sfm.element):
+        elif isinstance(e, sfm.Element):
             e_ = copy.copy(e)
             e_.clear()
             yield e_
@@ -42,10 +42,10 @@ class SFMTestCase(unittest.TestCase):
                                           '\\le windows\r\n',
                                           '\\empty\n',
                                           '\\le missing'])),
-                         [elem('le', text('unix\n')),
-                          elem('le', text('windows\r\n')),
-                          elem('empty', text('\n')),
-                          elem('le', text('missing'))])
+                         [elem('le', Text('unix\n')),
+                          elem('le', Text('windows\r\n')),
+                          elem('empty', Text('\n')),
+                          elem('le', Text('missing'))])
 
     def test_position(self):
         p = sfm.parser(['\\li1 text\n',
@@ -112,13 +112,13 @@ class SFMTestCase(unittest.TestCase):
                     r"\marker text",
                     r"\escaped backslash\\character",
                     r"\test1 \test2 \\backslash \^hat \%\test3\\\^"])),
-                [elem('marker', text('text')),
-                 elem('escaped', text(r'backslash\\character')),
+                [elem('marker', Text('text')),
+                 elem('escaped', Text(r'backslash\\character')),
                  elem('test1'),
-                 elem('test2', text(r'\\backslash ')),
+                 elem('test2', Text(r'\\backslash ')),
                  elem('^hat'),
                  elem('%'),
-                 elem('test3', text(r'\\')),
+                 elem('test3', Text(r'\\')),
                  elem('^')])
         # Test with extended escaping rules.
         with warnings.catch_warnings():
@@ -128,8 +128,8 @@ class SFMTestCase(unittest.TestCase):
                     "\\test1 \\test2 \\\\backslash \\^hat \\%\\test3\\\\\\^"],
                     tag_escapes="[^0-9a-zA-Z]")),
                 [elem('test1'),
-                 elem('test2', text('\\\\backslash \\^hat \\%')),
-                 elem('test3', text('\\\\\\^'))])
+                 elem('test2', Text('\\\\backslash \\^hat \\%')),
+                 elem('test3', Text('\\\\\\^'))])
 
 
 class USFMTestCase(unittest.TestCase):
@@ -192,36 +192,37 @@ class USFMTestCase(unittest.TestCase):
 
     def test_footnote_content(self):
         def ft(src, doc):
-            return (r'\id TEST\mt '+src, [elem('id', text('TEST'),
+            return (r'\id TEST\mt '+src, [elem('id', Text('TEST'),
                                           elem('mt', doc))])
 
         tests = [ft(r'\f - bare text\f*',
-                    elem(('f', '-'), text('bare text'))),
+                    elem(('f', '-'), Text('bare text'))),
                  ft(r'\f - \ft bare text\ft*\f*',
-                    elem(('f', '-'), text('bare text'))),
+                    elem(('f', '-'), Text('bare text'))),
                  ft(r'\f + \fk Issac:\ft In Hebrew means "laughter"\f*',
                     elem(('f', '+'),
-                         elem('fk', text('Issac:')),
-                         text('In Hebrew means "laughter"'))),
+                         elem('fk', Text('Issac:')),
+                         Text('In Hebrew means "laughter"'))),
                  ft(r'\f + \fk Issac:\fk*In Hebrew means "laughter"\f*',
                     elem(('f', '+'),
-                         elem('fk', text('Issac:')),
-                         text('In Hebrew means "laughter"'))),
+                         elem('fk', Text('Issac:')),
+                         Text('In Hebrew means "laughter"'))),
                  ft(r'\f + \fr 1.14 \fq religious festivals;\ft or'
                     r' \fq seasons.\f*',
                     elem(('f', '+'),
-                         elem('fr', text('1.14 ')),
-                         elem('fq', text('religious festivals;')),
-                         text('or '),
-                         elem('fq', text('seasons.')))),
+                         elem('fr', Text('1.14 ')),
+                         elem('fq', Text('religious festivals;')),
+                         Text('or '),
+                         elem('fq', Text('seasons.')))),
                  ft(r'\f + \fr 1.14 \fr*\fq religious festivals;\fq*or'
                     r' \fq seasons.\fq*\f*',
                     elem(('f', '+'),
-                         elem('fr', text('1.14 ')),
-                         elem('fq', text('religious festivals;')),
-                         text('or '),
-                         elem('fq', text('seasons.'))))]
-        run_tests = ((list(usfm.parser([s], error_level=usfm.level.Note)), r)
+                         elem('fr', Text('1.14 ')),
+                         elem('fq', Text('religious festivals;')),
+                         Text('or '),
+                         elem('fq', Text('seasons.'))))]
+        run_tests = ((list(usfm.parser([s],
+                                       error_level=usfm.ErrorLevel.Note)), r)
                      for s, r in tests)
         for r in run_tests:
             self.assertEqual(*r)

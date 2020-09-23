@@ -11,7 +11,7 @@ __credits__ = '''\
 Tim Eves provided the concordance program on which this is based.
 '''
 
-from palaso.sfm import usfm, style, element, text, generate
+from palaso.sfm import usfm, style, Element, Text, generate
 from palaso.teckit.engine import Converter, Mapping
 from itertools import groupby, chain
 import csv
@@ -45,14 +45,14 @@ isletters = ""
 
 def sfmmap(elements, elemente, textf, doc):
     def _g(e):
-        if isinstance(e, element):
+        if isinstance(e, Element):
             e = elements(e)
             e[0:] = list(map(_g, e))
             elemente(e)
             return e
         else:
             e_ = textf(e)
-            return text(e_, e.pos, e)
+            return Text(e_, e.pos, e)
     return list(map(_g, doc))
 
 
@@ -387,12 +387,12 @@ if __name__ == '__main__':
         help='Silence syntax warnings discovered during SFM parsing')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
-        const=usfm.level.Marker, default=usfm.level.Content,
+        const=usfm.ErrorLevel.Marker, default=usfm.ErrorLevel.Content,
         help='Turn on strict parsing mode. Markers not in the stylesheet or'
              ' private name space will cause an error')
     parser.add_option(
         "-l", "--loose", action='store_const', dest='error_level',
-        const=usfm.level.Unrecoverable, default=usfm.level.Content,
+        const=usfm.ErrorLevel.Unrecoverable, default=usfm.ErrorLevel.Content,
         help='Turn on loose parsing mode. Nothing short of orphan markers or'
              ' unterminated inlines will halt the parser.')
     parser.add_option(

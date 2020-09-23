@@ -30,7 +30,7 @@ import tempfile
 import unicodedata
 
 
-class references(set):
+class References(set):
     '''Represent a set of biblical references.
        This class is really a typed parser and pretty printer for a set
        of strings.'''
@@ -42,7 +42,7 @@ class references(set):
     def __str__(self): return ', '.join(sorted(self))
 
 
-class reference(sfm.position):
+class Reference(sfm.Position):
     def __new__(cls, pos, ref):
         p = super().__new__(cls, *pos)
         p.book = ref[0]
@@ -105,7 +105,7 @@ def decorate_references(source):
     ref = [None, None, None]
 
     def _g(_, e):
-        if isinstance(e, sfm.element):
+        if isinstance(e, sfm.Element):
             if e.name == 'id':
                 ref[0] = str(e[0]).split()[0]
             elif e.name == 'c':
@@ -113,7 +113,7 @@ def decorate_references(source):
             elif e.name == 'v':
                 ref[2] = e.args[0]
             return reduce(_g, e, None)
-        e.pos = reference(e.pos, ref)
+        e.pos = Reference(e.pos, ref)
     source = list(source)
     reduce(_g, source, None)
     return source
@@ -160,7 +160,7 @@ def update_row(wordrefs):
                     f" possible unused word \"{word.encode('utf_8')}\""
                     f' at row {ln+2} of master file\n'))
             newrefs = set()
-        oldrefs = references(row['References'])
+        oldrefs = References(row['References'])
         if newrefs - oldrefs:
             row['References'] = oldrefs | newrefs
         return row
@@ -204,14 +204,14 @@ if __name__ == '__main__':
         help='Print out warnings when possibly unsused words are found.')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
-        const=usfm.level.Marker,
-        default=usfm.level.Content,
+        const=usfm.ErrorLevel.Marker,
+        default=usfm.ErrorLevel.Content,
         help='Turn on strict parsing mode. Markers not in the stylesheet or'
              ' private name space will cause an error')
     parser.add_option(
         "-l", "--loose", action='store_const', dest='error_level',
-        const=usfm.level.Unrecoverable,
-        default=usfm.level.Content,
+        const=usfm.ErrorLevel.Unrecoverable,
+        default=usfm.ErrorLevel.Content,
         help='Turn on loose parsing mode. Nothing short of orphan markers or'
              ' unterminated inlines will halt the parser.')
     parser.add_option(
@@ -272,7 +272,7 @@ if __name__ == '__main__':
                 "always" if opts.warnings else "ignore",
                 SyntaxWarning)
             words_refs = reduce(concordance, sfms,
-                                collections.defaultdict(references))
+                                collections.defaultdict(References))
 
         # Open the master file if it exists and a temp output file.
         # copying metadata to the output file.
