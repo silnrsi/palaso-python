@@ -101,31 +101,13 @@ def _flatten(doc):
                        doc, [])
 
 
-def decorate_references(source):
-    ref = [None, None, None]
-
-    def _g(_, e):
-        if isinstance(e, sfm.Element):
-            if e.name == 'id':
-                ref[0] = str(e[0]).split()[0]
-            elif e.name == 'c':
-                ref[1] = e.args[0]
-            elif e.name == 'v':
-                ref[2] = e.args[0]
-            return reduce(_g, e, None)
-        e.pos = Reference(e.pos, ref)
-    source = list(source)
-    reduce(_g, source, None)
-    return source
-
-
 def concordance(refs, source_path):
     opts.verbose and sys.stdout.write(f'processing file: {source_path!r}\n')
     try:
         with codecs.open(source_path, 'r', encoding='utf_8_sig') as source:
             doc = sfm.sfilter(
                     sfm.text_properties('publishable', 'vernacular'),
-                    decorate_references(
+                    usfm.decorate_references(
                         usfm.parser(source,
                                     stylesheet=opts.stylesheet,
                                     error_level=opts.error_level)))

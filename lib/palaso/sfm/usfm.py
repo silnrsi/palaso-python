@@ -433,8 +433,10 @@ def decorate_references(source):
                 ref[1] = e.args[0]
             elif e.name == 'v':
                 ref[2] = e.args[0]
+            e.pos = Reference(e.pos, ref)
             return reduce(_g, e, None)
-        e.pos = Reference(e.pos, ref)
+        else:
+            e.pos = Reference(e.pos, ref)
     source = list(source)
     reduce(_g, source, None)
     return source
