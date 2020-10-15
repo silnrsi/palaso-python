@@ -25,7 +25,7 @@ from .records import sequence, unique
 from .records import UnrecoverableError
 
 
-_comment = re.compile(r'\s*#.*$')
+_comment = re.compile(r'\s*#(?:!|.*$)')
 _markers = re.compile(r'^\s*\\[^\s\\]+\s')
 
 
@@ -77,9 +77,10 @@ _fields = marker({
     'Description':     (str,   None),
     'OccursUnder':     (unique(sequence(str)), {None}),
     # 'Rank':            (int,   None),
-    'TextProperties':  (unique(sequence(str)), {}),
+    'TextProperties':  (unique(sequence(str)), set()),
     'TextType':        (str,   'Unspecified'),
     'StyleType':       (str,   None),
+    'Attributes':      (unique(sequence(str)), set())
     # 'FontSize':        (int,   None),
     # 'Regular':         (flag,  False),
     # 'Bold':            (flag,  False),
@@ -112,12 +113,15 @@ def parse(source, error_level=ErrorLevel.Content):
     ... \\FontSize 12
     ... \\Italic
     ... \\Bold
-    ... \\Color 16384""".splitlines(True))
+    ... \\Color 16384
+    ... #!\\Attributes attr size ?ref""".splitlines(True))
     >>> pprint((r, 
     ...         sorted(r['toc1']['OccursUnder']),
-    ...         sorted(r['toc1']['TextProperties'])))
+    ...         sorted(r['toc1']['TextProperties']),
+    ...         sorted(r['toc1']['Attributes'])))
     ... # doctest: +ELLIPSIS
-    ({'toc1': {'bold': '',
+    ({'toc1': {'attributes': {...},
+               'bold': '',
                'color': '16384',
                'description': 'Long table of contents text',
                'endmarker': None,
@@ -130,7 +134,8 @@ def parse(source, error_level=ErrorLevel.Content):
                'textproperties': {...},
                'texttype': 'Other'}},
      ['h', 'h1', 'h2', 'h3'],
-     ['paragraph', 'publishable', 'vernacular'])
+     ['paragraph', 'publishable', 'vernacular'],
+     ['?ref', 'attr', 'size'])
     >>> r = parse(r"""
     ... \\Marker dummy1
     ... \\Name dummy1 - File - dummy marker definition
@@ -143,14 +148,15 @@ def parse(source, error_level=ErrorLevel.Content):
     ...         sorted(r['dummy1']['OccursUnder'])))
     ... # doctest: +ELLIPSIS
     ([('dummy1',
-       {'bold': '',
+       {'attributes': set(),
+        'bold': '',
         'color': '12345',
         'description': 'A marker used for demos',
         'endmarker': None,
         'name': 'dummy1 - File - dummy marker definition',
         'occursunder': {...},
         'styletype': None,
-        'textproperties': {},
+        'textproperties': set(),
         'texttype': 'Other'})],
      ['NEST', 'id'])
     ''' # noqa
@@ -198,23 +204,25 @@ def update_sheet(sheet, ammendments={}, **kwds):
     ...              \\Marker test
     ...              \\Name test - A test'''.splitlines(True))
     >>> pprint(base)
-    {'test': {'description': None,
+    {'test': {'attributes': set(),
+              'description': None,
               'endmarker': None,
               'name': 'test - A test',
               'occursunder': {None},
               'styletype': None,
-              'textproperties': {},
+              'textproperties': set(),
               'texttype': 'Unspecified'}}
     >>> pprint(update_sheet(base,
     ...        test={'OccursUnder': {'p'}, 'FontSize': '12'},
     ...        test2={'Name': 'test2 - new marker'}))
-    {'test': {'description': None,
+    {'test': {'attributes': set(),
+              'description': None,
               'endmarker': None,
               'fontsize': '12',
               'name': 'test - A test',
               'occursunder': {'p'},
               'styletype': None,
-              'textproperties': {},
+              'textproperties': set(),
               'texttype': 'Unspecified'},
      'test2': {'Name': 'test2 - new marker'}}
     >>> update = parse(r'''
@@ -222,21 +230,23 @@ def update_sheet(sheet, ammendments={}, **kwds):
     ...                \\Name test - A test
     ...                \\TextType Note'''.splitlines(True))
     >>> pprint(update)
-    {'test': {'description': None,
+    {'test': {'attributes': set(),
+              'description': None,
               'endmarker': None,
               'name': 'test - A test',
               'occursunder': {None},
               'styletype': None,
-              'textproperties': {},
+              'textproperties': set(),
               'texttype': 'Note'}}
     >>> pprint(update_sheet(base, update))
-    {'test': {'description': None,
+    {'test': {'attributes': set(),
+              'description': None,
               'endmarker': None,
               'fontsize': '12',
               'name': 'test - A test',
               'occursunder': {'p'},
               'styletype': None,
-              'textproperties': {},
+              'textproperties': set(),
               'texttype': 'Note'},
      'test2': {'Name': 'test2 - new marker'}}
     """
