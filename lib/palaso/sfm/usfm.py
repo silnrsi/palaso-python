@@ -86,7 +86,7 @@ def _load_cached_stylesheet(path):
             try:
                 with contextlib.closing(bz2.BZ2File(cached_path, 'rb')) as sf:
                     return pickle.load(sf)
-            except (OSError, pickle.UnpicklingError):
+            except (OSError, EOFError, pickle.UnpicklingError):
                 os.unlink(cached_path)
                 cached_path = _cached_stylesheet(path)
                 with contextlib.closing(bz2.BZ2File(cached_path, 'rb')) as sf:
@@ -100,12 +100,12 @@ def _load_cached_stylesheet(path):
 
 default_stylesheet = _load_cached_stylesheet('usfm.sty')
 
-_default_meta = {
-    'TextType':    'Milestone',
-    'OccursUnder': None,
-    'Endmarker':   None,
-    'StyleType':   None
-}
+_default_meta = style.Marker(
+    TextType=style.CaselessStr('Milestone'),
+    OccursUnder={None},
+    Endmarker=None,
+    StyleType=None
+)
 
 
 class parser(sfm.parser):
@@ -271,6 +271,16 @@ class parser(sfm.parser):
                           re.UNICODE)
     caller_re = re.compile(r'\s*([^\s\\])', re.UNICODE)
     sep_re = re.compile(r'\s|$', re.UNICODE)
+    __unspecified_metas = {
+        ('Section', True): 's',
+        ('Title', True): 't',
+        ('VerseText', True): 'p',
+        ('VerseText', False): 'nd',
+        ('Other', True): 'p',
+        ('Other', False): 'nd',
+        ('Unspecified', True): 'p',
+        ('Unspecified', False): 'nd'
+    }
 
     @classmethod
     def extend_stylesheet(cls, *names, **kwds):
@@ -282,16 +292,30 @@ class parser(sfm.parser):
                  default_meta=_default_meta,
                  canonicalise_footnotes=True,
                  *args, **kwds):
-        if canonicalise_footnotes:
-            self._canonicalise_footnote = parser._canonicalise_footnote
-        else:
+        if not canonicalise_footnotes:
             self._canonicalise_footnote = lambda x: x
 
+        stylesheet = self.__synthesise_private_meta(stylesheet, default_meta)
         super().__init__(source,
                          stylesheet,
                          default_meta,
                          private_prefix='z',
                          *args, **kwds)
+
+    @classmethod
+    def __synthesise_private_meta(cls, sty, default_meta):
+        private_metas = dict(r for r in sty.items() if r[0].startswith('z'))
+        metas = {
+            n: sty.get(
+                cls.__unspecified_metas.get(
+                    (m['TextType'], m['Endmarker'] is None
+                        and m.get('StyleType', None) == 'Paragraph'),
+                    None),
+                default_meta).copy()
+            for n, m in private_metas.items()
+        }
+        return style.update_sheet(sty,
+                                  style.update_sheet(metas, private_metas))
 
     def _force_close(self, parent, tok):
         if tok is not sfm.parser._eos \
@@ -399,6 +423,7 @@ class parser(sfm.parser):
             self._tokens.put_back(tok)
 
         return self._canonicalise_footnote(self._default_(parent))
+    _notetext_ = _NoteText_
 
     def _Unspecified_(self, parent):
         orig_name = parent.name
