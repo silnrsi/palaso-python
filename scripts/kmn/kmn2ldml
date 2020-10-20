@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from palaso import kmn
 from palaso.kmfl import kmfl

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from xml.etree import cElementTree as et
 from cStringIO import StringIO

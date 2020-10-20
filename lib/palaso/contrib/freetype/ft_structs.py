@@ -337,7 +337,7 @@ class FT_CharmapRec(Structure):
                  TrueType specification and should be emulated similarly.
     '''
     _fields_ = [
-        ('face',        c_void_p),  # Shoudl be FT_Face
+        ('face',        c_void_p),  # Should be FT_Face
         ('encoding',    FT_Encoding),
         ('platform_id', FT_UShort),
         ('encoding_id', FT_UShort),
@@ -429,7 +429,7 @@ class FT_Outline(Structure):
         ('n_contours', c_short),
         ('n_points',   c_short),
         ('points',     POINTER(FT_Vector)),
-        # declaring buffer as c_char_p would prevent us to acces all tags
+        # declaring buffer as c_char_p would prevent us to access all tags
         ('tags',       POINTER(c_ubyte)),
         ('contours',   POINTER(c_short)),
         ('flags',      c_int),

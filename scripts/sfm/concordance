@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 '''
 Count the words in a USFM file skipping punctuation and non-publication
 markers updating a master concordance CSV file with any new references
@@ -101,13 +101,31 @@ def _flatten(doc):
                        doc, [])
 
 
+def decorate_references(source):
+    ref = [None, None, None]
+
+    def _g(_, e):
+        if isinstance(e, sfm.Element):
+            if e.name == 'id':
+                ref[0] = str(e[0]).split()[0]
+            elif e.name == 'c':
+                ref[1] = e.args[0]
+            elif e.name == 'v':
+                ref[2] = e.args[0]
+            return reduce(_g, e, None)
+        e.pos = Reference(e.pos, ref)
+    source = list(source)
+    reduce(_g, source, None)
+    return source
+
+
 def concordance(refs, source_path):
     opts.verbose and sys.stdout.write(f'processing file: {source_path!r}\n')
     try:
         with codecs.open(source_path, 'r', encoding='utf_8_sig') as source:
             doc = sfm.sfilter(
                     sfm.text_properties('publishable', 'vernacular'),
-                    usfm.decorate_references(
+                    decorate_references(
                         usfm.parser(source,
                                     stylesheet=opts.stylesheet,
                                     error_level=opts.error_level)))
@@ -183,7 +201,7 @@ if __name__ == '__main__':
     parser.add_option(
         "-u", "--unused-warning", action='store_true',
         default=False,
-        help='Print out warnings when possibly unsused words are found.')
+        help='Print out warnings when possibly unused words are found.')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
         const=usfm.ErrorLevel.Marker,
@@ -262,7 +280,7 @@ if __name__ == '__main__':
             open(master_path, 'wb').close()
         master_src = open(master_path, 'r+b')
         master_out = tempfile.NamedTemporaryFile()
-        # merge in the word referneces into the new master.
+        # merge in the word references into the new master.
         prev_num_words = opts.verbose and len(words_refs)
         prev_num_refs = opts.verbose \
             and sum(map(len, words_refs.itervalues()))

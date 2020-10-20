@@ -21,7 +21,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-"""A recurisve descent parser library based on functional combinators.
+"""A recursive descent parser library based on functional combinators.
 
 Basic combinators are taken from Harrison's book ["Introduction to Functional
 Programming"][1] and translated from ML into Python. See also [a Russian
@@ -49,7 +49,7 @@ related to a parser state:
 
     Parser.parse :: Parser(a, b), Sequence(a) -> b
 
-Altough this module is able to deal with a sequences of any kind of objects, the
+Although this module is able to deal with a sequences of any kind of objects, the
 recommended way of using it is applying a parser to a `Sequence(Token)`.
 `Token` objects are produced by a regexp-based tokenizer defined in
 `funcparserlib.lexer`. By using it this way you get more readable parsing error
@@ -136,7 +136,7 @@ class Parser(object):
         NOTE: The real type of the parsed value isn't always such as specified.
         Here we use dynamic typing for ignoring the tokens that are of no
         interest to the user. Also we merge parsing results into a single _Tuple
-        unless the user explicitely prevents it. See also skip and >>
+        unless the user explicitly prevents it. See also skip and >>
         combinators.
         """
 
@@ -169,7 +169,7 @@ class Parser(object):
         A choice composition of two parsers.
 
         NOTE: Here we are not providing the exact type of the result. In a
-        statically typed langage something like Either b c could be used. See
+        statically typed language something like Either b c could be used. See
         also + combinator.
         """
 
@@ -187,7 +187,7 @@ class Parser(object):
         """Parser(a, b), (b -> c) -> Parser(a, c)
 
         Given a function from b to c, transforms a parser of b into a parser of
-        c. It is useful for transorming a parser value into another value for
+        c. It is useful for transforming a parser value into another value for
         making it a part of a parse tree or an AST.
 
         This combinator may be thought of as a functor from b -> c to Parser(a,
@@ -346,7 +346,7 @@ def pure(x):
 def maybe(p):
     """Parser(a, b) -> Parser(a, b or None)
 
-    Returns a parser that retuns None if parsing fails.
+    Returns a parser that returns None if parsing fails.
 
     NOTE: In a statically typed language, the type Maybe b could be more
     approprieate.

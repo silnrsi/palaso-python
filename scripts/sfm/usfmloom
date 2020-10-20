@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 '''
 Interleave 2 or more USFM files renaming tags with per source document
 suffices.
@@ -47,7 +47,7 @@ def merge(tags, *docs):
         if isinstance(e, sfm.Element):
             for child in e:
                 _relabel(tag, child)
-            e.name += f'{opts.seperator!s}{tag!s}'
+            e.name += f'{opts.separator!s}{tag!s}'
         else:
             return e
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     parser.add_option(
         "-u", "--unused-warning", action='store_true',
         default=False,
-        help='Print out warnings when possibly unsused words are found.')
+        help='Print out warnings when possibly unused words are found.')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
         const=usfm.ErrorLevel.Marker,
@@ -103,9 +103,9 @@ if __name__ == '__main__':
         help='User stylesheet to add/override marker definitions to the'
              ' default USFM stylesheet')
     parser.add_option(
-        "-c", "--seperator", action='store', type='string',
-        metavar='SEPERATOR', default='',
-        help='Seperator between marker and source document tag'
+        "-c", "--separator", action='store', type='string',
+        metavar='SEPARATOR', default='',
+        help='Separator between marker and source document tag'
              ' default: \'%default\'')
     parser.add_option(
         "-t", "--tags", action='store', type='string',

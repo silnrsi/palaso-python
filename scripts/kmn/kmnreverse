@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from palaso.kmn import Key, Keyman
 import sys, codecs

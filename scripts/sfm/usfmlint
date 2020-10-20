@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 '''
 Run the USFM parser over a project generating a report of all the parsing
 errors found for each SFM file in the project.

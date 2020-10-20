@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import optparse, re, os, sys, unicodedata
 from palaso import kmn

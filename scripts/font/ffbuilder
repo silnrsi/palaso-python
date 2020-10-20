@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import psMat, fontforge, os, re, sys
 from optparse import OptionParser

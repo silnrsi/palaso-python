@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import re, urllib, os, time, smtplib, csv, sys, gzip, cStringIO
 from optparse import OptionParser
