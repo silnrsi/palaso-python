@@ -1,0 +1,3 @@
+lib/palaso/font/ usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/contrib/ usr/lib/python3.8/dist-packages/palaso/
+scripts/font/* usr/bin/

@@ -1,0 +1,69 @@
+Source: python-palaso
+Section: python
+Priority: optional
+Maintainer: Nicolas Spalinger <nicolas_spalinger@sil.org>
+Uploaders: Tim Eves <tim_eves@sil.org>
+Build-Depends: debhelper (>=11~), dh-python, python3 (>=3.6), python3-all, python3-dev, python3-setuptools
+Standards-Version: 4.5.0
+X-Python3-Version: >= 3.6
+Homepage: http://github.com/silnrsi/palaso-python
+
+Package: python3-palaso-core
+Architecture: all
+Section: python
+Depends: ${python3:Depends}, ${misc:Depends}
+Provides: ${python3:Provides}
+Description: Payap Language Software general python modules
+ Various general purpose Python modules used by other palaso packages.
+ .
+ This package installs the scripts and libraries for Python 3.
+
+Package: python3-palaso-font
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-fonttools, libgraphite2-3, python3-palaso-core, python3-palaso-unicode, python3-icu
+Provides: ${python3:Provides}
+Description: Payap Language Software python font support
+ Python scripts and modules for interacting with fonts, including graphite,
+ icu and harfbuzz wrappers. Also provides support for testml.
+ .
+ This package installs the scripts and libraries for Python 3.
+
+Package: python3-palaso-kbd
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-core 
+Provides: ${python3:Provides}
+Description: Payap Language Software python keyboard support
+ Python scripts and modules for interacting with kmn keyboard descriptions.
+ This excludes support for kmfl.
+ .
+ This package installs the scripts and libraries for Python 3.
+
+Package: python3-palaso-sfm
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-teckit, python3-palaso-core
+Provides: ${python3:Provides}
+Description: Standard Format Markup python support
+ Python modules and scripts for interacting with SFM and USFM files.
+ .
+ This package installs the scripts and libraries for Python 3.
+
+Package: python3-palaso-teckit
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-palaso-core, libteckit0
+Provides: ${python3:Provides}
+Description: TECKit text mapping wrapper
+ Python module and scripts to interact with TECKit mappings.
+ .
+ This package installs the scripts and the library for Python 3.
+
+Package: python3-palaso-unicode
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-icu, python3-palaso-core
+Provides: ${python3:Provides}
+Description: Payap Language Software unicode text processing
+ Python modules and scripts to support Unicode text processing. Including:
+   * LDML collation
+   * Word breaking
+ .
+ This package installs the scripts and libraries for Python 3.
+
