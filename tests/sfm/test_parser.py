@@ -252,23 +252,28 @@ class USFMTestCase(unittest.TestCase):
 
     def test_round_trip_parse(self):
         data_dir = Path(__file__).parent / 'data'
-        self._test_round_trip_parse(
-            (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser,
-            leave_file=True)
+        for sfm in ['41MATWEBorig.SFM', '60JASWEBorig.SFM']:
+            with self.subTest(sfm=sfm):
+                self._test_round_trip_parse(
+                    (data_dir / sfm).open(encoding='utf_8_sig'),
+                    usfm.parser,
+                    leave_file=True)
 
     def test_round_trip_src(self):
         data_dir = Path(__file__).parent / 'data'
-        self._test_round_trip_source(
-            (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser,
-            leave_file=True)
+        for sfm in ['41MATWEBorig.SFM', '60JASWEBorig.SFM']:
+            with self.subTest(sfm=sfm):
+                self._test_round_trip_source(
+                    (data_dir / sfm).open(encoding='utf_8_sig'),
+                    usfm.parser,
+                    leave_file=True)
 
 
 if __name__ == "__main__":
     import doctest
     suite = unittest.TestSuite(
-        [doctest.DocTestSuite('palaso.sfm'),
+        [doctest.DocFileSuite('palaso.sfm.doctest'),
+         doctest.DocTestSuite('palaso.sfm'),
          doctest.DocTestSuite('palaso.sfm.records'),
          doctest.DocTestSuite('palaso.sfm.style'),
          doctest.DocTestSuite('palaso.sfm.usfm'),

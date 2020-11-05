@@ -1,0 +1,320 @@
+>>> from palaso.sfm import (
+...     Element,
+...     Position,
+...     Text,
+...     _put_back_iter,
+...     generate,
+...     parser,
+...     sreduce,
+...     smap
+... )
+
+Test class Element
+
+>>> Element('marker')
+Element('marker')
+
+>>> str(Element('marker'))
+'\\marker'
+
+>>> str(Element('marker', args=['1','2']))
+'\\marker 1 2'
+
+>>> e = Element('marker', args=['1'],
+...             content=[Text('some text '),
+...                      Element('marker2',
+...                              content=[Text('more text\n')]),
+...                      Element('blah',content=[Text('\n')]),
+...                      Element('blah',content=[Text('\n')]),
+...                      Element('yak', args=['yak'])])
+>>> len(e)
+5
+>>> e.name
+'marker'
+>>> e.pos
+Position(line=1, col=1)
+>>> e.meta
+{}
+>>> print(str(e))
+\marker 1 some text \marker2 more text
+\blah
+\blah
+\yak yak
+>>> Element('marker') == Element('marker')
+True
+>>> Element('marker') == Element('different')
+False
+
+
+Test class Text
+
+>>> from pprint import pprint
+>>> Text('a test')
+Text('a test')
+
+>>> Text('prefix ',Position(3,10)).pos, Text('suffix',Position(1,6)).pos
+(Position(line=3, col=10), Position(line=1, col=6))
+
+>>> t = Text('prefix ',Position(3,10)) + Text('suffix',Position(1,6))
+>>> t, t.pos
+(Text('prefix suffix'), Position(line=3, col=10))
+
+>>> t = Text('a few short words')[12:]
+>>> t, t.pos
+(Text('words'), Position(line=1, col=13))
+
+>>> t = Text('   yuk spaces   ').lstrip()
+>>> t, t.pos
+(Text('yuk spaces   '), Position(line=1, col=4))
+
+>>> t = Text('   yuk spaces   ').rstrip()
+>>> t, t.pos
+(Text('   yuk spaces'), Position(line=1, col=1))
+
+>>> Text('   yuk spaces   ').strip()
+Text('yuk spaces')
+
+>>> pprint([(t,t.pos) for t in Text('a few short words').split(' ')])
+[(Text('a'), Position(line=1, col=1)),
+ (Text('few'), Position(line=1, col=3)),
+ (Text('short'), Position(line=1, col=7)),
+ (Text('words'), Position(line=1, col=13))]
+
+>>> list(map(str, Text('a few short words').split(' ')))
+['a', 'few', 'short', 'words']
+
+>>> t=Text.concat([Text('a ', pos=Position(line=1, col=1)),
+...                Text('few ', pos=Position(line=1, col=3)),
+...                Text('short ', pos=Position(line=1, col=7)),
+...                Text('words', pos=Position(line=1, col=13))])
+>>> t, t.pos
+(Text('a few short words'), Position(line=1, col=1))
+
+
+Test class _put_back_iter
+>>> i=_put_back_iter([1,2,3])
+>>> next(i)
+1
+>>> next(i)
+2
+>>> i.put_back(256)
+>>> next(i)
+256
+>>> i.peek()
+3
+>>> i.put_back(512)
+>>> i.peek()
+512
+>>> next(i); next(i)
+512
+3
+>>> next(i)
+Traceback (most recent call last):
+...
+StopIteration
+
+Test class parser(collections.Iterable):
+SFM parser, and base class for more complex parsers such as USFM and the
+stylesheet parser.  This can be used to parse unstructured SFM files as a
+sequence of childless elements or text nodes. By supplying a stylesheet
+structure can be extracted from a source, such as a USFM document.
+
+Various options allow customisation of the strictness of error checking,
+private tag space prefix or even what constitutes a marker, beyond just
+starting with a '\'.
+
+>>> from pprint import pprint
+>>> import warnings
+
+Test edge case text handling
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     list(parser([])); list(parser([''])); list(parser('plain text'))
+[]
+[]
+[Text('plain text')]
+
+Test mixed marker and text and cross line coalescing
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     pprint(list(parser(r"""\lonely
+... \sfm text
+... bare text
+... \more-sfm more text
+... over a line break\marker""".splitlines(True))))
+[Element('lonely', content=[Text('\n')]),
+ Element('sfm', content=[Text('text\nbare text\n')]),
+ Element('more-sfm', content=[Text('more text\nover a line break')]),
+ Element('marker')]
+
+Default Backslash handling (just '\')
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     pprint(list(parser([
+...         r"\marker text",
+...         r"\escaped backslash\\character",
+...         r"\t1 \t2 \\backslash \^hat \%\t3\\\^"])))
+[Element('marker', content=[Text('text')]),
+ Element('escaped', content=[Text('backslash\\\\character')]),
+ Element('t1'),
+ Element('t2', content=[Text('\\\\backslash ')]),
+ Element('^hat'),
+ Element('%'),
+ Element('t3', content=[Text('\\\\')]),
+ Element('^')]
+
+Specify extra escapable characters or tokens, in this case everything that
+doesn't start with a number or letter isn't a tag.
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     pprint(list(parser([
+...         r"\t1 \t2 \\backslash \^hat \%\t3\\\^"],
+...         tag_escapes=r"[^0-9a-zA-Z]")))
+[Element('t1'),
+ Element('t2', content=[Text('\\\\backslash \\^hat \\%')]),
+ Element('t3', content=[Text('\\\\\\^')])]
+
+
+>>> doc=r"""
+... \id MAT EN
+... \ide UTF-8
+... \rem from MATTHEW
+... \h Mathew
+... \toc1 Mathew
+... \mt1 Mathew
+... \mt2 Gospel Of Matthew"""
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     pprint(list(parser(doc.splitlines(True))))
+[Text('\n'),
+ Element('id', content=[Text('MAT EN\n')]),
+ Element('ide', content=[Text('UTF-8\n')]),
+ Element('rem', content=[Text('from MATTHEW\n')]),
+ Element('h', content=[Text('Mathew\n')]),
+ Element('toc1', content=[Text('Mathew\n')]),
+ Element('mt1', content=[Text('Mathew\n')]),
+ Element('mt2', content=[Text('Gospel Of Matthew')])]
+
+>>> tss = parser.extend_stylesheet({},'id','ide','rem','h','toc1',
+...                                'mt1','mt2')
+>>> pprint(tss)
+{'h': {'Endmarker': None,
+       'OccursUnder': {None},
+       'StyleType': None,
+       'TextType': 'default'},
+ 'id': {'Endmarker': None,
+        'OccursUnder': {None},
+        'StyleType': None,
+        'TextType': 'default'},
+ 'ide': {'Endmarker': None,
+         'OccursUnder': {None},
+         'StyleType': None,
+         'TextType': 'default'},
+ 'mt1': {'Endmarker': None,
+         'OccursUnder': {None},
+         'StyleType': None,
+         'TextType': 'default'},
+ 'mt2': {'Endmarker': None,
+         'OccursUnder': {None},
+         'StyleType': None,
+         'TextType': 'default'},
+ 'rem': {'Endmarker': None,
+         'OccursUnder': {None},
+         'StyleType': None,
+         'TextType': 'default'},
+ 'toc1': {'Endmarker': None,
+          'OccursUnder': {None},
+          'StyleType': None,
+          'TextType': 'default'}}
+
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("error")
+...     pprint(list(parser(doc.splitlines(True), tss)))
+[Text('\n'),
+ Element('id', content=[Text('MAT EN\n')]),
+ Element('ide', content=[Text('UTF-8\n')]),
+ Element('rem', content=[Text('from MATTHEW\n')]),
+ Element('h', content=[Text('Mathew\n')]),
+ Element('toc1', content=[Text('Mathew\n')]),
+ Element('mt1', content=[Text('Mathew\n')]),
+ Element('mt2', content=[Text('Gospel Of Matthew')])]
+>>> tss['rem'].update(OccursUnder={'ide'})
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("error")
+...     pprint(list(parser(doc.splitlines(True), tss)))
+... # doctest: +NORMALIZE_WHITESPACE
+[Text('\n'),
+ Element('id', content=[Text('MAT EN\n')]),
+ Element('ide',
+         content=[Text('UTF-8\n'),
+                  Element('rem', content=[Text('from MATTHEW\n')])]),
+ Element('h', content=[Text('Mathew\n')]),
+ Element('toc1', content=[Text('Mathew\n')]),
+ Element('mt1', content=[Text('Mathew\n')]),
+ Element('mt2', content=[Text('Gospel Of Matthew')])]
+>>> del tss['mt1']
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("error")
+...     pprint(list(parser(doc.splitlines(True), tss)))
+Traceback (most recent call last):
+...
+SyntaxWarning: <string>: line 7,2: unknown marker \mt1: not in stylesheet
+
+Test function sreduce(elementf, textf, trees, initial):
+A crude word count example:
+>>> doc =r'''\lonely
+... \sfm text
+... bare text
+... \more-sfm more text
+... over a line break\marker'''.splitlines(True)
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     sreduce(lambda e, a, b: 1 + len(e.args) + a + b,
+...             lambda t, a: a + len(t.split()),
+...             parser(doc),
+...             0)
+12
+
+Test function smap(elementf, textf, trees):
+A crude upper casing example:
+>>> doc =r'''\lonely
+... \sfm text
+... bare text
+... \more-sfm more text
+... over a line break\marker'''.splitlines(True)
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     print(generate(smap(
+...         lambda n, a, b: (n.upper(), [x.upper() for x in a], b),
+...         lambda t: t.upper(),
+...         parser(doc))))
+\LONELY
+\SFM TEXT
+BARE TEXT
+\MORE-SFM MORE TEXT
+OVER A LINE BREAK\MARKER
+
+
+Test function generate(doc):
+Format a document inserting line separtors after paragraph markers where
+the first element has children.
+
+trees: An iterable over Element trees, such as the output of parser().
+
+>>> doc = r'\id TEST' '\n' \
+...       r'\mt \p A paragraph' \
+...       r' \qt A \+qt quote\+qt*\qt*'
+>>> tss = parser.extend_stylesheet({}, 'id', 'mt', 'p', 'qt')
+>>> tss['mt'].update(OccursUnder={'id'},StyleType='Paragraph')
+>>> tss['p'].update(OccursUnder={'mt'}, StyleType='Paragraph')
+>>> tss['qt'].update(OccursUnder={'p'},
+...                  StyleType='Character',
+...                  Endmarker='qt*')
+>>> tree = list(parser(doc.splitlines(True), tss))
+>>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
+\id TEST
+\mt \p A paragraph \qt A \+qt quote\+qt*\qt*
+>>> print(generate(parser(doc.splitlines(True), tss)))
+\id TEST
+\mt
+\p A paragraph \qt A \+qt quote\+qt*\qt*
