@@ -1,0 +1,9 @@
+>>> from palaso.sfm.usfm import parser
+>>> import warnings
+
+Basic Milestone test
+
+>>> with warnings.catch_warnings():
+...     warnings.simplefilter("ignore")
+...     list(parser([r'\id Text \qt-e|attr="value"\* more text']))
+[Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])]

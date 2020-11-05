@@ -273,6 +273,7 @@ if __name__ == "__main__":
     import doctest
     suite = unittest.TestSuite(
         [doctest.DocFileSuite('palaso.sfm.doctest'),
+         doctest.DocFileSuite('palaso.sfm.usfmdoctest'),
          doctest.DocTestSuite('palaso.sfm'),
          doctest.DocTestSuite('palaso.sfm.records'),
          doctest.DocTestSuite('palaso.sfm.style'),
