@@ -1,9 +1,19 @@
 >>> from palaso.sfm.usfm import parser
+>>> from palaso.sfm import generate
+>>> from pprint import pprint
 >>> import warnings
+>>> def test(s):
+...    with warnings.catch_warnings():
+...        warnings.simplefilter("ignore")
+...        # import pdb; pdb.set_trace()
+...        a = list(parser([s]))
+...        r = generate(a)
+...        return (r == s, generate(a), a)
+
 
 Basic Milestone test
 
->>> with warnings.catch_warnings():
-...     warnings.simplefilter("ignore")
-...     list(parser([r'\id Text \qt-e|attr="value"\* more text']))
-[Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])]
+>>> pprint(test(r'\id Text \qt-e|attr="value"\* more text'))
+(True,
+ '\\id Text \\qt-e|attr="value"\\* more text',
+ [Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])])

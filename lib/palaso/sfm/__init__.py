@@ -921,21 +921,23 @@ def generate(doc):
     def ge(e, a, body):
         styletype = e.meta['StyleType']
         sep = ''
+        end = ''
         if len(e) > 0:
             if styletype == 'Paragraph' \
                     and isinstance(e[0], Element) \
                     and e[0].meta['StyleType'] == 'Paragraph':
                 sep = os.linesep
-            elif not body.startswith(('\r\n', '\n')):
+            elif not body.startswith(('\r\n', '\n', '|')):
                 sep = ' '
+            elif styletype != 'Character' and not body.endswith((" ", "\r\n", "\n")):
+                end = '*'
         elif styletype == 'Character':
             body = ' '
         elif styletype == 'Paragraph':
             body = os.linesep
         nested = '+' if 'nested' in e.annotations else ''
-        end = ''
         if 'implicit-closed' not in e.annotations:
-            end = e.meta.get('Endmarker', '') or ''
+            end = e.meta.get('Endmarker', '') or end
         end = end and f"\\{nested}{end}"
 
         return f"{a}\\{nested}{' '.join([e.name] + e.args)}{sep}{body}{end}" \
