@@ -14,6 +14,11 @@
 Basic Milestone test
 
 >>> pprint(test(r'\id Text \qt-e|attr="value"\* more text'))
+(False,
+ '\\id Text \\qt-e |attr="value"\\* more text',
+ [Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])])
+
+>>> pprint(test(r'\id Text \qt-e |attr="value"\* more text'))
 (True,
- '\\id Text \\qt-e|attr="value"\\* more text',
+ '\\id Text \\qt-e |attr="value"\\* more text',
  [Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])])

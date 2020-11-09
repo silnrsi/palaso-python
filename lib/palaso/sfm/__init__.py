@@ -660,7 +660,10 @@ class parser(collections.Iterable):
         for tok in self._tokens:
             tag = self.__get_tag(parent, tok)
             if tag:  # Parse markers.
-                if tag.name == "*" and parent is not None:
+                if tag.name == "*":
+                    if parent is None or parent.meta['StyleType'] != 'Milestone':
+                        self._error(ErrorLevel.Unrecoverable,
+                                    'Non milestone cannot be closed by \\*')
                     return
                 meta = self.__get_style(tag.name)
                 if self.__need_subnode(parent, tag, meta):
@@ -921,16 +924,14 @@ def generate(doc):
     def ge(e, a, body):
         styletype = e.meta['StyleType']
         sep = ''
-        end = ''
+        end = '*' if styletype == 'Milestone' else ''
         if len(e) > 0:
             if styletype == 'Paragraph' \
                     and isinstance(e[0], Element) \
                     and e[0].meta['StyleType'] == 'Paragraph':
                 sep = os.linesep
-            elif not body.startswith(('\r\n', '\n', '|')):
+            elif not body.startswith(('\r\n', '\n')):
                 sep = ' '
-            elif styletype != 'Character' and not body.endswith((" ", "\r\n", "\n")):
-                end = '*'
         elif styletype == 'Character':
             body = ' '
         elif styletype == 'Paragraph':
