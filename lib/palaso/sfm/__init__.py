@@ -663,7 +663,7 @@ class parser(collections.Iterable):
                 if tag.name == "*":
                     if parent is None or parent.meta['StyleType'] != 'Milestone':
                         self._error(ErrorLevel.Unrecoverable,
-                                    'Non milestone cannot be closed by \\*')
+                                    'Non milestone \\{0} cannot be closed by \\*', tok, parent.name)
                     return
                 meta = self.__get_style(tag.name)
                 if self.__need_subnode(parent, tag, meta):

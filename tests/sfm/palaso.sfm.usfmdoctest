@@ -2,23 +2,28 @@
 >>> from palaso.sfm import generate
 >>> from pprint import pprint
 >>> import warnings
->>> def test(s):
+>>> def test(s, errors="ignore"):
 ...    with warnings.catch_warnings():
 ...        warnings.simplefilter("ignore")
 ...        # import pdb; pdb.set_trace()
 ...        a = list(parser([s]))
 ...        r = generate(a)
-...        return (r == s, generate(a), a)
+...        pprint((r == s, generate(a), a))
 
 
 Basic Milestone test
 
->>> pprint(test(r'\id Text \qt-e|attr="value"\* more text'))
+>>> test(r'\id Text \qt-e|attr="value"\* more text')
 (False,
  '\\id Text \\qt-e |attr="value"\\* more text',
  [Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])])
 
->>> pprint(test(r'\id Text \qt-e |attr="value"\* more text'))
+>>> test(r'\id Text \qt-e |attr="value"\* more text')
 (True,
  '\\id Text \\qt-e |attr="value"\\* more text',
  [Element('id', content=[Text('Text '), Element('qt-e', content=[Text('|attr="value"')]), Text(' more text')])])
+
+>>> test(r'\id \ip Text \wj |attr="value"\* more text', errors="error")
+Traceback (most recent call last):
+  ...
+SyntaxError: <string>: line 1,31: Non milestone \wj cannot be closed by \*
