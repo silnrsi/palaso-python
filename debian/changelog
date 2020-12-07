@@ -1,8 +1,8 @@
-python-palaso (0.7.5-2ubuntu1~ppa1) focal; urgency=medium
+python-palaso (0.7.5-2ubuntu1) focal; urgency=medium
 
   * Proposed pkg-ing for smith focal
 
- -- Nicolas Spalinger <nicolas.spalinger@sil.org> Tue, 06 Oct 2020 14:10:17 +0000
+ -- Nicolas Spalinger <nicolas.spalinger@sil.org>  Mon, 07 Dec 2020 20:42:15 +0100
 
 python-palaso (0.7.5-1ubuntu1) bionic; urgency=medium
 
