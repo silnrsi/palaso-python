@@ -547,7 +547,7 @@ class parser(collections.Iterable):
         self._sty = stylesheet.copy()
         self._sty.update(
             (m['Endmarker'], type(m)(em_def, OccursUnder={k}))
-            for k, m in stylesheet.items() 
+            for k, m in stylesheet.items()
             if m['Endmarker'])
 
     def _error(self, severity, msg, ev, *args, **kwds):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import sys
 from setuptools import setup
 from glob import glob
 
@@ -17,25 +17,28 @@ packages = ['palaso',
             'palaso.text',
             'palaso.unicode']
 
-scripts = set(filter(lambda x: x.rfind(".") == -1, glob('scripts/*/*')))
+scripts = {s for s in glob('scripts/*/*') if s.rfind('.') == -1}
+# Exclude testusfm for now: it's a debugging tool
+scripts -= {'scripts/sfm/testusfm'}
 
 try:
-    from Pyrex.Distutils.extension import Extension
-    from Pyrex.Distutils import build_ext
-    ext = [Extension("palaso.kmfl", ["lib/palaso.kmfl.pyx"],
+    from Pyrex.Distutils.extension import Extension  # type: ignore
+    from Pyrex.Distutils import build_ext            # type: ignore
+    ext = [Extension("palaso.kmfl",
+                     ["lib/palaso.kmfl.pyx"],
                      libraries=["kmfl", "kmflcomp"])]
     cmd = {'build_ext': build_ext}
 except ImportError:
-    print("No Pyrex!")
+    print("No Pyrex found: not building keyman support", sys.stderr)
     ext = []
     cmd = {}
-    scripts = scripts - set(['scripts/kmn/keymancoverage',
-                             'scripts/kmn/kmfltestkeys',
-                             'scripts/kmn/kmn2c',
-                             'scripts/kmn/kmn2klc',
-                             'scripts/kmn/kmn2ldml',
-                             'scripts/kmn/kmn2xml',
-                             'scripts/kmn/kmnxml2svg'])
+    scripts -= {'scripts/kmn/keymancoverage',
+                'scripts/kmn/kmfltestkeys',
+                'scripts/kmn/kmn2c',
+                'scripts/kmn/kmn2klc',
+                'scripts/kmn/kmn2ldml',
+                'scripts/kmn/kmn2xml',
+                'scripts/kmn/kmnxml2svg'}
 
 setup(name='palaso',
       version='0.7.5',
