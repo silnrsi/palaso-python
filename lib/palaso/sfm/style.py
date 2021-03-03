@@ -87,7 +87,7 @@ _fields = Marker({
     'TextProperties':   (unique(sequence(CaselessStr)), set()),
     'TextType':         (CaselessStr,   'Unspecified'),
     'StyleType':        (CaselessStr,   None),
-    #'Attributes':       (sequence(str), None)
+    # 'Attributes':       (sequence(str), None)
     # 'Rank':            (int,   None),
     # 'FontSize':        (int,   None),
     # 'Regular':         (flag,  False),
@@ -173,11 +173,12 @@ def parse(source, error_level=ErrorLevel.Content):
         warnings.simplefilter(
             "always" if error_level > ErrorLevel.Content else "ignore")
         rec_parser = records.parser(
-                        no_comments,
-                        records.Schema(
-                            'Marker', 
-                            type(_fields)({CaselessStr(k):v for k,v in _fields.items()})),
-                        error_level=error_level)
+            no_comments,
+            records.Schema(
+                'Marker',
+                type(_fields)(
+                    {CaselessStr(k): v for k, v in _fields.items()})),
+            error_level=error_level)
         rec_parser.source = getattr(source, 'name', '<string>')
         recs = iter(rec_parser)
         next(recs, None)
