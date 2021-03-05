@@ -131,9 +131,8 @@ class Element(list):
     def __str__(self):
         marker = ''
         nested = '+' if 'nested' in self.annotations else ''
-        milestone = '\*' if 'milestone' in self.annotations else ''
         if self.name:
-            marker = f"\\{nested}{' '.join([self.name + milestone] + self.args)}"
+            marker = f"\\{nested}{' '.join([self.name] + self.args)}"
         endmarker = self.meta.get('Endmarker', '')
         body = ''.join(map(str, self))
         sep = ''
@@ -930,7 +929,7 @@ def generate(doc):
 
     But it cannot be turned off if it is required
     >>> tree = list(parser(doc.splitlines(True), tss))
-    >>> tree[0][1][0][1][1].annotations['nested'] = False    
+    >>> tree[0][1][0][1][1].annotations['nested'] = False
     >>> print(generate(tree))
     \\id TEST
     \\mt
@@ -954,13 +953,12 @@ def generate(doc):
             body = os.linesep
         nested = '+' if 'nested' in e.annotations \
                         or parent_styletype == 'Character' else ''
-        milestone = '\*' if 'milestone' in e.annotations else ''
         end = ''
         if 'implicit-closed' not in e.annotations:
             end = e.meta.get('Endmarker', '') or ''
         end = end and f"\\{nested}{end}"
 
-        return f"{a}\\{nested}{' '.join([e.name + milestone] + e.args)}{sep}{body}{end}" \
+        return f"{a}\\{nested}{' '.join([e.name] + e.args)}{sep}{body}{end}" \
                if e.name else ''
 
     def gt(t, a):

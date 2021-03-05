@@ -296,6 +296,9 @@ class parser(sfm.parser):
             self._canonicalise_footnote = lambda x: x
 
         stylesheet = self.__synthesise_private_meta(stylesheet, default_meta)
+        for m in stylesheet.values():
+            if m['StyleType'] == 'Milestone':
+                m.update(Endmarker='*')
         super().__init__(source,
                          stylesheet,
                          default_meta,
