@@ -907,10 +907,27 @@ def generate(doc):
     ...                  StyleType='Character',
     ...                  Endmarker='qt*')
     >>> tree = list(parser(doc.splitlines(True), tss))
-    >>> print(''.join(map(str, parser(doc.splitlines(True), tss))))
+    >>> print(''.join(map(str, tree)))
     \\id TEST
     \\mt \\p A paragraph \\qt A \\+qt quote\\+qt*\\qt*
-    >>> print(generate(parser(doc.splitlines(True), tss)))
+    >>> print(generate(tree))
+    \\id TEST
+    \\mt
+    \\p A paragraph \\qt A \\+qt quote\\+qt*\\qt*
+
+    Top level Character style markers can have automatic nesting rendering
+    overridden by setting the 'nested' annotation. This out of spec, but
+    useful for generating fragments of a tree.
+    >>> tree[0][1][0][1].annotations['nested'] = True
+    >>> print(generate(tree))
+    \\id TEST
+    \\mt
+    \\p A paragraph \\+qt A \\+qt quote\\+qt*\\+qt*
+
+    But it cannot be turned off if it is required
+    >>> tree = list(parser(doc.splitlines(True), tss))
+    >>> tree[0][1][0][1][1].annotations['nested'] = False    
+    >>> print(generate(tree))
     \\id TEST
     \\mt
     \\p A paragraph \\qt A \\+qt quote\\+qt*\\qt*
@@ -918,6 +935,7 @@ def generate(doc):
 
     def ge(e, a, body):
         styletype = e.meta['StyleType']
+        parent_styletype = e.parent and e.parent.meta['StyleType']
         sep = ''
         if len(e) > 0:
             if styletype == 'Paragraph' \
@@ -930,7 +948,8 @@ def generate(doc):
             body = ' '
         elif styletype == 'Paragraph':
             body = os.linesep
-        nested = '+' if 'nested' in e.annotations else ''
+        nested = '+' if 'nested' in e.annotations \
+                        or parent_styletype == 'Character' else ''
         end = ''
         if 'implicit-closed' not in e.annotations:
             end = e.meta.get('Endmarker', '') or ''
