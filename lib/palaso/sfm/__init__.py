@@ -131,8 +131,9 @@ class Element(list):
     def __str__(self):
         marker = ''
         nested = '+' if 'nested' in self.annotations else ''
+        milestone = '\*' if 'milestone' in self.annotations else ''
         if self.name:
-            marker = f"\\{nested}{' '.join([self.name] + self.args)}"
+            marker = f"\\{nested}{' '.join([self.name + milestone] + self.args)}"
         endmarker = self.meta.get('Endmarker', '')
         body = ''.join(map(str, self))
         sep = ''
@@ -660,6 +661,9 @@ class parser(collections.Iterable):
         for tok in self._tokens:
             tag = self.__get_tag(parent, tok)
             if tag:  # Parse markers.
+                if tag.name == '*':
+                    parent.annotations['milestone'] = True
+                    continue
                 meta = self.__get_style(tag.name)
                 if self.__need_subnode(parent, tag, meta):
                     sub_parser = meta.get('TextType')
@@ -950,12 +954,13 @@ def generate(doc):
             body = os.linesep
         nested = '+' if 'nested' in e.annotations \
                         or parent_styletype == 'Character' else ''
+        milestone = '\*' if 'milestone' in e.annotations else ''
         end = ''
         if 'implicit-closed' not in e.annotations:
             end = e.meta.get('Endmarker', '') or ''
         end = end and f"\\{nested}{end}"
 
-        return f"{a}\\{nested}{' '.join([e.name] + e.args)}{sep}{body}{end}" \
+        return f"{a}\\{nested}{' '.join([e.name + milestone] + e.args)}{sep}{body}{end}" \
                if e.name else ''
 
     def gt(t, a):
