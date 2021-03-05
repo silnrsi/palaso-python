@@ -663,7 +663,7 @@ class parser(collections.Iterable):
             if tag:  # Parse markers.
                 if tag.name == '*':
                     parent.annotations['milestone'] = True
-                    continue
+                    return
                 meta = self.__get_style(tag.name)
                 if self.__need_subnode(parent, tag, meta):
                     sub_parser = meta.get('TextType')
