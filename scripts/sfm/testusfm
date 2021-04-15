@@ -44,7 +44,9 @@ else:
 if args.input:
     for f in args.usfm:
         with open(f, encoding="utf-8") as inf:
-            doc = list(usfm.parser(inf, stylesheet=sheet, tag_escapes=r"[%$]"))
+            doc = list(usfm.parser(inf,
+                                   stylesheet=sheet,
+                                   tag_escapes=r"[%$]"))
             outf.write(sfm.generate(doc))
 else:
     doc = list(usfm.parser(
