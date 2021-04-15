@@ -527,8 +527,11 @@ class parser(collections.Iterable):
             Optional, defaults to r'\\\\' to allow for escaping the backslash.
         """
         # Pick the marker lookup failure mode.
-        assert default_meta or not private_prefix, 'default_meta must be provided when using private_prefix'  # noqa: E501
-        assert error_level <= ErrorLevel.Marker or default_meta, 'default meta must be provided when error_level > ErrorLevel.Marker'  # noqa: E501
+        assert default_meta or not private_prefix, \
+            'default_meta must be provided when using private_prefix'
+        assert error_level <= ErrorLevel.Marker or default_meta,    \
+            'default meta must be provided when'                    \
+            ' error_level > ErrorLevel.Marker'
 
         # Set simple attributes
         self.source = getattr(source, 'name', '<string>')
@@ -536,7 +539,7 @@ class parser(collections.Iterable):
         self._pua_prefix = private_prefix
         self._tokens = _put_back_iter(self.__lexer(
             source,
-            re.compile(rf'(?:\\(?:{tag_escapes})|[^\\])+|\\[^\s\\]+',
+            re.compile(rf'(?:\\(?:{tag_escapes})|[^\\])+|\\[^\s|\\]+',
                        re.DOTALL | re.UNICODE)))
         self._error_level = error_level
         self._escaped_tag = re.compile(rf'^\\{tag_escapes}',
@@ -607,7 +610,7 @@ class parser(collections.Iterable):
         """ Return an iterator that returns tokens in a sequence:
             marker, text, marker, text, ...
         """
-        lmss = enumerate(map(tokeniser.finditer, lines))
+        lmss = list(enumerate(map(tokeniser.finditer, lines)))
         fs = (Text(m.group(), Position(l+1, m.start()+1))
               for l, ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith', '\\'))
@@ -660,9 +663,9 @@ class parser(collections.Iterable):
         for tok in self._tokens:
             tag = self.__get_tag(parent, tok)
             if tag:  # Parse markers.
-                if tag.name == '*':
-                    parent.annotations['milestone'] = True
-                    return
+                # if tag.name == '*':
+                #     parent.annotations['milestone'] = True
+                #     return
                 meta = self.__get_style(tag.name)
                 if self.__need_subnode(parent, tag, meta):
                     sub_parser = meta.get('TextType')
@@ -703,7 +706,7 @@ class parser(collections.Iterable):
             else:   # Pass non marker data through with a litte fix-up
                 if parent is not None \
                         and len(parent) == 0 \
-                        and not tok.startswith(('\r\n', '\n', '\\')):
+                        and not tok.startswith(('\r\n', '\n', '\\', '|')):
                     tok = tok[1:]
                 if tok:
                     tok.parent = parent
