@@ -932,6 +932,8 @@ class RuleSet:
                     p = g.parseKey(k)
                     if p[1][0] != 0 or p[1][1] != 0:
                         poslkup.append(posfmt.format(cmap[p[0]], p[1]))
+                if not len(poslkup):
+                    continue
                 poslkups.append(sorted(poslkup))
                 rlkupmap[count] = i
                 count += 1
@@ -973,7 +975,7 @@ class RuleSet:
         count = 0
         rule = []
         for m in match:
-            if m.hasPositions:
+            if m.hasPositions and r.gnps[count] in lkupmap:
                 s = m.asStr(cmap)
                 lnum = lkupmap[r.gnps[count]]
                 count += 1
