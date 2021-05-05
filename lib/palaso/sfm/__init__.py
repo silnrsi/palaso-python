@@ -49,6 +49,9 @@ class Position(NamedTuple):
     def __str__(self) -> str:
         return f'line {self.line},{self.col}'
 
+    def advance(self, n):
+        return Position(self.line, self.col+n)
+
 
 class Element(list):
     """
@@ -216,11 +219,12 @@ class Text(str):
             if e == -1:
                 result.append(tail)
                 tail = Text('',
-                            Position(self.pos.line, self.pos.col+len(tail)),
+                            tail.pos.advance(len(tail)),
                             self.parent)
                 break
             result.append(tail[:e])
             tail = tail[e+len(sep):]
+            tail.pos = tail.pos.advance(e+len(sep))
             maxsplit -= 1
         if tail:
             result.append(tail)
@@ -230,7 +234,7 @@ class Text(str):
         n = len(self)
         s_ = super().lstrip(*args, **kwds)
         return Text(s_,
-                    Position(self.pos.line, self.pos.col + n-len(s_)),
+                    self.pos.advance(n-len(s_)),
                     self.parent)
 
     def rstrip(self, *args, **kwds):
@@ -250,9 +254,7 @@ class Text(str):
 
     def __getitem__(self, i):
         return Text(super().__getitem__(i),
-                    Position(self.pos.line,
-                             self.pos.col
-                             + (i.start or 0 if isinstance(i, slice) else i)),
+                    self.pos.advance(i.start or 0 if isinstance(i, slice) else i),
                     self.parent)
 
 
