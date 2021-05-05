@@ -449,6 +449,10 @@ class Reference(sfm.Position):
         p.verse = ref[2]
         return p
 
+    def advance(self, n):
+        return Reference(super().advance(n),
+                         [self.book, self.chapter, self.verse])
+
 
 def decorate_references(source):
     ref = [None, None, None]
