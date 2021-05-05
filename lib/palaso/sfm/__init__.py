@@ -33,7 +33,7 @@ import os
 from itertools import chain, groupby
 from enum import IntEnum
 from functools import reduce
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 __all__ = ('usfm',                                            # Sub modules
            'Position', 'Element', 'Text', 'ErrorLevel', 'parser',  # data types
@@ -619,7 +619,7 @@ class parser(collections.Iterable):
         return chain.from_iterable(g if istag else (Text.concat(g),)
                                    for istag, g in gs)
 
-    def __get_tag(self, parent: Element, tok: str):
+    def __get_tag(self, parent: Optional[Element], tok: str):
         if tok[0] != '\\' or self._escaped_tag.match(tok):
             return None
 
@@ -887,13 +887,13 @@ def mpath(*path):
     return _pred
 
 
-def text_properties(*props):
+def text_properties(*args):
     """
     Create a predicate function that tests if a marker's text properties
     contain all the properties passed as arguments to this function.
     The returned callable can be used as a predicate to the sfilter() function.
     """
-    props = set(props)
+    props = set(args)
     def _props(e): return props <= set(e.meta.get('TextProperties', []))
     return _props
 
