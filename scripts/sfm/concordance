@@ -14,7 +14,7 @@ Dennis Drescher for having done something very similar and showing how it
 can be done.
 '''
 
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser
 from functools import reduce
 from itertools import chain, groupby, starmap
 from palaso.sfm import usfm, style
@@ -199,8 +199,8 @@ if __name__ == '__main__':
         "sfms", metavar="<SFM FILE>", type=str, nargs='+',
         help='SFM file(s) to extract words from.')
     parser.add_argument(
-        "master_src", metavar="<MASTER CSV FILE>",
-        type=FileType('a+', encoding='utf_8_sig'),
+        "db_path", metavar="<MASTER CSV FILE>",
+        type=Path,
         help="Path to the master CSV database.")
     parser.add_argument("-v", "--verbose", action='store_true', default=False,
                         help='Print out statistics and progress info')
@@ -273,21 +273,24 @@ if __name__ == '__main__':
 
         # Open the master file if it exists and a temp output file.
         # copying metadata to the output file.
-        master_out = tempfile.NamedTemporaryFile("w+", encoding="utf_8_sig")
-        # merge in the word referneces into the new master.
-        prev_num_words = args.verbose and len(words_refs)
-        prev_num_refs = args.verbose and sum(map(len, words_refs.values()))
-        merge_master_file_with_book(args.master_src, master_out, words_refs)
-        # Replace the original with the new version.
-        # We need to use this verbose way rather than shutil.copy2 because
-        #  Windows will not allow the NamedTemporaryFile object to be opened a
-        #  second time and closing it deletes the temporary.
-        master_out.seek(0)
-        args.master_src.seek(0)
-        args.master_src.truncate()
-        shutil.copyfileobj(master_out, args.master_src)
-        args.master_src.close()
-        master_out.close()
+        with args.db_path.open('a+t',
+                               newline='',
+                               encoding='utf_8_sig') as db_src, \
+            tempfile.NamedTemporaryFile("w+t",
+                                        newline='',
+                                        encoding="utf_8_sig") as db_new:
+            # merge in the word referneces into the new master.
+            prev_num_words = args.verbose and len(words_refs)
+            prev_num_refs = args.verbose and sum(map(len, words_refs.values()))
+            merge_master_file_with_book(db_src, db_new, words_refs)
+            # Replace the original with the new version.
+            # We need to use this verbose way rather than shutil.copy2 because
+            #  Windows will not allow the NamedTemporaryFile object to be
+            #  opened a second time and closing it deletes the temporary.
+            db_new.seek(0)
+            db_src.seek(0)
+            db_src.truncate()
+            shutil.copyfileobj(db_new, db_src)
     except IOError as err:
         sys.stderr.write(f'{parser.prog!s}: IO error: {err!s}\n')
         sys.exit(2)
