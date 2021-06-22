@@ -1,0 +1,34 @@
+#!/usr/bin/python3
+
+from palaso.unicode.ucd import get_ucd
+import csv
+import sys
+import argparse
+
+parser = argparse.ArgumentParser(description='Create CSV of Unicode data')
+parser.add_argument('csv', help='Spreadsheet to create')
+args = parser.parse_args()
+
+# header = list()
+fields = ['scx']
+with open(args.csv, 'w', newline='') as csv_file:
+    writer = csv.writer(csv_file)
+    for codepoint in range(sys.maxunicode):
+        # Get the character name if the character exists
+        try:
+            name = get_ucd(codepoint, 'na')
+        except:
+            continue
+
+        # Record data obtained so far
+        row = list()
+        row.append(f'{codepoint:04X}')
+        row.append(name)
+
+        # Get all other needed character properties
+        for field in fields:
+            data = get_ucd(codepoint, field)
+            row.append(data)
+
+        # Write data to CSV file
+        writer.writerow(row)
