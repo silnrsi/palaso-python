@@ -5,14 +5,51 @@ import csv
 import sys
 import argparse
 
-parser = argparse.ArgumentParser(description='Create CSV of Unicode data')
-parser.add_argument('csv', help='Spreadsheet to create')
-args = parser.parse_args()
 
-# header = list()
-fields = ['scx']
-with open(args.csv, 'w', newline='') as csv_file:
-    writer = csv.writer(csv_file)
+def main():
+    parser = argparse.ArgumentParser(description='Create CSV of Unicode data')
+    parser.add_argument('-a', '--alias', help='List of header names')
+    parser.add_argument('csv', help='Spreadsheet to create')
+    args = parser.parse_args()
+
+    fields = ['scx']
+
+    header_names = dict()
+    if args.alias:
+        read_header_names(args.alias, header_names)
+
+    header = list()
+    header.append('USV')
+    header.append('Name')
+    for field in fields:
+        header_name = header_names.get(field, field)
+        header.append(header_name)
+
+    with open(args.csv, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(header)
+        write_data(writer, fields)
+
+
+def read_header_names(alias_filename, names):
+    with open(alias_filename) as alias_file:
+        for line in alias_file:
+            # Ignore comments
+            line = line.partition('#')[0]
+            line = line.strip()
+
+            # Ignore blank lines
+            if line == '':
+                continue
+
+            # Parse names
+            alias = line.split(';')
+            short = alias[0].strip()
+            long = alias[1].strip()
+            names[short] = long.replace('_', ' ')
+
+
+def write_data(writer, fields):
     for codepoint in range(sys.maxunicode):
         # Get the character name if the character exists
         try:
@@ -32,3 +69,7 @@ with open(args.csv, 'w', newline='') as csv_file:
 
         # Write data to CSV file
         writer.writerow(row)
+
+
+if __name__ == '__main__':
+    main()
