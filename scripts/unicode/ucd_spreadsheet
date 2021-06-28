@@ -50,11 +50,11 @@ def read_header_names(alias_filename, names):
 
 
 def write_data(writer, fields):
-    for codepoint in range(sys.maxunicode):
+    for codepoint in range(sys.maxunicode-1):
         # Get the character name if the character exists
         try:
             name = get_ucd(codepoint, 'na')
-        except:
+        except KeyError:
             continue
 
         # Record data obtained so far
