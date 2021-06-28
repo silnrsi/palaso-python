@@ -12,7 +12,22 @@ def main():
     parser.add_argument('csv', help='Spreadsheet to create')
     args = parser.parse_args()
 
-    fields = ['scx']
+    fields = [
+        'gc',
+        'ccc',
+        'bc',
+        'dm',
+        'Bidi_M',
+        'uc',
+        'lc',
+        'tc',
+        'age',
+        'sc',
+        'blk',
+        'scx',
+        'InSC',
+        'InPC',
+        ]
 
     header_names = dict()
     if args.alias:
@@ -20,6 +35,7 @@ def main():
 
     header = list()
     header.append('USV')
+    header.append('Glyph')
     header.append('Name')
     for field in fields:
         header_name = header_names.get(field, field)
@@ -60,6 +76,10 @@ def write_data(writer, fields):
         # Record data obtained so far
         row = list()
         row.append(f'{codepoint:04X}')
+        char = '  ' + chr(codepoint) + ' '
+        if codepoint < 0x20:
+            char = ''
+        row.append(char)
         row.append(name)
 
         # Get all other needed character properties
