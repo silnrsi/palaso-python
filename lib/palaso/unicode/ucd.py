@@ -163,12 +163,30 @@ class UCD(list):
             return m[v] if v < len(m) else v
         return v
 
+    def findall(self, key, val):
+        """ Returns a list of all the codepoints whose key value is value """
+        if key in self.enums:
+            try:
+                enumval = self.enums[key].index(val)
+            except ValueError:
+                return []
+        else:
+            enumval = val
+        return [cp for cp in range(len(self)) if self[cp] is not None and self[cp][key] == enumval]
+        
+
 local_ucd = None
-def get_ucd(cp, key):
+def _get_local_ucd():
     global local_ucd
     if local_ucd is None:
         local_ucd = UCD()
-    return local_ucd.get(cp, key)
+    return local_ucd
+
+def get_ucd(cp, key):
+    return _get_local_ucd().get(cp, key)
+
+def find_ucd(key, val):
+    return _get_local_ucd().findall(key, val)
 
 if __name__ == '__main__':
     import sys, pickle
@@ -177,6 +195,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(get_ucd(0x0041, "sc"))
         print(get_ucd(0x3400, "na"))
+        print(["{:04X}".format(cp) for cp in find_ucd("InSC", "Invisible_Stacker")])
     else:
         try:
             cp = int(sys.argv[1], 16)
