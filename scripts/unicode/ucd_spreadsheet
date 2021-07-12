@@ -73,6 +73,10 @@ def write_data(writer, fields):
         except KeyError:
             continue
 
+        # Omit algorithmically derived CJK names
+        if 'CJK UNIFIED IDEOGRAPH-' in name:
+            continue
+
         # Record data obtained so far
         row = list()
         row.append(f'{codepoint:04X}')
