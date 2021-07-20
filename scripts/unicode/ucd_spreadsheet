@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from palaso.unicode.ucd import get_ucd
+from palaso.unicode.ucd import UCD
 import csv
 import sys
 import argparse
@@ -9,6 +9,7 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description='Create CSV of Unicode data')
     parser.add_argument('-a', '--alias', help='List of header names')
+    parser.add_argument('ucd', help='UCD XML file to get beta data from')
     parser.add_argument('csv', help='Spreadsheet to create')
     args = parser.parse_args()
 
@@ -34,6 +35,8 @@ def main():
         'jg',
         ]
 
+    ucd_beta = UCD(localfile=args.ucd)
+
     header_names = dict()
     if args.alias:
         read_header_names(args.alias, header_names)
@@ -51,7 +54,7 @@ def main():
     with open(args.csv, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(header)
-        write_data(writer, fields)
+        write_data(writer, ucd_beta, fields)
 
 
 def read_header_names(alias_filename, names):
@@ -72,11 +75,11 @@ def read_header_names(alias_filename, names):
             names[short] = long.replace('_', ' ')
 
 
-def write_data(writer, fields):
+def write_data(writer, ucd, fields):
     for codepoint in range(sys.maxunicode-1):
         # Get the character name if the character exists
         try:
-            name = get_ucd(codepoint, 'na')
+            name = ucd.get(codepoint, 'na')
         except KeyError:
             continue
 
@@ -85,7 +88,7 @@ def write_data(writer, fields):
             continue
 
         # Omit PUA characters
-        script = get_ucd(codepoint, 'sc')
+        script = ucd.get(codepoint, 'sc')
         if script == 'Zzzz':
             continue
 
@@ -108,7 +111,7 @@ def write_data(writer, fields):
         }
         # Get all other needed character properties
         for field in fields:
-            data = get_ucd(codepoint, field)
+            data = ucd.get(codepoint, field)
             if field == 'dt':
                 if data == 'none':
                     data = ''
