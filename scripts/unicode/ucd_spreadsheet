@@ -20,19 +20,18 @@ def main():
         'dm',
         'nv',
         'Bidi_M',
-        # 'na1',
+        'bmg',
         'uc',
         'lc',
         'tc',
-        'age',
         'sc',
-        'blk',
-        'jt',
-        'jg',
-        'bmg',
         'scx',
         'InSC',
         'InPC',
+        'age',
+        'blk',
+        'jt',
+        'jg',
         ]
 
     header_names = dict()
@@ -45,7 +44,9 @@ def main():
     header.append('Name')
     for field in fields:
         header_name = header_names.get(field, field)
-        header.append(header_name)
+        header_words = header_name.split(' ')
+        header_string = '\n'.join(header_words)
+        header.append(header_string)
 
     with open(args.csv, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
@@ -81,6 +82,11 @@ def write_data(writer, fields):
 
         # Omit algorithmically derived CJK names
         if 'CJK UNIFIED IDEOGRAPH-' in name:
+            continue
+
+        # Omit PUA characters
+        script = get_ucd(codepoint, 'sc')
+        if script == 'Zzzz':
             continue
 
         # Record data obtained so far
