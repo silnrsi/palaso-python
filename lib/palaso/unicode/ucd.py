@@ -15,6 +15,11 @@ the object interface:
     from palaso.unicode.ucd import UCD
     myucd = UCD(localfile="ucd.nounihan.flat.zip")   # localfile falls back to bundled data
     print(myucd.get(0x0041, 'scx'))
+
+The second parameter specifies the property to be queried and must be coded using the 
+abbreviations that are defined in the XML expression of the Unicode Character Database.
+For property abbreviation and value definitions, see Unicode Standard Annex #42 at 
+https://www.unicode.org/reports/tr42, especially section 4.4 Properties.
 """
 
 import array, pickle
