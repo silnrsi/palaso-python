@@ -29,10 +29,13 @@ def main():
         'scx',
         'InSC',
         'InPC',
-        'age',
-        'blk',
         'jt',
         'jg',
+        'CE',
+        'Comp_Ex',
+        'lb',
+        'age',
+        'blk',
         ]
 
     ucd_beta = UCD(localfile=args.ucd)
