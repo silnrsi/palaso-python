@@ -1,7 +1,8 @@
+#!/usr/bin/python3
 
 """Module to generate strings from a regexp"""
 
-import sre_parse
+import sre_parse, sre_compile
 from random import randrange, choice
 
 class ExpandingList(list):
@@ -111,12 +112,12 @@ def _rec_proc(pattern, data, index, match) :
             yield s
 
 def _proc(pattern, data, match) :
-    op = data[0]
-    if op == 'literal' :        # ('literal', charcode)
+    op = str(data[0])
+    if op == 'LITERAL' :        # ('literal', charcode)
         s = match.copy()
-        s.string += unichr(data[1])
+        s.string += chr(data[1])
         yield s
-    elif op == 'max_repeat' :   # ('max_repeat', (min, max, [contents]))
+    elif op == 'MAX_REPEAT' :   # ('max_repeat', (min, max, [contents]))
         if pattern.mode == 'random' :
             subdata = [data[1][2][0]] * randrange(data[1][0], data[1][1])
         elif pattern.mode == 'first' :
@@ -132,14 +133,14 @@ def _proc(pattern, data, match) :
                 yield s
         else :
             yield match
-    elif op == 'subpattern' :   # ('subpattern', (index | None, [contents]))
+    elif op == 'SUBPATTERN' :   # ('subpattern', (index | None, [contents]))
         if data[1][0] :
             match.startpos[data[1][0]] = len(match.string)
-        for s in _iterate(pattern, data[1][1], match) :
+        for s in _iterate(pattern, data[1][3], match) :
             if data[1][0] :
                 s.endpos[data[1][0]] = len(s.string)
             yield s
-    elif op == 'in' :           # ('in', [contents])
+    elif op == 'IN' :           # ('in', [contents])
         allchars = []
         for r in data[1] :
             allchars.extend([c for c in _chars(r)])
@@ -151,9 +152,9 @@ def _proc(pattern, data, match) :
             dochars = allchars
         for c in dochars :
             s = match.copy()
-            s.string += unichr(c)
+            s.string += chr(c)
             yield s
-    elif op == 'branch' :       # ('branch', (None, [[contents1], [contents2], ...]))
+    elif op == 'BRANCH' :       # ('branch', (None, [[contents1], [contents2], ...]))
         if pattern.mode == 'first' :
             l = [data[1][1][0]]
         elif pattern.mode == 'random' :
@@ -167,11 +168,11 @@ def _proc(pattern, data, match) :
         raise SyntaxError("Unprocessable regular expression operator: %s" % op)
 
 def _chars(rdata) :
-    op = rdata[0]
-    if op == 'range' :      # ('range', (first, last))
-        for c in xrange(rdata[1][0], rdata[1][1] + 1) :
+    op = str(rdata[0])
+    if op == 'RANGE' :      # ('range', (first, last))
+        for c in range(rdata[1][0], rdata[1][1] + 1) :
             yield c
-    elif op == 'literal' :  # ('literal', char)
+    elif op == 'LITERAL' :  # ('literal', char)
         yield rdata[1]
     else :
         raise SyntaxError("Unrecognised character group operator: " + op)
@@ -190,10 +191,10 @@ def _len_proc(data) :
     return (res, depth)
 
 def _len(data) :
-    op = data[0]
-    if op == 'literal' :
+    op = str(data[0])
+    if op == 'LITERAL' :
         return (1, 1)
-    elif op == 'max_repeat' :
+    elif op == 'MAX_REPEAT' :
         minc = data[1][0]
         maxc = data[1][1]
         mult = maxc - minc
@@ -202,20 +203,20 @@ def _len(data) :
             return (geom(res, maxc) + 1, depth * maxc)
         else :
             return (geom(res, maxc) - geom(res, minc), depth * maxc)
-    elif op == 'subpattern' :
-        return _len_proc(data[1][1])
-    elif op == 'in' :
+    elif op == 'SUBPATTERN' :
+        return _len_proc(data[1][3])
+    elif op == 'IN' :
         res = 0
         for r in data[1] :
-            inop = r[0]
-            if inop == 'range' :
+            inop = str(r[0])
+            if inop == 'RANGE' :
                 res += r[1][1] - r[1][0] + 1
-            elif inop == 'literal' :
+            elif inop == 'LITERAL' :
                 res += 1
             else :
-                raise SyntaxError("Unrecognised character group operator: " + op)
+                raise SyntaxError("Unrecognised character group operator: " + inop)
         return (res, 1)
-    elif op == 'branch' :
+    elif op == 'BRANCH' :
         res = 0
         depth = 0
         for r in data[1][1] :
@@ -241,7 +242,7 @@ def expand_sub(string, template, debug=0, mode='all') :
     """
     pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
     pattern.mode = mode
-    template = sre_parse.parse_template(template, pattern)
+    template = sre_parse.parse_template(template, sre_compile.compile(pattern))
     if debug :
         print(pattern)
         print(template)
@@ -270,14 +271,19 @@ def inversionlength(string) :
         that the regular expression would generate if pass to invert(string, 'all')"""
     pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
     return _len_proc(pattern.data)
-    
+
+def pprint(string):
+    pattern = sre_parse.parse(string, flags=sre_parse.SRE_FLAG_VERBOSE)
+    print(pattern.data)
+
 if __name__ == "__main__" :
     tests=[
         ('([ab])([cd])', r'\2\1'),
-        (u'([\u1000-\u1003])([\u103C-\u103D]?)(\u102F|\u1030)([\u1000-\u1003]\u103A)', r'\1\2\4\3')
+        (u'([\u1000-\u1003])([\u103C-\u103D]?)(\u102F?|\u1030)([\u1000-\u1003]\u103A)', r'\1\2\4\3'),
+        ('(x([ab]|[cd]?))', r'\1')
     ]
     for t in tests :
         print("-" * 50)
-        print((t[0] + "\t" + t[1]).encode('utf-8'))
+        print(t[0] + "\t" + t[1])
         for s in expand_sub(t[0], t[1]) :
-            print((s[0] + "\t" + s[1]).encode('utf-8'))
+            print(s[0] + "\t" + s[1])
