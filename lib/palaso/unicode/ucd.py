@@ -20,6 +20,11 @@ The second parameter specifies the property to be queried and must be coded usin
 abbreviations that are defined in the XML expression of the Unicode Character Database.
 For property abbreviation and value definitions, see Unicode Standard Annex #42 at 
 https://www.unicode.org/reports/tr42, especially section 4.4 Properties.
+
+When a new version of Unicode is released, an updated ucdata_pickle.bz2
+file should be created using the command
+
+    python3 ucd.py ucd.all.flat.zip ucdata_pickle.bz2
 """
 
 import array, pickle
