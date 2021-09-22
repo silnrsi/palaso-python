@@ -995,8 +995,16 @@ class RuleSet:
 
     def outtext(self, outfile, cmap, mode="w"):
         with open(outfile, mode) as fh:
-            for r in sorted(self.strings, key=lambda x:(-len(x), x.key())):
-                fh.write(r.asStr(cmap=cmap)+"\n")
+            if len(self.layers):
+                for r in sorted(self.strings, key=lambda x:-len(x)):
+                    for m in r.pre + r.match + r.post:
+                        self.learnClasses(m.keys, cmap)
+                for i, l in enumerate(self.layers):
+                    fh.write(l.outText(cmap, i))
+                fh.write("\nMain rules:\n")
+            else:
+                for r in sorted(self.strings, key=lambda x:(-len(x), x.key())):
+                    fh.write(r.asStr(cmap=cmap)+"\n")
             if mode == "a":
                 fh.write("\n----------\n")
 
@@ -1243,13 +1251,15 @@ class Layer:
                     for picks in itertools.combinations(allrs, size)
                     if all(any(i in s for i in picks) for s in allvals))
                 for r in allrs:
-                    r.keepme = 1 if r in bestset else 2
+                    # r.keepme = 1 if r in bestset else 2
+                    r.keepme = 1
         if count > 0:
             for r in list(self.strings):
                 if r.keepme != 1:
                     self.strings.remove(r)
                 if r.keepme == 2:
                     self.covered_strings.add(r)
+        log.debug(self.strings)
         return count
 
     def makeSets(self, parent, cmap):
@@ -1257,6 +1267,7 @@ class Layer:
             Creates different sets for each length of match string '''
         allsets = []
         alllengths = set()
+        # import pdb; pdb.set_trace()
         for s in self.strings:
             p = self.findCLengths(s)
             l = len(s) - p[0] - p[1]
@@ -1266,29 +1277,48 @@ class Layer:
                 alllengths.add(l)
                 while l >= len(allsets):
                     allsets.append([])
-                allsets[l] = [set() for i in range(l)]
+            for j, a in enumerate(allsets[l]):
+                count = 0
+                for i, r in enumerate((s[p[0]:-p[1]] if p[1] else s[p[0]:])):
+                    rset = set(r.keys)
+                    rset.difference_update(a[i])
+                    if not len(rset):
+                        count += 1
+                if count == l - 1:
+                    updatei = j
+                    break
+            else:
+                allsets[l].append([set() for i in range(l)])
+                updatei = len(allsets[l]) - 1
             for i, r in enumerate((s[p[0]:-p[1]] if p[1] else s[p[0]:])):
-                allsets[l][i].update(r.keys)
-        self.sets = [[sorted(s) for s in a] for a in allsets]
+                allsets[l][updatei][i].update(r.keys)
+        self.sets = [[[sorted(s) for s in l] for l in a] for a in allsets]
         self.lengths = sorted(alllengths)
         for a in self.sets:
-            for s in a:
-                parent.learnClasses(s, cmap, count=len(self.contextset))
+            for l in a:
+                for s in l:
+                    parent.learnClasses(s, cmap, count=len(self.contextset))
 
     def outFeaRef(self, index, cmap, parent):
         ''' Creates rules to match and call our lookup, in the main lookup '''
         rules = []
+        allrules = set()
+        log.debug(self.sets)
         for c in self.contexts():
             for l in self.lengths:
-                rule = ["pos"]
-                for p in c[0]:
-                    rule.append(parent.lookupClass(p.keys, cmap))
-                rule.append(parent.lookupClass(sorted(self.sets[l][0]), cmap) + "' lookup kernposchain_{}".format(index))
-                for s in self.sets[l][1:l]:
-                    rule.append(parent.lookupClass(sorted(s), cmap) + "'")
-                for p in c[1]: 
-                    rule.append(parent.lookupClass(p.keys, cmap))
-                rules.append(" ".join(rule) + ";")
+                for a in self.sets[l]:
+                    rule = ["pos"]
+                    for p in c[0]:
+                        rule.append(parent.lookupClass(p.keys, cmap))
+                    rule.append(parent.lookupClass(sorted(a[0]), cmap) + "' lookup kernposchain_{}".format(index))
+                    for s in a[1:l]:
+                        rule.append(parent.lookupClass(sorted(s), cmap) + "'")
+                    for p in c[1]:
+                        rule.append(parent.lookupClass(p.keys, cmap))
+                    arule = (" ".join(rule) + ";").replace("'", "")
+                    if arule not in allrules:
+                        allrules.add(arule)
+                        rules.append(" ".join(rule) + ";")
         return rules
 
     def outFeaLookup(self, index, cmap, parent, lkupmap):
@@ -1308,6 +1338,12 @@ class Layer:
         rules.extend(r[1] for r in sorted(ruleset))
         rules.append("}} kernposchain_{};".format(index))
         return rules
+
+    def outText(self, cmap, index):
+        res = ["---layer {}---".format(index)]
+        for s in sorted(self.strings, key=lambda x:(getattr(x, 'gnps', [10000])[0], -len(x))):
+            res.append(s.asStr(cmap=cmap))
+        return "\n".join(res)
 
 
 def addString(collections, s, rounding=0):
