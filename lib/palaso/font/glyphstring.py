@@ -304,20 +304,20 @@ class String(object):
         return res + " ".join(x.asStr(cmap) for x in self.pre + self.match + self.post)
 
     def subOverlap(self, other, layer=None, eqok=True):
-        """ Would any string match self over other if sorted by length.
-            Given a layer, tests all strings with the contexts of the layer.
-            Returns True if any string would be masked unless self is in the
-            strings tested. """
-        if len(self.match) > len(other.match):
+        """ If self were tested before other, would other be masked and not match? """
+        selfstr = self.pre + self.match + self.post
+        otherstr = list(other.pre) + list(other.match) + list(other.post)
+        if len(selfstr) > len(otherstr):
             return False
-        lpre = listPrefix(reversed(self.pre), reversed(other.pre))
-        lpost = listPrefix(self.post, other.post)
-        if (lpost != len(self.post) and lpost != len(other.post)) \
-                or (lpre != len(self.pre) and lpre != len(other.pre)):
-            return False
-        if any(not z[1].contains(z[0]) for z in zip(self.match, other.match)):
-            return False
-        if not eqok and len(self.match) == len(other.match):    # if identical, say no
+        matched = False
+        for i in range(len(otherstr)):
+            for j in range(len(selfstr)):
+                if not otherstr[i+j].contains(selfstr[j], includepos=False):
+                    break
+            else:
+                matched = True
+                break
+        else:
             return False
         return True
 
