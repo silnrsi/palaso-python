@@ -928,13 +928,14 @@ class RuleSet:
                 if not len(g.rules):
                     continue
                 poslkup = []
-                for k in sorted(g):
+                for k in g: #sorted(g):
                     p = g.parseKey(k)
                     if p[1][0] != 0 or p[1][1] != 0:
                         poslkup.append(posfmt.format(cmap[p[0]], p[1]))
                 if not len(poslkup):
                     continue
-                poslkups.append(sorted(poslkup))
+                #poslkups.append(sorted(poslkup))
+                poslkups.append(poslkup)
                 rlkupmap[count] = i
                 count += 1
             print("Number of lookups {}".format(len(poslkups)))
@@ -994,6 +995,7 @@ class RuleSet:
         return "pos " + " ".join(rule) + ";"
 
     def outtext(self, outfile, cmap, mode="w"):
+        self.classes = {}
         with open(outfile, mode) as fh:
             if len(self.layers):
                 for r in sorted(self.strings, key=lambda x:-len(x)):
