@@ -301,7 +301,7 @@ class String(object):
             res = '"'+self.text+'" '
         else:
             res = ""
-        return res + " ".join(x.asStr(cmap) for x in self.pre + self.match + self.post)
+        return res + " ".join(x.asStr(cmap) for x in list(self.pre) + list(self.match) + list(self.post))
 
     def subOverlap(self, other, layer=None, eqok=True):
         """ If self were tested before other, would other be masked and not match? """
@@ -837,7 +837,7 @@ class RuleSet:
                 s = layers[keys[i]].mergeScore(layers[keys[j]])
                 if s > 5:
                     jobs.append((s, keys[i], keys[j]))
-        log.debug("Start with {} jobs {}".format(len(jobs), jobs))
+        log.debug("Start with {} jobs {} and {} layers".format(len(jobs), jobs, len(layers)))
         # merge context groups into layers finding maximum overlap
         while len(jobs):
             jobs.sort(reverse=True)
@@ -862,27 +862,32 @@ class RuleSet:
     def addIntoLayers(self):
         newstrings = [set() for i in range(len(self.layers))]
         debug_count = 0
+        #for i, l in enumerate(self.layers):
+        #    log.debug("Before addIntoLayers ({})".format(i) + "\n".join(str(s) for s in l.strings))
         for r in self.strings:
             r.afterchain = False
             if any(r in l for l in self.layers):
                 continue
             for i, l in enumerate(self.layers):
-                for s in sum((list(l.inAllContexts(x)) for x in list(l.strings)), []):
-                    for t in list(newstrings[i]):
-                        if t.subOverlap(s):
-                            newstrings[i].remove(t)
-                            d = t.differences(s)
-                            newstrings[i].update(d)
-                            debug_count += 1
-                    if r.subOverlap(s):
-                        d = r.differences(s, assumeOverlap=True)
-                        if d is not None and len(d):
-                            newstrings[i].update(d)
-                        r.afterchain = True
+                for sc in (list(l.inAllContexts(x)) for x in list(l.strings)):
+                    for s in sc:
+                        for t in list(newstrings[i]):
+                            if t.subOverlap(s):
+                                newstrings[i].remove(t)
+                                d = t.differences(s)
+                                newstrings[i].update(d)
+                                debug_count += 1
+                        if r.subOverlap(s):
+                            r.afterchain = True
+                            if l.findContext(r):
+                                d = r.differences(s, assumeOverlap=True)
+                                if d is not None and len(d):
+                                    newstrings[i].update(d)
         log.debug("Reworked {}".format(debug_count))
         for i, l in enumerate(self.layers):
             if len(newstrings[i]):
                 l.strings.update(newstrings[i])
+            log.debug("After addIntoLayers ({}): ".format(i) + "\n".join(str(s) for s in l.strings))
 
     def learnClasses(self, keys, cmap, count=1):
         if len(keys) > 1:
@@ -928,14 +933,13 @@ class RuleSet:
                 if not len(g.rules):
                     continue
                 poslkup = []
-                for k in g: #sorted(g):
+                for k in sorted(g):
                     p = g.parseKey(k)
                     if p[1][0] != 0 or p[1][1] != 0:
                         poslkup.append(posfmt.format(cmap[p[0]], p[1]))
                 if not len(poslkup):
                     continue
-                #poslkups.append(sorted(poslkup))
-                poslkups.append(poslkup)
+                poslkups.append(sorted(poslkup))
                 rlkupmap[count] = i
                 count += 1
             print("Number of lookups {}".format(len(poslkups)))
@@ -1137,7 +1141,7 @@ class Layer:
     def inAllContexts(self, s):
         ''' Iterate returning a string expanded by all contexts '''
         for c in self.contexts():
-            yield String(pre = c[0], post = c[1], match = (s[len(c[0]):-len(c[1])] if len(c[1]) else s[len(c[0]):]))
+            yield String(pre = list(c[0]), post = list(c[1]), match = (s[len(c[0]):-len(c[1])] if len(c[1]) else s[len(c[0]):]))
 
     def findContext(self, s):
         ''' If we could add a string, return True '''
@@ -1223,6 +1227,7 @@ class Layer:
         def skey(x):
             return getattr(x, 'gnps', [10000])
         # Use mark and sweep
+        log.debug("Before layer.reduce: " + "\n".join(str(s) for s in self.strings))
         for r in self.strings:
             r.keepme = 0
         for g in itertools.groupby(sorted(self.strings, key=skey), key=skey):
@@ -1240,7 +1245,7 @@ class Layer:
                             cache[k].add(id(c))
                             strings[k].add(r)
                     else:
-                        cache[k] = set([id(c)])
+                        cache[k] = {id(c)}
                         strings[k] = {r}
             allvals = []
             for k, v in cache.items():
@@ -1261,7 +1266,7 @@ class Layer:
                     self.strings.remove(r)
                 if r.keepme == 2:
                     self.covered_strings.add(r)
-        log.debug(self.strings)
+        log.debug("After  layer.reduce: " + "\n".join(str(s) for s in self.strings))
         return count
 
     def makeSets(self, parent, cmap):
@@ -1305,7 +1310,7 @@ class Layer:
         ''' Creates rules to match and call our lookup, in the main lookup '''
         rules = []
         allrules = set()
-        log.debug(self.sets)
+        log.debug("layer {} sets: ".format(index) + str(self.sets))
         for c in self.contexts():
             for l in self.lengths:
                 for a in self.sets[l]:
@@ -1335,7 +1340,7 @@ class Layer:
             rule.extend(parent.outFeaMatch(s, s.match, cmap, lkupmap))
             rule.extend(parent.lookupClass(n.keys, cmap) for n in (s.post[:-p[1]] if p[1] else s.post))
             if getattr(s, 'afterchain', False):
-                print(rule, p, s.asStr(), (len(s.pre), len(s.match), len(s.post)))
+                log.info("afterchain found in layer {} ".format(index) + str((rule, p, s.asStr(), (len(s.pre), len(s.match), len(s.post)))))
             ruleset.add((-len(rule), " ".join(rule) + ";"))
         rules.extend(r[1] for r in sorted(ruleset))
         rules.append("}} kernposchain_{};".format(index))
