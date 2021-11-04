@@ -871,16 +871,16 @@ class RuleSet:
             for i, l in enumerate(self.layers):
                 for sc in (list(l.inAllContexts(x)) for x in list(l.strings)):
                     for s in sc:
-                        for t in list(newstrings[i]):
+                        for t in list(newstrings[i]):       # reduce the proposed added string by anything else we encounter
                             if t.subOverlap(s):
                                 newstrings[i].remove(t)
                                 d = t.differences(s)
                                 newstrings[i].update(d)
                                 debug_count += 1
-                        if r.subOverlap(s):
-                            r.afterchain = True
-                            if l.findContext(r):
-                                d = r.differences(s, assumeOverlap=True)
+                        if r.subOverlap(s):                 # would this mask anything in the layer
+                            r.afterchain = True             # yes. Put it at the end
+                            if l.findContext(r):            # if should be part of the layer,
+                                d = r.differences(s, assumeOverlap=True)    # add anything not already in there.
                                 if d is not None and len(d):
                                     newstrings[i].update(d)
         log.debug("Reworked {}".format(debug_count))
@@ -942,7 +942,7 @@ class RuleSet:
                 poslkups.append(sorted(poslkup))
                 rlkupmap[count] = i
                 count += 1
-            print("Number of lookups {}".format(len(poslkups)))
+            print("Number of single position lookups {}".format(len(poslkups)))
             for i, li in enumerate(sorted(range(len(poslkups)), 
                         key=lambda x:(len(poslkups[x]), "\n".join(y.split()[1] for y in poslkups[x])))):
                 l = poslkups[li]
