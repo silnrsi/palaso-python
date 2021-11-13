@@ -307,10 +307,8 @@ class String(object):
         """ If self were tested before other, would other be masked and not match? """
         selfstr = self.pre + self.match + self.post
         otherstr = list(other.pre) + list(other.match) + list(other.post)
-        if len(selfstr) > len(otherstr):
-            return False
         matched = False
-        for i in range(len(otherstr)):
+        for i in range(len(otherstr) - (len(self) - 1)):
             for j in range(len(selfstr)):
                 if not otherstr[i+j].contains(selfstr[j], includepos=False):
                     break
