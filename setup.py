@@ -41,7 +41,7 @@ except ImportError:
                 'scripts/kmn/kmnxml2svg'}
 
 setup(name='palaso',
-      version='0.7.5',
+      version='0.7.6',
       description='Payap Language Software python package and scripts',
       long_description="""Modules and scripts useful for building language
                           software.""",
