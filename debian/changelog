@@ -1,4 +1,4 @@
-python-palaso (1:0.7.6) bionic; urgency=medium
+python-palaso (1:0.7.6) focal; urgency=medium
 
   * Make debian dir generate only ptyhon3 packages.
   * Fix bugs in python2 to python3 transiton.
