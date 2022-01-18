@@ -224,7 +224,6 @@ class Text(str):
                 break
             result.append(tail[:e])
             tail = tail[e+len(sep):]
-            tail.pos = tail.pos.advance(e+len(sep))
             maxsplit -= 1
         if tail:
             result.append(tail)
