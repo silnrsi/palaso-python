@@ -3,80 +3,10 @@ Section: python
 Priority: optional
 Maintainer: Nicolas Spalinger <nicolas_spalinger@sil.org>
 Uploaders: Tim Eves <tim_eves@sil.org>
-Build-Depends: debhelper (>=11~), dh-python, python3-all, python-all, python3-setuptools, python-setuptools, python-pyrex (>= 0.9), libkmfl-dev, libkmflcomp-dev
+Build-Depends: debhelper (>=11~), dh-python, python3, python3-setuptools, libkmfl-dev, libkmflcomp-dev
 Standards-Version: 3.9.6
-X-Python-Version: >= 2.7
 X-Python3-Version: >= 3.6
 Homepage: http://github.com/silnrsi/palaso-python
-
-Package: python-palaso-core
-Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-core (>= 1:0.7.5)
-Provides: ${python:Provides}
-Description: Payap Language Software general python modules
- Various general purpose Python modules used by other palaso packages.
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso-font
-Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-font (>= 1:0.7.5), fonttools, libgraphite2-3, python-fontforge, python-palaso-core
-Provides: ${python:Provides}
-Description: Payap Language Software python font support
- Python scripts and modules for interacting with fonts, including graphite,
- icu and harfbuzz wrappers. Also provides support for testml.
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso-kbd
-Architecture: any
-Depends: ${python:Depends}, ${shlibs:Depends}, ${misc:Depends}, python3-palaso-kbd (>= 1:0.7.5), libkmfl0, libkmflcomp0, python-palaso-core 
-Provides: ${python:Provides}
-Description: Payap Language Software python keyboard support
- Python scripts and modules for interacting with keyboard descriptions,
- particularly kmfl.
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso-sfm
-Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-sfm (>= 1:0.7.5), python-palaso-teckit, python-palaso-core
-Provides: ${python:Provides}
-Description: Standard Format Markup python support
- Python modules and scripts for interacting with SFM and USFM files.
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso-teckit
-Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-teckit (>= 1:0.7.5), python-palaso-core, libteckit0
-Provides: ${python:Provides}
-Description: TECKit text mapping wrapper
- Python module and scripts to interact with TECKit mappings.
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso-unicode
-Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python3-palaso-unicode (>= 1:0.7.5), python-pyicu, python-gtk2 (>=2.14), python-palaso-core
-Provides: ${python:Provides}
-Description: Payap Language Software unicode text processing
- Python modules and scripts to support Unicode text processing. Including:
-   * LDML collation
-   * Word breaking
- .
- This package installs the libray for Python 2.
-
-Package: python-palaso
-Architecture: all
-Depends: ${misc:Depends}, python3-palaso (>= 1:0.7.5), python-palaso-kbd, python-palaso-font, python-palaso-teckit, python-palaso-sfm, python-palaso-teckit, python-palaso-unicode
-Description: Payap Language Software python package and scripts
- This metapackage provides Python scripts, modules and packages created by the
- Computing Unit at the Payap Linguistic Institute, a partnership between SIL and
- Payap University. These have been useful for language software programs and 
- tools developed by the Computing Unit.
- .
- This package installs the libray for Python 2.
 
 Package: python3-palaso-core
 Architecture: all

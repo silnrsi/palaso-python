@@ -1,9 +1,16 @@
+python-palaso (1:0.7.6) bionic; urgency=medium
+
+  * Make debian dir generate only ptyhon3 packages.
+  * Fix bugs in python2 to python3 transiton.
+
+ -- Tim Eves <tim_eves@sil.org>  Tue, 18 Jan 2022 21:39:32 +0700
+
 python-palaso (1:0.7.5) bionic; urgency=medium
 
   * Make debian dir generate both python2 and ptyhon3 packages from single 
     source.
   * Move all non-libkmfl dependant scripts to the python3 packages.
-  * Make the python2 packages depend on python3 to force upgrade to ptyon3 
+  * Make the python2 packages depend on python3 to force upgrade to python3 
     packages for script users.
 
  -- Tim Eves <tim_eves@sil.org>  Fri, 23 Sep 2019 11:46:53 +0700

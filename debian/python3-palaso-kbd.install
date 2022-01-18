@@ -1,3 +1,3 @@
-debian/python3-pypapk/usr/lib/python3.6/dist-packages/palaso/kmn/{__init__.py,keyboard.svg,parser.py,vector.py} usr/lib/python3.6/dist-packages/palaso/kmn/
-#debian/python3-pypapk/usr/lib/python3.7/dist-packages/palaso/kmn/{__init__.py,keyboard.svg,parser.py,vector.py} usr/lib/python3.7/dist-packages/palaso/kmn/
-debian/python3-pypapk/usr/bin/{keyman2ldml,kmnreverse} usr/bin
+#debian/python3-palaso/usr/lib/python3.6/dist-packages/palaso/kmn/{__init__.py,keyboard.svg,parser.py,vector.py} usr/lib/python3.6/dist-packages/palaso/kmn/
+debian/python3-palaso/usr/lib/python3.8/dist-packages/palaso/kmn/{__init__.py,keyboard.svg,parser.py,vector.py} usr/lib/python3.8/dist-packages/palaso/kmn/
+debian/python3-palaso/usr/bin/{keyman2ldml,kmnreverse} usr/bin
