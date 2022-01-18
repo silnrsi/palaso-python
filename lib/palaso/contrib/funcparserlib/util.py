@@ -28,7 +28,7 @@ def pretty_tree(x, kids, show):
     Returns a pseudographic tree representation of x similar to the tree command
     in Unix.
     """
-    (MID, END, CONT, LAST, ROOT) = (u'|-- ','`-- ','|   ','    ','')
+    (MID, END, CONT, LAST, ROOT) = ('|-- ','`-- ','|   ','    ','')
 
     def rec(x, indent, sym):
         line = indent + sym + show(x)

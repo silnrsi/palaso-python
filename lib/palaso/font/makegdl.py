@@ -2,7 +2,6 @@ from . import psnames
 
 
 class PointClass(object):
-
     def __init__(self, name):
         self.name = name
         self.glyphs = []
