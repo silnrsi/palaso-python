@@ -1,154 +1,166 @@
-import re, psnames
+from . import psnames
 
-class PointClass(object) :
 
-    def __init__(self, name) :
+class PointClass(object):
+
+    def __init__(self, name):
         self.name = name
         self.glyphs = []
         self.dias = []
         self.isBase = False
 
-    def addBaseGlyph(self, g) :
+    def addBaseGlyph(self, g):
         self.glyphs.append(g)
-        if g.isBase : self.isBase = True
+        if g.isBase:
+            self.isBase = True
 
-    def addDiaGlyph(self, g) :
+    def addDiaGlyph(self, g):
         self.dias.append(g)
 
-    def classGlyphs(self, isDia = False) :
-        if isDia :
+    def classGlyphs(self, isDia=False):
+        if isDia:
             return self.dias
-        else :
+        else:
             return self.glyphs
 
-    def isNotInClass(self, g, isDia = False) :
-        if isDia :
+    def isNotInClass(self, g, isDia=False):
+        if isDia:
             return g not in self.dias
-        else :
+        else:
             return g not in self.dias and g not in self.glyphs
 
-class Font(object) :
-    
-    def __init__(self) :
+
+class Font(object):
+    def __init__(self):
         self.glyphs = []
         self.psnames = {}
         self.canons = {}
         self.gdls = {}
         self.anchors = {}
 
-    def emunits(self) :
+    def emunits(self):
         return 0
 
-    def addGlyph(self, g) :
+    def addGlyph(self, g):
         self.glyphs.append(g)
         n = g.GDLName()
-        if n in self.gdls :
+        if n in self.gdls:
             count = 1
             index = -2
             n = n + "_1"
-            while n in self.gdls :
+            while n in self.gdls:
                 count = count + 1
                 n = n[0:index] + "_" + str(count)
-                if count == 10 : index = -3
-                if count == 100 : index = -4
+                if count == 10:
+                    index = -3
+                if count == 100:
+                    index = -4
             g.name.GDLName = n
         self.gdls[n] = g
-        for n in g.parseNames() :
+        for n in g.parseNames():
             self.psnames[n.psname] = g
             self.canons[n.canonical()] = (n, g)
         return g
 
-    def createClasses(self) :
+    def createClasses(self):
         self.classes = {}
-        for k, v in self.canons.items() :
-            if v[0].ext :
+        for k, v in self.canons.items():
+            if v[0].ext:
                 h = v[0].head()
                 o = self.canons.get(h.canonical(), None)
-                if o :
-                    if v[0].ext not in self.classes : self.classes[v[0].ext] = {}
+                if o:
+                    if v[0].ext not in self.classes:
+                        self.classes[v[0].ext] = {}
                     self.classes[v[0].ext][o[1].GDLName()] = v[1].GDLName()
 
-    def pointClasses(self) :
+    def pointClasses(self):
         self.points = {}
-        for g in self.glyphs :
-            for a in g.anchors.keys() :
+        for g in self.glyphs:
+            for a in g.anchors.keys():
                 b = a
-                if a.startswith("_") : b = a[1:]
-                if a not in self.points :
+                if a.startswith("_"):
+                    b = a[1:]
+                if a not in self.points:
                     self.points[b] = PointClass(b)
-                if a == b :
+                if a == b:
                     self.points[b].addBaseGlyph(g)
-                else :
+                else:
                     self.points[b].addDiaGlyph(g)
 
-    def outGDL(self, fh) :
+    def outGDL(self, fh):
         munits = self.emunits()
         fh.write('table(glyph) {MUnits = ' + str(munits) + '};\n')
-        for g in self.glyphs :
+        for g in self.glyphs:
             fh.write(g.GDLName() + ' = postscript("' + g.PSName + '")')
-            if len(g.anchors) :
+            if len(g.anchors):
                 fh.write('{')
                 outs = []
-                for a in g.anchors.keys() :
+                for a in g.anchors.keys():
                     v = g.anchors[a]
-                    if a.startswith("_") :
+                    if a.startswith("_"):
                         name = a[1:] + "M"
-                    else :
+                    else:
                         name = a + "S"
-                    outs.append(name + "=point(" + str(int(v[0])) + "m, " + str(int(v[1])) + "m)")
+                    outs.append(
+                        f"{name}=point({str(int(v[0]))}m,"
+                        f" {str(int(v[1]))}m)")
                 fh.write(", ".join(outs) + "}")
             fh.write(";\n")
         fh.write("\n")
         fh.write("\n/* Point Classes */\n")
-        for p in self.points.values() :
+        for p in self.points.values():
             n = p.name + "Dia"
             self.outclass(fh, "c" + n, p.classGlyphs(True))
             self.outclass(fh, "cTakes" + n, p.classGlyphs(False))
-            self.outclass(fh, 'cn' + n, filter(lambda x : p.isNotInClass(x, True), self.glyphs))
-            self.outclass(fh, 'cnTakes' + n, filter(lambda x : p.isNotInClass(x, False), self.glyphs))
+            self.outclass(fh, 'cn' + n,
+                          filter(lambda x: p.isNotInClass(x, True),
+                                 self.glyphs))
+            self.outclass(fh, 'cnTakes' + n,
+                          filter(lambda x: p.isNotInClass(x, False),
+                                 self.glyphs))
         fh.write("\n/* Classes */\n")
-        for p in self.classes.keys() :
+        for p in self.classes.keys():
             ins = []
             outs = []
-            for k, v in self.classes[p].items() :
+            for k, v in self.classes[p].items():
                 ins.append(k)
                 outs.append(v)
             self.outclass(fh, 'cno_' + p, ins)
             self.outclass(fh, 'c' + p, outs)
 
-    def outclass(self, fh, name, glyphs) :
+    def outclass(self, fh, name, glyphs):
         fh.write(name + " = (")
         count = 1
         sep = ""
-        for g in glyphs :
-            if isinstance(g, basestring) :
+        for g in glyphs:
+            if isinstance(g, str):
                 fh.write(sep + g)
-            else :
+            else:
                 fh.write(sep + g.GDLName())
-            if count % 8 == 0 :
+            if count % 8 == 0:
                 sep = ',\n         '
-            else :
+            else:
                 sep = ', '
             count += 1
         fh.write(');\n\n')
 
-class Glyph(object) :
 
-    def __init__(self, name) :
+class Glyph(object):
+    def __init__(self, name):
         self.PSName = name
         self.isBase = False
         self.name = next(self.parseNames())
         self.anchors = {}
 
-    def addAnchor(self, name, x, y, t = None) :
+    def addAnchor(self, name, x, y, t=None):
         self.anchors[name] = (x, y)
-        if not name.startswith("_") and t != 'basemark' :
+        if not name.startswith("_") and t != 'basemark':
             self.isBase = True
 
-    def parseNames(self) :
-        for name in self.PSName.split("/") :
+    def parseNames(self):
+        for name in self.PSName.split("/"):
             res = psnames.Name(name)
             yield res
 
-    def GDLName(self) :
+    def GDLName(self):
         return self.name.GDL()

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from itertools import groupby, ifilter, imap
+from itertools import groupby
 import unicodedata, operator
 
 word_cat = set(['Lu','Ll','Lt','Lm','Lo','Mn','Mc','Me','Pd','Cs','Co','Cn'])
@@ -32,10 +32,10 @@ def word_char(char, words, nonwords, category=word_cat, __ucd_category=unicodeda
 def words(text, words=[], nonwords=[], category=word_cat):
     '''Split a text string into words.
        Words are defined as groups of characters that satisfy word_char'''
-    joiner = unicode().join
-    return imap(joiner, 
-                imap(operator.itemgetter(1),
-                     ifilter(operator.itemgetter(0),
+    joiner = str().join
+    return map(joiner, 
+                map(operator.itemgetter(1),
+                     filter(operator.itemgetter(0),
                              groupby(text, lambda x: word_char(x, words, nonwords, category)))))
 
 

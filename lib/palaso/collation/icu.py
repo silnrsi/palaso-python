@@ -1,6 +1,7 @@
 """Module to interact with palaso.icu"""
 
 import palaso.icu, operator, struct, re, palaso.reggen, palaso.contexts
+from functools import reduce
 
 def sorted(tailor, strs, level=15, preproc=(), mode = -1) :
     """sorts a list of strings against the given tailoring and level, returning the resultant sorted list.

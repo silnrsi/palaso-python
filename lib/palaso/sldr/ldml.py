@@ -421,7 +421,7 @@ class Ldml(ETWriter):
                     comments = []
                 curr = getattr(elem, 'parent', None)
                 if not uparrows:
-                    if elem.text == u"↑↑↑" or \
+                    if elem.text == "↑↑↑" or \
                                 (getattr(elem, 'hasdeletedchild', False) and len(elem) == 0):
                         curr.remove(elem)
                         curr.hasdeletedchild = True
@@ -800,7 +800,7 @@ class Ldml(ETWriter):
         if len(res):
             res += "/" 
         tests = [(k, n.get(k)) for k in self._sortedattrs(n) if k in distkeys]
-        res += n.tag + u"".join(u'[@{}="{}"]'.format(*x) for x in tests)
+        res += n.tag + "".join(u'[@{}="{}"]'.format(*x) for x in tests)
         return res
 
     def serialize_xml(self, write, base = None, indent = '', topns = True, namespaces = {}, nouid=True):

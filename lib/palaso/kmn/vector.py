@@ -1,6 +1,6 @@
 import random
 import operator
-from itertools import product, islice, imap
+from itertools import product, islice
 
 
 def VectorIterator(indices, mode ='all') :
@@ -25,20 +25,22 @@ def _pick(pid,digits):
     return tuple(r)
 
 def _iterate_random(digits):
-    n_products = reduce(operator.mul,imap(len,digits))
+    n_products = reduce(operator.mul,map(len,digits))
     return islice((_pick(pid,digits) for pid in _rands(n_products)), n_products)        
 
 def _iterate_random_all(digits):
-    n_products = reduce(operator.mul,imap(len,digits))
+    n_products = reduce(operator.mul,map(len,digits))
     schedule = range(n_products)
     random.shuffle(schedule)
     return (_pick(pid,digits) for pid in schedule)
 
 def _iterate_random_all_depth(digits):
     digits = [ds[:] for ds in digits]
-    map(random.shuffle, digits)
+    for ds in digits:
+        random.shuffle(ds)
     return product(*digits)
-    
+
+
 _vector_iterators = {
      'all'              : _iterate_all,
      'first1'           : _first(_iterate_all),

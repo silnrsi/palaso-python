@@ -209,5 +209,5 @@ if __name__ == '__main__' :
     d = et.parse(data).getroot()
     t.process(context = d)
     with codecs.open(sys.argv[3], "w", encoding="utf-8") as of :
-        of.write(unicode(t))
+        of.write(str(t))
 

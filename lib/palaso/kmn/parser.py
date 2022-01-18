@@ -138,7 +138,7 @@ class DeadKey(object):
             cls.missing += 1
             if cls.missing == 0xF900:
                 cls.missing = 0xF0000
-            if unichr(cls.missing) not in cls.excludes:
+            if chr(cls.missing) not in cls.excludes:
                 break
 
     def __new__(cls, toklist):
@@ -147,7 +147,7 @@ class DeadKey(object):
             return cls.allkeys[number]
         res = super(DeadKey, cls).__new__(cls)
         res.number = number
-        res.char = unichr(cls.missing)
+        res.char = chr(cls.missing)
         cls.allkeys[number] = res
         cls.increment()
         return res
@@ -237,13 +237,13 @@ def get_num(s):
 
 def get_char(v):
     if v[0] in 'uU':
-        return unichr(int(v[2:], 16))
+        return chr(int(v[2:], 16))
     elif v[0] in 'xX':
-        return unichr(int(v[1:], 16))
+        return chr(int(v[1:], 16))
     elif v[0] in 'dD':
-        return unichr(int(v[1:]))
+        return chr(int(v[1:]))
     else:
-        return unichr(int(v, 8))
+        return chr(int(v, 8))
 
 class Parser(object):
 
@@ -347,7 +347,7 @@ class Parser(object):
         toktype = lambda s: some(lambda x: x.type == s) >> tokval
         def sumstr(s):
             #import pdb; pdb.set_trace()
-            return u"".join(unicode(x) for x in s)
+            return "".join(str(x) for x in s)
         keyword = lambda s: some(lambda x: x.type == 'KEYWORD' and x.value.lower() == s)
         op = lambda s: a(Token('OP', s)) >> tokval
         op_ = lambda s: skip(op(s))

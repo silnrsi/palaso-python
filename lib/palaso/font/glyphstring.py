@@ -562,7 +562,7 @@ class Node(object):
         if reskp is None or len(reskp) == 0:
             return None
         if includepos and self.hasPositions():
-            resk, resp = zip(*reskp)
+            resk, resp = list(zip(*reskp))
             return Node(resk, resp)
         elif other.hasPositions():
             poses = [self.positions[self.keys.index(g)] for g in reskp]

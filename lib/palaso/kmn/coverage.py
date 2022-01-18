@@ -12,14 +12,14 @@ class Coverage :
     def create_sequences(self, input, mode = 'all', cache = None, history=None) :
         cache = cache or {}
         history = history or collections.defaultdict(list)
-        for rule in xrange(0, self.numrules) :
+        for rule in range(0, self.numrules) :
             res = self.kmfl.reverse_match(input, rule, mode = mode)
             if not res: continue
             
             for output in res[1] :
                 if output[-1] >= 0x100FF00 : continue   # ignore specials
                 newinput = input[0:len(input) - res[0]] + output[:-1]
-                newstr = u"".join(unichr(i) for i in newinput)
+                newstr ="".join(chr(i) for i in newinput)
                 if newstr and newstr in cache :
                     for x in cache[newstr] :
                         yield x + [output[-1]]
@@ -45,7 +45,7 @@ class Coverage :
     def coverage_test(self, mode = 'all') :
         cache = {}
         outputted = set()
-        for i in xrange(0, self.numrules) :
+        for i in range(0, self.numrules) :
             for c in self.kmfl.flatten_context(i, side = 'l', mode = mode) :
                 last_context_item = c[-1]
                 if (last_context_item & 0xFFFF) > 0xFF00 : continue

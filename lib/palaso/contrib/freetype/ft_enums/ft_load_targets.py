@@ -6,7 +6,6 @@
 #  Distributed under the terms of the new BSD license.
 #
 # -----------------------------------------------------------------------------
-from __future__ import absolute_import
 """
 A list of values that are used to select a specific hinting algorithm to use
 by the hinter. You should OR one of these values to your 'load_flags' when

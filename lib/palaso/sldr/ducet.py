@@ -28,7 +28,7 @@ def readDucet(path="") :
             continue
 
         try:
-            key = u"".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
+            key ="".join(chr(int(x, 16)) for x in keyre.findall(parts[0]))
             vals = valre.findall(parts[1])
             result[key] = tuple(tuple(int(x, 16) for x in v) for v in vals)
         except:

@@ -17,7 +17,7 @@ class xmlmodel(object) :
 
     def set_key(self, key, value) :
         if len(key) > 1 :
-            if not self.axes.has_key(key[0]) :
+            if key[0] not in self.axes:
                 self.axes[key[0]] = xmlmodel(self)
             self.axes[key[0]].set_key(key[1:], value)
         else :
@@ -25,7 +25,7 @@ class xmlmodel(object) :
 
     def get_key(self, key) :
         if len(key) > 1 :
-            if not self.axes.has_key(key[0]) :
+            if key[0] not in self.axes:
                 return None
             return self.axes[key[0]].get_key(key[1:])
         else :
@@ -56,9 +56,9 @@ class xmlmodel(object) :
 
     def write_xml(self, fh, indent) :
         indent += "  "
-        for (k, v) in self.data.iteritems() :
+        for (k, v) in self.data.items() :
             fh.write("%s<data key='%s'>%s</data>\n" % (indent, k, v))
-        for (k, v) in self.axes.iteritems() :
+        for (k, v) in self.axes.items() :
             fh.write("%s<axis key='%s'>\n" % (indent, k))
             v.write_xml(fh, indent)
             fh.write("%s</axis>\n" % (indent))

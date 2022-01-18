@@ -48,6 +48,6 @@ class Simple :
         gtk.main_quit()
 
     def do_popup(self, widget, data=None, data1=None) :
-        print data
-        print data1
+        print(data)
+        print(data1)
 

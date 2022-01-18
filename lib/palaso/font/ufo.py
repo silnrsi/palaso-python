@@ -13,7 +13,7 @@ def read_dict(elem) :
     return res
 
 def read_array(elem) :
-    return map(read_any, elem)
+    return list(map(read_any, elem))
 
 def read_robofab_glyphlist(libfname, contentsfname) :
     etree = parse(libfname)

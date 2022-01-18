@@ -1,12 +1,13 @@
 
 from debian_bundle.deb822 import Sources, Packages
 from subprocess import Popen, PIPE
-import re, itertools, os, urllib, subprocess, gzip, cStringIO, sys, urllib
+import re, itertools, os, subprocess, gzip, io, sys
+import urllib.request, urllib.parse, urllib.error, urllib.request, urllib.parse, urllib.error
 
 class unzipurlfile(gzip.GzipFile) :
 
     def __init__(self, f) :
-        self.resf = cStringIO.StringIO()
+        self.resf = io.StringIO()
         self.resf.write(f.read())
         self.resf.seek(0)
         super(unzipurlfile, self).__init__(fileobj = self.resf)
@@ -21,27 +22,27 @@ class source_collection(object) :
     def __init__(self, seq) :
         self.sources = {}
         self.binaries = {}
-        if isinstance(seq, basestring) :
+        if isinstance(seq, (bytes, str)):
             url = seq
-            f = urllib.urlopen(url)
+            f = urllib.request.urlopen(url)
             if f.getcode() >= 300 :
                 f.close()
-                fz = urllib.urlopen(url + ".gz")
+                fz = urllib.request.urlopen(url + ".gz")
                 if fz.getcode() >= 300 :
                     fz.close()
-                    print "Unable to open Sources file: " + url
+                    print("Unable to open Sources file: " + url)
                     sys.exit(1)
                 f = unzipurlfile(fz)
                 fz.close()
             seq = f
         x = Sources(seq)
         while len(x) > 0 :
-            if not self.sources.has_key(x['package']) or not subprocess.call(["dpkg", "--compare-versions", self.sources[x['package']]['version'], "lt", x['version']]):
+            if x['package'] not in self.sources or not subprocess.call(["dpkg", "--compare-versions", self.sources[x['package']]['version'], "lt", x['version']]):
                 self.sources[x['package']] = x
                 for b in re.split(r"\s*,\s*", x['binary']) :
                     self.binaries[b] = x['package']
             x = Sources(seq)
-        if isinstance(seq, basestring) :
+        if isinstance(seq, (bytes, str)) :
             f.close()
 
     def all(self) :
@@ -85,15 +86,15 @@ class source_collection(object) :
         for f in src['files'] :
             name = f['name']
             if not os.path.exists(name) :
-                (name, info) = urllib.urlretrieve(host + "/" + src['directory'] + "/" + name, name)
-                print "Downloaded " + name
+                (name, info) = urllib.request.urlretrieve(host + "/" + src['directory'] + "/" + name, name)
+                print("Downloaded " + name)
             if name.endswith(".dsc") :
                 dsc = name
         if os.path.exists(dest) :
             cmd = 'rm -fr ' + dest
             os.system(cmd)
         cmd = "dpkg-source -x " + dsc + " " + dest
-        print cmd
+        print(cmd)
         os.system(cmd)
 
 class package_collection(object) :

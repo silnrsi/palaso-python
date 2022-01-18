@@ -6,7 +6,6 @@
 #  Distributed under the terms of the new BSD license.
 #
 # -----------------------------------------------------------------------------
-from __future__ import absolute_import
 '''
 Freetype structured types
 -------------------------

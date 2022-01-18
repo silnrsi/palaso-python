@@ -93,7 +93,7 @@ class LdmlMerge(Ldml):
                     self.overlay(o, usedrafts=usedrafts, this=t)
                 elif usedrafts:
                     self._merge_leaf(other, t, o)
-                if t.text == u"↑↑↑" and o.text != "":
+                if t.text == "↑↑↑" and o.text != "":
                     t.text = o.text
             break  # only do one alignment
         if addme and (o.tag != "alias" or not len(this)):  # alias in effect turns it into blocking

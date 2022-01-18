@@ -32,9 +32,9 @@ class LexerError(Exception):
         self.msg = msg
 
     def __str__(self):
-        s = u'cannot tokenize data'
+        s ='cannot tokenize data'
         line, pos = self.place
-        return u'%s: %d,%d: "%s"' % (s, line, pos, self.msg)
+        return'%s: %d,%d: "%s"' % (s, line, pos, self.msg)
 
 
 class Token(object):
@@ -45,7 +45,7 @@ class Token(object):
         self.end = end
 
     def __repr__(self):
-        return u'Token(%r, %r)' % (self.type, self.value)
+        return'Token(%r, %r)' % (self.type, self.value)
 
     def __eq__(self, other):
         # FIXME: Case sensitivity is assumed here
@@ -57,10 +57,10 @@ class Token(object):
         else:
             sl, sp = self.start
             el, ep = self.end
-            return u'%d,%d-%d,%d:' % (sl, sp, el, ep)
+            return'%d,%d-%d,%d:' % (sl, sp, el, ep)
 
     def __str__(self):
-        s = u"%s %s '%s'" % (self._pos_str(), self.type, self.value)
+        s ="%s %s '%s'" % (self._pos_str(), self.type, self.value)
         return s.strip()
 
     @property
@@ -68,7 +68,7 @@ class Token(object):
         return self.value
 
     def pformat(self):
-        return u"%s %s '%s'" % (self._pos_str().ljust(20),
+        return"%s %s '%s'" % (self._pos_str().ljust(20),
                                 self.type.ljust(14),
                                 self.value)
 

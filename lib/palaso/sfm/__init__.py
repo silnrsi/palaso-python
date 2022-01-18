@@ -30,6 +30,7 @@ import operator
 import re
 import warnings
 import os
+from . import usfm
 from itertools import chain, groupby
 from enum import IntEnum
 from functools import reduce
@@ -38,7 +39,7 @@ from typing import NamedTuple, Optional
 __all__ = ('usfm',                                            # Sub modules
            'Position', 'Element', 'Text', 'ErrorLevel', 'parser',  # data types
            'sreduce', 'smap', 'sfilter', 'mpath',
-           'text_properties', 'format', 'copy')               # functions
+           'text_properties', 'generate', 'copy')               # functions
 
 
 class Position(NamedTuple):
@@ -253,7 +254,8 @@ class Text(str):
 
     def __getitem__(self, i):
         return Text(super().__getitem__(i),
-                    self.pos.advance(i.start or 0 if isinstance(i, slice) else i),
+                    (self.pos.advance(i.start or 0 if isinstance(i, slice)
+                     else i)),
                     self.parent)
 
 
@@ -285,9 +287,6 @@ class _put_back_iter(collections.Iterator):
         self._pbq = []
 
     def __next__(self):
-        return self.next()
-
-    def next(self):
         if self._pbq:
             try:
                 return self._pbq.pop()
@@ -612,8 +611,8 @@ class parser(collections.Iterable):
             marker, text, marker, text, ...
         """
         lmss = list(enumerate(map(tokeniser.finditer, lines)))
-        fs = (Text(m.group(), Position(l+1, m.start()+1))
-              for l, ms in lmss for m in ms)
+        fs = (Text(m.group(), Position(ln+1, m.start()+1))
+              for ln, ms in lmss for m in ms)
         gs = groupby(fs, operator.methodcaller('startswith', '\\'))
         return chain.from_iterable(g if istag else (Text.concat(g),)
                                    for istag, g in gs)
@@ -624,7 +623,7 @@ class parser(collections.Iterable):
 
         tok = tok[1:]
         tag = Tag(tok.lstrip('+'), tok[0] == '+')
-        if parent is None:
+        if parent is not None:
             return tag
 
         # Check for the expected end markers with no separator and

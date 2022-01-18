@@ -265,7 +265,7 @@ class Buffer(object) :
             hbng.hb_buffer_set_direction(self.buffer, 5)
         else :
             hbng.hb_buffer_set_direction(self.buffer, 4)
-        (major, minor, macro) = map(int, version_string.split('.')) if version_string else (0, 0, 0)
+        (major, minor, macro) = [int(s) for s in version_string.split('.')] if version_string else (0, 0, 0)
         if unicodefuncs :
             hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
 #        elif (major < 1 and minor <= 9 and macro <= 20) :

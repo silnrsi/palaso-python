@@ -367,22 +367,22 @@ def item_to_key(item) :
                 modstr += m + " "
                 mods &= ~modifier
                 # lowercase uppercase keys (0x11 any shift)
-                if modifier & 0x11 and _keyshiftnames.has_key(key) :
+                if modifier & 0x11 and key in _keyshiftnames :
                     key = _rawkeys[_keyshiftnames[key]][0]
         if not modstr and key < 0x100:
-            return char_keysym(unichr(key))
+            return char_keysym(chr(key))
 
-        if _keynames.has_key(key) :
+        if key in _keynames:
             keystr = _keynames[key]
         else :
-            keystr = "XK_" + unichr(key & 0xFF)
+            keystr = "XK_" + chr(key & 0xFF)
         return "[" + modstr + keystr + "]"
     else :
-        return char_keysym(unichr(item))
+        return char_keysym(chr(item))
 
 def item_to_char(item) :
     if item < 0x110000 :
-        return unichr(item)
+        return chr(item)
     sym = item_to_key(item)
     if len(sym) > 2 and sym[0] == '[' and sym[-1] == ']' :
         words = re.split(r'\s+', sym[1:-1].strip())
@@ -398,7 +398,7 @@ def item_to_char(item) :
             if len(res) == 1 : return res.lower()
         elif len(words) == 2 and words[0].lower() == 'ctrl' :
             res = words[-1].replace('K_', '')
-            if len(res) == 1 : return unichr(ord(res) - 64)
+            if len(res) == 1 : return chr(ord(res) - 64)
     elif len(sym) == 2 :
         return sym[1:]
     else :
@@ -450,7 +450,7 @@ def keysym_klcinfo(sym) :
             mod = mod | _modifiers[w][2]
         vkey = words[-1]
         _, _, sc, vkc, kn, ekn = _rawkeys[words[-1]]
-        if _msrawmap.has_key(vkey) :
+        if vkey in _msrawmap:
             vkey = _msrawmap[vkey]
         else :
             vkey = vkey.replace("K_", "")
@@ -485,7 +485,7 @@ class Keyman(kmflorobject) :
         cache = cache or {}
         history = history or collections.defaultdict(list)
         found = False
-        for rule in xrange(0, self.numrules) :
+        for rule in range(0, self.numrules) :
             res = self.reverse_match(input, rule, mode = mode)
             if not res: continue
             for y in self._sequence(input, rule, res, cache, history, mode) :
@@ -501,7 +501,7 @@ class Keyman(kmflorobject) :
         for output in res[1] :
             if output[-1] >= 0x100FF00 : continue   # ignore specials
             newinput = input[0:len(input) - res[0]] + output[:-1]
-            newstr = u"".join(unichr(i) for i in newinput)
+            newstr ="".join(chr(i) for i in newinput)
             if newstr and newstr in cache :
                 for x in cache[newstr] :
                     yield x + [Key(output[-1])]
@@ -534,7 +534,7 @@ class Keyman(kmflorobject) :
             ensure that all rules are exercised"""
         cache = {}
         outputted = set()
-        for i in xrange(0, self.numrules) :
+        for i in range(0, self.numrules) :
             for c in self.flatten_context(i, side = 'l', mode = mode) :
                 last_context_item = c[-1]
                 if (last_context_item & 0xFFFF) > 0xFF00 : continue

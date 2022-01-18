@@ -198,10 +198,10 @@ def get_ucd(cp, key):
 def find_ucd(key, val):
     return _get_local_ucd().findall(key, val)
 
+
 if __name__ == '__main__':
-    import sys, pickle
-    from palaso.unicode.ucd import UCD, get_ucd
-                
+    import sys
+
     if len(sys.argv) < 2:
         print(get_ucd(0x0041, "sc"))
         print(get_ucd(0x3400, "na"))

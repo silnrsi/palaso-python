@@ -28,28 +28,24 @@ from builtins import chr
 import unicodedata
 import re
 
-try: unicode
-except NameError:
-    unicode = str
-
 hexescre = re.compile(r"(?:\\(?:ux)\{([0-9a-fA-F]+)\}|\\u([0-9a-fA-F]{4})|\\U([0-9a-fA-F]{8})|\\x([0-9a-fA-F]{2}))")
 hexgre = re.compile(r"\\u\{([0-9a-fA-F]+)\}")
 simpleescs = {
-    'a' : u"\u0007",
-    'b' : u"\u0008",
-    't' : u"\u0009",
-    'n' : u"\u000A",
-    'v' : u"\u000B",
-    'f' : u"\u000C",
-    'r' : u"\u000D",
-    '\\' : u"\u005C"
+    'a': "\u0007",
+    'b': "\u0008",
+    't': "\u0009",
+    'n': "\u000A",
+    'v': "\u000B",
+    'f': "\u000C",
+    'r': "\u000D",
+    '\\': "\u005C"
 }
 simpleescsre = re.compile(r"\\([^0-9])")
 groupsre = re.compile(r"\\([0-9]+)")
 
 
 def us2list(text):
-    """Convert a string of Unicode Sets into a list of strings."""
+    """Convert a string of str Sets into a list of strings."""
     res = parse(text)
     if len(res) > 0:
         return res[0]
@@ -70,7 +66,7 @@ def list2us(list_of_strings, ucd):
         if braces_needed:
             text = _add_needed_braces(text)
         unicode_set.append(text)
-    return u'[{}]'.format(' '.join(unicode_set))
+    return '[{}]'.format(' '.join(unicode_set))
 
 
 def _need_braces(text):
@@ -82,7 +78,7 @@ def _need_braces(text):
 
 def _add_needed_braces(text):
     """Add braces."""
-    return u'{' + text + u'}'
+    return '{' + text + '}'
 
 
 def _hex_escape(text, ucd):
@@ -113,8 +109,8 @@ def _escape_using_hex(char):
     """Use hex digits to escape the character."""
     codepoint = ord(char)
     if codepoint > 0xFFFF:
-        return u'\\U{:08x}'.format(codepoint)
-    return u'\\u{:04x}'.format(codepoint)
+        return '\\U{:08x}'.format(codepoint)
+    return '\\u{:04x}'.format(codepoint)
 
 
 def _escape_using_backslash(s):
@@ -124,7 +120,7 @@ def _escape_using_backslash(s):
 
 
 def escapechar(s):
-    return u"\\"+ s if s in '[]{}\\&-|^$:' else s
+    return "\\"+ s if s in '[]{}\\&-|^$:' else s
 
 
 class UnicodeSetSequence(list):
@@ -192,7 +188,7 @@ def flatten(s, normal=None):
         else:
             return
         res = []
-        yield u"".join(_expand(p, vals, i, x) for i, x in enumerate(indices))
+        yield "".join(_expand(p, vals, i, x) for i, x in enumerate(indices))
 
 
 def struni(s, groups=None):
@@ -208,7 +204,7 @@ def parse(s, normal=None):
     # convert escapes
     s = hexescre.sub(lambda m:escapechar(chr(int(m.group(m.lastindex), 16))), s)
     # don't flatten \\ escapes here since we need to differentiate with action chars {}[]
-    s = hexgre.sub(lambda m:"{"+u"".join(escapechar(chr(int(x, 16))) for x in m.group(1).split())+"}", s)
+    s = hexgre.sub(lambda m:"{"+"".join(escapechar(chr(int(x, 16))) for x in m.group(1).split())+"}", s)
     s = s.replace(' ', '')
     res = UnicodeSetSequence()
     i = 0
@@ -223,7 +219,7 @@ def parse(s, normal=None):
         if len(nextitem):
             res.append(nextitem)
     if normal is not None:
-        res = [UnicodeSet(set(unicodedata.normalize(normal, unicode(c)) for c in x)) for x in res]
+        res = [UnicodeSet(set(unicodedata.normalize(normal, str(c)) for c in x)) for x in res]
     return res
 
 
@@ -299,7 +295,7 @@ def parseitem(s, ind, lastitem, end):
                         res.add(chr(x))
                     lastitem = None
                 else:
-                    res.add(u"-")
+                    res.add("-")
             else:
                 res.add(op)
     elif s[ind] == '{':
@@ -312,7 +308,7 @@ def parseitem(s, ind, lastitem, end):
         x = s[ind+1]
         try:
             y = int(x)
-            res.add(u"\\"+x)
+            res.add("\\"+x)
         except:
             res.add(simpleescs.get(x, x))
         ind += 2

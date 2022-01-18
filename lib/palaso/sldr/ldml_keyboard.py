@@ -195,10 +195,10 @@ class Keyboard(object):
         k = keys[:end-begin]
         # if there is no base, insert one
         if (0, 0) not in [(x.primary, x.tertiary) for x in k]:
-            s += u"\u25CC"
+            s +="\u25CC"
             k += SortKey(0, 0, 0, 0)  # push this to the front
         # sort key is (primary, secondary, string index)
-        return u"".join(s[y] for y in sorted(range(len(s)), key=lambda x:k[x]))
+        return "".join(s[y] for y in sorted(range(len(s)), key=lambda x:k[x]))
 
     def _padlist(self, val, num):
         boolmap = {'false' : 0, 'true': 1}
@@ -502,7 +502,7 @@ def main():
     with open(args.testfile) as inf:
         for l in inf.readlines():
             res = list(kbd.process_string(l))
-            outfile.write(u", ".join(map(unicode, res)) + u"\n")
+            outfile.write(u", ".join(map(str, res)) + "\n")
     outfile.close()
 
 if __name__ == '__main__':

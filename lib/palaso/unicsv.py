@@ -24,8 +24,8 @@ class reader:
     def __init__(self, f, dialect=excel, encoding='utf-8', *args, **kwds):
         self.__reader = csv.reader(_utf8_recoder(f,encoding), dialect, *args, **kwds)
 
-    def next(self):
-        return tuple(unicode(cell,'utf-8') for cell in self.__reader.next())
+    def __next__(self):
+        return tuple(str(cell,'utf-8') for cell in self.__reader.next())
 
     def __iter__(self):
         return self
@@ -42,10 +42,10 @@ class writer:
         self.__writer = csv.writer(_utf8_recoder(f,encoding), dialect, *args, **kwds)
 
     def writerow(self,row):
-        self.__writer.writerow([unicode(cell).encode('utf-8') for cell in row])
+        self.__writer.writerow([str(cell).encode('utf-8') for cell in row])
 
     def writerows(self,rows):
-        self.__writer.writerows([[unicode(cell).encode('utf-8') for cell in row] for row in rows])
+        self.__writer.writerows([[str(cell).encode('utf-8') for cell in row] for row in rows])
 
     @property
     def dialect(self): return self.__writer.dialect
@@ -58,8 +58,8 @@ class DictReader:
 
     def __iter__(self): return self
 
-    def next(self):
-        return dict((unicode(k,'utf-8'),unicode(v,'utf-8')) for k,v in self.__reader.next().iteritems())
+    def __next__(self):
+        return dict((str(k,'utf-8'),str(v,'utf-8')) for k,v in self.__reader.next().iteritems())
 
     @property
     def dialect(self): return self.__reader.dialect
@@ -68,7 +68,7 @@ class DictReader:
     def line_num(self): return self.__reader.line_num
 
     @property
-    def fieldnames(self): return self.__reader.fieldnames and [unicode(f,'utf-8') for f in self.__reader.fieldnames]
+    def fieldnames(self): return self.__reader.fieldnames and [str(f,'utf-8') for f in self.__reader.fieldnames]
 
 
 class DictWriter:
@@ -77,7 +77,7 @@ class DictWriter:
 
     @staticmethod
     def __make_row(row):
-        return dict((k,unicode(v).encode('utf-8')) for k,v in row.iteritems())
+        return dict((k,str(v).encode('utf-8')) for k,v in row.iteritems())
 
     def writerow(self,row):
         self.__writer.writerow(self.__make_row(row))
@@ -86,7 +86,7 @@ class DictWriter:
         self.__writer.writerows(self.__make_row(row) for row in rows)
 
     def writeheader(self):
-        self.__writer.writerow(dict((f,unicode(f).encode('utf-8')) for f in self.__writer.fieldnames))
+        self.__writer.writerow(dict((f,str(f).encode('utf-8')) for f in self.__writer.fieldnames))
 
     @property
     def extrasaction(self): return self.__writer.extrasaction

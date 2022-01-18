@@ -5,11 +5,6 @@ from xml.sax.xmlreader import AttributesImpl
 from xml.sax.saxutils import XMLGenerator
 import warnings
 
-try:
-    unicode
-except NameError:
-    unicode = str
-
 class Duplicate(RuntimeError) : 
     def __init__(self, str) :
         RuntimeError.__init__(self, str.encode('utf-8'))
@@ -39,7 +34,7 @@ class LDMLHandler(xml.sax.ContentHandler) :
         elif tag in ('first_variable', 'last_variable', 'first_tertiary_ignorable', 'last_tertiary_ignorable', 'first_secondary_ignorable', 'last_secondary_ignorable', 'first_primary_ignorable', 'last_primary_ignorable', 'first_non_ignorable', 'last_non_ignorable', 'first_trailing', 'last_trailing') :
             self.textelement = tag
         elif tag == 'cp' :
-            self.text += unichr(attributes.get('hex'))
+            self.text += chr(attributes.get('hex'))
         elif tag == 'reset' :
             self.resetattr = attributes.get('before')
         elif tag == 'x' :
@@ -151,7 +146,7 @@ class Collation :
                 # add map for &output=input
                 self.addIdentity(s, b)
                 if debug :
-                    print("%s -> %s" % (b, s)).encode("utf-8")
+                    print(("%s -> %s" % (b, s)).encode("utf-8"))
 
         # go through the rules collecting sequences which are collation elements
         # convert &abc < x -> &a < x/bc type thing everywhere
@@ -228,7 +223,7 @@ class Element :
         self.child = element
         return element
     def asICU(self) :
-        res = unicode(Element.icu_relation_map[self.relation])
+        res = str(Element.icu_relation_map[self.relation])
         if self.context and self.context.context :
             res += " " + self.context.context + "|"
         if self.special :
@@ -276,8 +271,7 @@ class ElementIter :
     def __init__(self, start) :
         self.curr = start
     def __iter__(self) : return self
-    def __next__(self) : return self.next()
-    def next(self) :
+    def __next__(self) :
         res = self.curr
         if not res : raise StopIteration()
         self.curr = res.child
@@ -289,7 +283,7 @@ class Context :
         self.extend = None
 
 def overlap(base, str) :
-    run = range(0, len(str))
+    run = list(range(0, len(str)))
     return (base.find(str) != -1 or 
         base.endswith(tuple(str[0:i] for i in run)) or
         base.startswith(tuple(str[-i:] for i in run)))

@@ -42,9 +42,9 @@ def intersperse(main, *extras) :
             orders = [get_ucd(c, 'ccc') for c in dias]
             bases = list(zip(dias, orders))
             new = sorted(bases + extras, cmp=lambda a,b: cmp(a[1], b[1]))
-            results = zip(*new)
-            groups[i] = u"".join([groups[i][0]] + list(results[0]))
-        res.append(u"".join(groups))
+            results = list(zip(*new))
+            groups[i] = "".join([groups[i][0]] + list(results[0]))
+        res.append("".join(groups))
     return res
 
 def e(x) :
@@ -94,7 +94,7 @@ class Reunpack(object) :
                 elif c == 2 :
                     s = s.upper()
                 res.append(s)                       # append to output
-        return u"".join(res)                        # list -> string
+        return "".join(res)                        # list -> string
 
 
 class ReSplit(object) :

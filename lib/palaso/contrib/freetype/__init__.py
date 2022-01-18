@@ -6,7 +6,6 @@
 #  Distributed under the terms of the new BSD license.
 #
 # -----------------------------------------------------------------------------
-from __future__ import absolute_import
 '''
 FreeType high-level python API 
 
@@ -1135,7 +1134,7 @@ class Face( object ):
           correspond to the internal indices used within the file. This is done
           to ensure that value 0 always corresponds to the 'missing glyph'.
         '''
-        if type( charcode ) in (str,unicode):
+        if type( charcode ) in (bytes,str):
             charcode = ord( charcode )
         return FT_Get_Char_Index( self._FT_Face, charcode )
 

@@ -132,7 +132,7 @@ class IcuFont(Font) :
 
     def glyphs(self, text, includewidth = False) :
         if not len(text) : return []
-        self.layout.layoutChars(unicode(text))
+        self.layout.layoutChars(str(text))
         gids = self.layout.getGlyphs()
         poss = self.layout.getGlyphPositions()
         res = []

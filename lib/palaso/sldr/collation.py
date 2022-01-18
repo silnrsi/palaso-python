@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 # Py2 and Py3 compatibility
-from __future__ import print_function
-
 import re, copy, os
 import unicodedata as ud
 from math import log10
@@ -17,7 +15,7 @@ def escape(s):
     lastbase = False
     for k in s:
         if k in escs:
-            res += u"\\" + k
+            res +="\\" + k
             continue
         i = ord(k)
         if 32 < i < 127:
@@ -26,9 +24,9 @@ def escape(s):
             lastbase = True
             res += k
         elif i > 0xFFFF:
-            res += u'\\U' + ("00000000" + (hex(i)[2:]))[-8:]
+            res +='\\U' + ("00000000" + (hex(i)[2:]))[-8:]
         else:
-            res += u'\\u' + ("0000" + (hex(i)[2:]))[-4:]
+            res +='\\u' + ("0000" + (hex(i)[2:]))[-4:]
     return res
 
 def unescape(s):
@@ -100,7 +98,7 @@ def readDucet(path="") :
                 parts = contentLine.split(';')
                 if len(parts) != 2:
                     continue
-                key = u"".join(unichr(int(x, 16)) for x in keyre.findall(parts[0]))
+                key ="".join(unichr(int(x, 16)) for x in keyre.findall(parts[0]))
                 vals = valre.findall(parts[1])
                 result[key] = tuple(tuple(int(x, 16) for x in v) for v in vals)
     except :
@@ -250,9 +248,9 @@ class CollElement(object):
         self.order = (0,)
 
     def __repr__(self):
-        res = u">>>>"[:self.level] + self.base
+        res =">>>>"[:self.level] + self.base
         if self.exp:
-            return repr(res + u"/" + self.exp)
+            return repr(res +"/" + self.exp)
         else:
             return repr(res)
 

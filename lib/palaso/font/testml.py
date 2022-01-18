@@ -25,7 +25,7 @@ class Style(dict) :
 
     def addToElement(self, parent) :
         s = et.SubElement(parent, 'style')
-        prefs = " ".join(map(lambda x: x + "=" + str(self[x]), sorted(self.keys())))
+        prefs = " ".join(x + "=" + str(self[x]) for x in sorted(self.keys()))
         s.set('name', self.name)
         if not prefs and self.lang is None :
             parent.remove(s)
