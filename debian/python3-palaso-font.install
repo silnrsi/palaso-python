@@ -1,3 +1,3 @@
-#debian/python3-palaso/usr/lib/python3.6/dist-packages/palaso/{font,contrib} usr/lib/python3.6/dist-packages/palaso/
-debian/python3-palaso/usr/lib/python3.8/dist-packages/palaso/{font,contrib} usr/lib/python3.8/dist-packages/palaso/
-debian/python3-palaso/usr/bin/{addsfdmerge,ap2sfd,cmptxtrender,ffbuilder,ffpointreplace,ftcollide,testmlnorm,ufo2sfd}  usr/bin/
+lib/palaso/font/ usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/contrib/ usr/lib/python3.8/dist-packages/palaso/
+scripts/font/* usr/bin/

@@ -1,2 +1,3 @@
-#debian/python3-palaso/usr/lib/python3.6/dist-packages/palaso/{__init__,contexts,unicsv}.py usr/lib/python3.6/dist-packages/palaso/
-debian/python3-palaso/usr/lib/python3.8/dist-packages/palaso/{__init__,contexts,unicsv}.py usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/*.py usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/*.json usr/lib/python3.8/dist-packages/palaso/
+

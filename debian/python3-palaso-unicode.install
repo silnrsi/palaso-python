@@ -1,3 +1,7 @@
-#debian/python3-palaso/usr/lib/python3.6/dist-packages/palaso/{collation,text,sldr,unicode,{langtags,reggen}.py} usr/lib/python3.6/dist-packages/palaso/
-debian/python3-palaso/usr/lib/python3.8/dist-packages/palaso/{collation,text,sldr,unicode,{langtags,reggen}.py} usr/lib/python3.8/dist-packages/palaso/
-debian/python3-palaso/usr/bin/{brktest,flattenldml,ldml2icu,sortldml,testldml} usr/bin
+lib/palaso/unicode/ usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/collation/ usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/sldr/ usr/lib/python3.8/dist-packages/palaso/
+lib/palaso/text/ usr/lib/python3.8/dist-packages/palaso/
+
+scripts/collation/* usr/bin
+scripts/langtag/* usr/bin

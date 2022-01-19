@@ -1,1 +1,2 @@
-lib/palaso.egg-info/*
+build/
+lib/palaso.egg-info/
