@@ -1,32 +1,24 @@
-#!/usr/bin/env python2
-
-import pdb
+#!/usr/bin/env python3
 
 import sys
 import os, site
-import PyICU, palaso.collation.icu
+import icu, palaso.collation.icu
 from re import sub, escape
 import struct
 
-try:
- 	import pygtk
-  	pygtk.require("2.0")
-except:
-  	pass
-try:
-	import gtk
-  	import gtk.glade
-except:
-	sys.exit(1)
+import gi
+gi.require_version('Gtk', "3.0")
+from gi.repository import Gtk
 
 class Trainer:
 
     def __init__(self):
         self.gladefile = os.path.join(os.path.dirname(palaso.collation.icu.__file__), 'sort_trainer.glade')
-        self.wTree = gtk.glade.XML(self.gladefile, "window1")
+        self.builder = Gtk.Builder.new_from_file(self.gladefile)
+        self.wTree = self.builder.get_object("window1")
 
         dic = {
-            "on_window1_destroy" : gtk.main_quit,
+            "on_window1_destroy" : Gtk.main_quit,
             "on_bt_sort_clicked" : self.on_sort,
             "on_open_order1_activate" : self.on_open_sort,
             "on_open_sort_list1_activate" : self.on_open_src,
@@ -35,57 +27,57 @@ class Trainer:
             "on_bt_source_clicked" : self.on_set_src,
             "on_bt_keys_clicked" : self.on_sort_keys
             }
-        self.wTree.signal_autoconnect(dic)
-        self.tdia = TextDialog(self.gladefile)
+        self.tdia = TextDialog(self.builder)
+        dic.update(self.tdia.signals)
+        self.builder.connect_signals(dic)
 
     def on_sort(self, widget):
-        lb_error = self.wTree.get_widget("lb_status")
+        lb_error = self.builder.get_object("lb_status")
         lb_error.set_text('')
-        buf_order = self.wTree.get_widget("txt_order").get_buffer()
+        buf_order = self.builder.get_object("txt_order").get_buffer()
         try:
-            sort = PyICU.RuleBasedCollator(buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter()))
-        except PyICU.ICUError, val:
+            sort = icu.RuleBasedCollator(buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter(), False))
+        except icu.ICUError as val:
             lb_error.set_text(str(val))
             return
-        buf_src = self.wTree.get_widget("txt_src").get_buffer()
-        list = buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()).splitlines()
-        list.sort(sort.compare)
-        buf_srt = self.wTree.get_widget("txt_srt").get_buffer()
-        buf_srt.set_text("\n".join(list))
+        buf_src = self.builder.get_object("txt_src").get_buffer()
+        l = buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter(), False).splitlines()
+        l.sort(key=sort.getSortKey)
+        buf_srt = self.builder.get_object("txt_srt").get_buffer()
+        buf_srt.set_text("\n".join(l))
 
     def on_sort_keys(self, widget):
-#        pdb.set_trace()
-        lb_error = self.wTree.get_widget("lb_status")
+        lb_error = self.builder.get_object("lb_status")
         lb_error.set_text('')
-        buf_order = self.wTree.get_widget("txt_order").get_buffer()
-        txt_order = buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter())
+        buf_order = self.builder.get_object("txt_order").get_buffer()
+        txt_order = buf_order.get_text(buf_order.get_start_iter(), buf_order.get_end_iter(), False)
         try:
-            sort = PyICU.RuleBasedCollator(txt_order)
-        except PyICU.ICUError, val:
+            sort = icu.RuleBasedCollator(txt_order)
+        except icu.ICUError as val:
             lb_error.set_text(str(val))
             return
         text = sub(r'(?m)#.*$', u'\ufdd0', txt_order)
-        text = sub(r'\\[uU]([0-9a-fA-F]{4,6})', lambda(x) : unichr(int(x.group(1), 16)), text)
+        text = sub(r'\\[uU]([0-9a-fA-F]{4,6})', lambda x: chr(int(x.group(1), 16)), text)
         text = sub(r'(?<!\\)\[.*?\]', u'\ufdd0', text)
         text = sub(r'(?<!\\)[\s&<=;,|/]', u'\ufdd0', text)
-        text = sub(r'\\(.)', lambda(x) : x.group(1), text)
-        text = sub('\ufddo{2,}', u'\ufdd0', text)
+        text = sub(r'\\(.)', lambda x: x.group(1), text)
+        text = sub('\ufdd0{2,}', '\ufdd0', text)
         char_list = text.split(u'\ufdd0')
-        buf_src = self.wTree.get_widget("txt_src").get_buffer()
-        char_list += buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()).splitlines()
+        buf_src = self.builder.get_object("txt_src").get_buffer()
+        char_list += buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter(), False).splitlines()
         chars_dict = dict.fromkeys(char_list, 1)
-        chars = chars_dict.keys()
-        chars.sort(sort.compare)
+        chars = list(chars_dict.keys())
+        chars.sort(key=sort.getSortKey)
         textout = ''
-#        pdb.set_trace()
         for char in chars:
             if char == '': continue
             keyinfo = list()
             keyinfo_size = 0
             st = sort.getCollationKey(char).getByteArray()
-            for b in st.rstrip('\000').split('\001'):
-                if len(b) % 2: b += "\000"
-                keyinfo.append([struct.unpack('>H', x+(y or "\000")) for (x, y) in zip(b[::2], b[1::2])])
+            # import pdb; pdb.set_trace()
+            for b in st.rstrip(b'\000').split(b'\001'):
+                if len(b) % 2: b += b"\000"
+                keyinfo.append([x*256 + y for (x, y) in zip(b[::2], b[1::2])])
                 if len(keyinfo[-1]) > keyinfo_size: keyinfo_size = len(keyinfo[-1])
             line = char + "\t"
             for k in range(keyinfo_size):
@@ -125,27 +117,26 @@ class Trainer:
         return res
 
     def on_save_src(self, widget):
-        buf_src = self.wTree.get_widget("txt_src").get_buffer()
+        buf_src = self.builder.get_object("txt_src").get_buffer()
         fname = self.get_file_save()
         if fname:
             fileo = file(fname, "w")
-            fileo.write(buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter()))
+            fileo.write(buf_src.get_text(buf_src.get_start_iter(), buf_src.get_end_iter(), False))
             fileo.close()
 
     def on_save_sort(self, widget):
-#        pdb.set_trace()
-        buf_srt = self.wTree.get_widget("txt_order").get_buffer()
+        buf_srt = self.builder.get_object("txt_order").get_buffer()
         fname = self.get_file_save()
         if fname:
             fileo = file(fname, "w")
-            fileo.write(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter()))
+            fileo.write(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter(), False))
             fileo.close()
 
     def on_open_src(self, widget):
         fname = self.get_file_open()
         if fname:
             fileo = file(fname, "rU")
-            buf_src = self.wTree.get_widget("txt_src").get_buffer()
+            buf_src = self.builder.get_object("txt_src").get_buffer()
             buf_src.set_text("".join(fileo.readlines()))
             fileo.close()
         
@@ -153,37 +144,38 @@ class Trainer:
         fname = self.get_file_open()
         if fname:
             fileo = file(fname, "rU")
-            buf_srt = self.wTree.get_widget("txt_order").get_buffer()
+            buf_srt = self.builder.get_object("txt_order").get_buffer()
             buf_srt.set_text("".join(fileo.readlines()))
             fileo.close()
 
     def on_set_src(self, widget):
-        buf_srt = self.wTree.get_widget("txt_srt").get_buffer()
-        buf_src = self.wTree.get_widget("txt_src").get_buffer()
-        buf_src.set_text(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter()))
+        buf_srt = self.builder.get_object("txt_srt").get_buffer()
+        buf_src = self.builder.get_object("txt_src").get_buffer()
+        buf_src.set_text(buf_srt.get_text(buf_srt.get_start_iter(), buf_srt.get_end_iter(), False))
 
     def on_src_new(self, widget):
-        self.wTree.get_widget("txt_src").get_buffer().set_text('')
-        self.wTree.get_widget("txt_srt").get_buffer().set_text('')
+        self.builder.get_object("txt_src").get_buffer().set_text('')
+        self.builder.get_object("txt_srt").get_buffer().set_text('')
 
     def on_srt_new(self, widget):
-        self.wTree.get_widget("txt_order").get_buffer().set_text('')
+        self.builder.get_object("txt_order").get_buffer().set_text('')
 
 
 class TextDialog:
-    def __init__(self, gladefile):
-        self.wTree = gtk.glade.XML(gladefile, "sort_keys")
-        dic = {
+    def __init__(self, builder):
+        self.builder = builder
+        self.signals = {
             "on_bt_ok_clicked" : self.quit,
-            "on_sort_keys_delete_event" : lambda(x) : self.quit(x)
+            "on_sort_keys_delete_event" : lambda x: self.quit(x)
         }
-        self.wTree.signal_autoconnect(dic)
-        self.root = self.wTree.get_widget("sort_keys")
+        self.root = builder.get_object("sort_keys")
         self.root.hide()
 
     def set_text(self, text):
-        tx_box = self.wTree.get_widget("txt_keys")
-        tx_box.get_buffer().set_text(text)
+        tx_box = self.builder.get_object("txt_keys")
+        buf = tx_box.get_buffer()
+        buf.delete(buf.get_start_iter(), buf.get_end_iter())
+        buf.set_text(text)
         self.root.show()
 
     def quit(self, widget):
@@ -192,5 +184,5 @@ class TextDialog:
 
 if __name__ == "__main__":
     trainer = Trainer()
-    gtk.main()
+    Gtk.main()
 
