@@ -1,11 +1,19 @@
+# Editor environment files
 *~
-*.pyc
+.vscode
+*.code-workspace
+
+# Python runtime caching
 __pycache__
-.mypy_cache
+
+# setuptools intermediaries
 /build
 /dist
 /MANIFEST
+*.egg-info
+
+# Pyrex intermediaries
 lib/palaso.kmfl.[ch]
-/.vscode
-*.code-workspace
-/tests/sfm/data/**
+
+# Exclude private test data
+/tests/**/data/private/**
