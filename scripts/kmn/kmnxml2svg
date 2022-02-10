@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os, sys, string
 from xml.dom.minidom import *
@@ -79,7 +79,7 @@ def parseKeyboardFile(file):
         unshift = key.getAttribute('unshift')
         shift = key.getAttribute('shift')
         _keyMap[keyId] = (unshift, shift)
-    #print _keyMap
+    # print(_keyMap)
 
 def processSVGFile(file,outputsvg):
     global name
@@ -102,14 +102,14 @@ def processSVGFile(file,outputsvg):
                     rectId = rect.getAttribute('id')
                     a = rectId.split('_', 1)
                     baseId = a[1]
-                    if (_codeMap.has_key(baseId)):
+                    if (baseId in _codeMap):
                         keyId = _codeMap[baseId]
                     else :
                         keyId = baseId
                     x = int(rect.getAttribute('x'))
                     y = int(rect.getAttribute('y'))
 
-                    if (_keyMap.has_key(keyId)):
+                    if (keyId in _keyMap):
                         (unshift, shift) = _keyMap[keyId]
                     elif keyId in nonKeys :
                         continue 
@@ -136,7 +136,7 @@ def processSVGFile(file,outputsvg):
                     textUp.setAttribute('y', str(y + 25))
                     textUp.appendChild(dom.createTextNode(shift))
                     g.appendChild(textUp)
-                    #print textDown.toxml()
+                    # print(textDown.toxml())
                     textUpLabel = dom.createElement('text')
                     textUpLabel.setAttribute('id', 'textul_' + baseId)
                     textUpLabel.setAttribute('sodipodi:role', 'line')
@@ -156,29 +156,28 @@ def processSVGFile(file,outputsvg):
                         textDownLabel.appendChild(dom.createTextNode(keyId))
                         g.appendChild(textDownLabel)
 
-            
-            #print newLayer.toprettyxml()
+            # print(newLayer.toprettyxml())
             dom.documentElement.appendChild(newLayer)  
-            
-            #print dom.toprettyxml()
+
+            # print(dom.toprettyxml())
             outf = open(outputsvg, 'w')
             outf.write(dom.toxml('utf-8'))
             outf.close()
-            
+   
 def usage():
-    print """%s [-f font] [-s point_size] [-w weight] [-t template.svg] input.xml output.svg
+    print("""%s [-f font] [-s point_size] [-w weight] [-t template.svg] input.xml output.svg
     -f font to use in svg file
     -s font point size
     -w font weight (defaults to normal)
     -t template .svg file (keyboard.svg)
-    use inkscape to change svg into another format"""%(sys.argv[0])
+    use inkscape to change svg into another format""" % (sys.argv[0]))
     
 def main():
     try:
         optlist, args = getopt.getopt(sys.argv[1:], "hf:s:t:w:", ["help"])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         # print help information and exit:
-        print str(err) # will print something like "option -a not recognized"
+        print(str(err)) # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
     for o, a in optlist:

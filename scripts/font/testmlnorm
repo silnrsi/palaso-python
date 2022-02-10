@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from palaso.font.testml import TestFile
 from argparse import ArgumentParser
@@ -12,7 +12,7 @@ args = parser.parse_args()
 tests = TestFile().fromFile(args.fnames[0])
 if args.entities :
     res = tests.toFile()
-    res = re.sub(ur'([^\u0000-\u007F])', lambda m: u'&#x%04X;' % ord(m.group(1)), res.decode('utf-8'))
+    res = re.sub(r'([^\u0000-\u007F])', lambda m: f'&#x{ord(m.group(1)):04X};', res.decode('utf-8'))
     f = open(args.fnames[1], "wb")
     f.write(res)
     f.close()

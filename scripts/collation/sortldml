@@ -1,10 +1,11 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 import sys, xml.sax, palaso, pprint, PyICU, re, codecs
 from optparse import OptionParser
 from palaso.collation import *
 from palaso.contexts import defaultapp
 from contextlib import nested
+from functools import reduce
 
 with defaultapp() :
     usage = "%prog -l ldml_file [infile [outfile]]"
@@ -54,7 +55,7 @@ with defaultapp() :
     else :
         tailor = ""
     results = palaso.collation.icu.sorted(tailor, infile.readlines(), level=options.depth, preproc = collation.reorders if options.preprocess else ())
-    outfile.write(u"".join(results))
+    outfile.write("".join(results))
     if options.prefile :
         preprocs = [(re.compile(p[0]), p[1]) for p in collation.reorders]
         prefile = codecs.open(options.prefile, "w", "utf-8")
@@ -63,8 +64,8 @@ with defaultapp() :
             mods = reduce(lambda s, p: p[0].sub(p[1], s), preprocs, st)
             prefile.write(", ".join((st, mods)) + "\n")
     if options.z :
-        print tailor.encode("utf-8")
+        print(tailor.encode("utf-8"))
         if collation :
             icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
             for s in palaso.collation.icu.sorted(tailor, collation.getElements(), level=options.depth, preproc = collation.reorders if options.preprocess else ()) :
-                print "%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s)))
+                print("%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s))))

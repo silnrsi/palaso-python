@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import argparse, codecs, unicodedata, re, os, itertools
 from palaso.kmn.parser import Parser, mapkey, Token, DeadKey, VKey, keyrowmap
@@ -26,7 +26,7 @@ class ETWriter(object):
         if namespaces is None: namespaces = {}
         self.namespaces = namespaces
         self.attributeOrder = attributeOrder
-        self.maxAts = max([0] + attributeOrder.values()) + 1
+        self.maxAts = max([0] + list(attributeOrder.values())) + 1
         self.elementOrder = dict((x, i+1) for i,x in enumerate(elementOrder))
         self.maxTags = len(self.elementOrder) + 1
         self.takesCData = takesCData
@@ -44,7 +44,7 @@ class ETWriter(object):
             return (tag, None, None)
 
     def _protect(self, txt, base=_attribprotect):
-        return re.sub(r'['+r"".join(base.keys())+r"]", lambda m: base[m.group(0)], txt)
+        return re.sub(f'[{"".join(base.keys())}]', lambda m: base[m.group(0)], txt)
 
     def _nsprotectattribs(self, attribs, localattribs, namespaces):
         if attribs is not None:
@@ -91,15 +91,15 @@ class ETWriter(object):
                     localattribs['xmlns:'+lq] = lns
         self._nsprotectattribs(getattr(base, 'attrib', None), localattribs, namespaces)
         for c in getattr(base, 'comments', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
-        write(u'{}<{}'.format(indent, tag))
+            write('{}<!--{}-->\n'.format(indent, c))
+        write('{}<{}'.format(indent, tag))
         if len(localattribs):
             def getorder(x):
                 return self.attributeOrder.get(tag, {}).get(x, self.maxAts)
             def cmpattrib(x, y):
                 return cmp(getorder(x), getorder(y)) or cmp(x, y)
             for k in self._sortedattrs(base, localattribs):
-                write(u' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
+                write(' {}="{}"'.format(self._localisens(k)[0], self._protect(localattribs[k])))
         if len(base):
             write('>\n')
             for b in sorted(base, key=lambda b:self.elementOrder.get(b.tag, self.maxTags)):
@@ -110,11 +110,11 @@ class ETWriter(object):
                 t = self._protect(base.text.replace('\n', '\n' + indent), base=_elementprotect)
             else:
                 t = "<![CDATA[\n\t" + indent + base.text.replace('\n', '\n\t' + indent) + "\n" + indent + "]]>"
-            write(u'>{}</{}>\n'.format(t, tag))
+            write('>{}</{}>\n'.format(t, tag))
         else:
             write('/>\n')
         for c in getattr(base, 'commentsafter', []):
-            write(u'{}<!--{}-->\n'.format(indent, c))
+            write('{}<!--{}-->\n'.format(indent, c))
 
 attributeorders = ('before', 'from', 'after', 'iso', 'to', 'layer', 'display')
 #elementOrder = ('version', 'names', 'settings', 'import', 'keyMap', 'displayMap', 'layer', 'vkeys',
@@ -171,8 +171,8 @@ class LDMLKeyboard(ETWriter):
         k = self.root.find(".//displayMap")
         if k is None:
             k = et.SubElement(self.root, "displayMap")
-        pto = (u'"{}"' if '"' not in to else u"'{}'").format(to)
-        pdisplay = (u'"{}"' if '"' not in display else u"'{}'").format(display)
+        pto = ('"{}"' if '"' not in to else "'{}'").format(to)
+        pdisplay = ('"{}"' if '"' not in display else "'{}'").format(display)
         if self.root.find('.//displayMap/display[@mapOutput='+pto+']') is None:
             et.SubElement(k, "display", attrib={'mapOutput': to, 'display': display})
 
@@ -189,8 +189,8 @@ class LDMLKeyboard(ETWriter):
         before = []
         end = []
         for k, v in sorted(rules.items(), key=lambda x:(-len(x[0]), x[0])):
-            fr = unicode(k)
-            to = unicode(v)
+            fr = str(k)
+            to = str(v)
             c = min(len(to), len(fr))
             for i in range(c):
                 if fr[i] != to[i]:
@@ -237,9 +237,9 @@ class LDMLKeyboard(ETWriter):
             et.SubElement(i, "reorder", attrib={'from': readable(p), 'prebase': '1'})
 
 def readable(s, regcontext=False):
-    s1 = re.sub(r"([\[\].+?*&^$\\{}|\(\)])", r"\\\1", unicode(s)) if regcontext else unicode(s)
-    return u"".join("\\u{{{:04X}}}".format(ord(x)) \
-            if unicodedata.category(x)[0] in "CM" else x for x in unicode(s1))
+    s1 = re.sub(r"([\[\].+?*&^$\\{}|\(\)])", r"\\\1", str(s)) if regcontext else str(s)
+    return "".join("\\u{{{:04X}}}".format(ord(x)) \
+            if unicodedata.category(x)[0] in "CM" else x for x in str(s1))
 
 def iterSetList(l):
     if len(l) == 1:
@@ -283,7 +283,7 @@ class TransformElements:
     def addElement(self, **kw):
         to = kw['to']
         fr = kw['from']
-        test = u"{}|{}".format(fr, to)
+        test = "{}|{}".format(fr, to)
         if to == fr:    # special high priority insertion
             self.elements.setdefault(test, []).append(kw)
         for l in self.froms.get(fr, []):
@@ -325,7 +325,7 @@ class TransformElements:
             return max(len(new), len(old))
         count = 0
         for i,o in enumerate(old):
-            if isinstance(o, basestring):
+            if isinstance(o, (str,bytes)):
                 if o != new[i]:
                     count += 1
             elif new[i] not in o:
@@ -333,7 +333,7 @@ class TransformElements:
         return count
 
     def mergeTransform(self, old, new):
-        if isinstance(old, basestring):
+        if isinstance(old, (str,bytes)):
             old = [set(x) for x in old]
         for i, o in enumerate(old):
             if new[i] not in o:
@@ -350,7 +350,7 @@ class TransformElements:
                     for s in iterSetList(r['before'][-i-1:]):
                         if any(isinstance(x, set) for x in r['from']):
                             continue
-                        other = self.matches(s+u"".join(r['from']), r['before'][:-i-1], r.get('after', []))
+                        other = self.matches(s+"".join(r['from']), r['before'][:-i-1], r.get('after', []))
                         if other is not None and s + r['to'] != other['to']:
                             kw = {'from': s+r['from'], 'to': s+r['to'], 'before': r['before'][:-i-1]}
                             if 'after' in r:
@@ -388,10 +388,10 @@ class TransformElements:
                     if k in ('before', 'after', 'from'):
                         if k == 'from' and isinstance(b, set):
                             continue
-                        res = u""
+                        res = ""
                         for l in b:
                             if len(l) > 1:
-                                res += "[" + u"".join(readable(x, True) for x in sorted(l)) + "]"
+                                res += "[" + "".join(readable(x, True) for x in sorted(l)) + "]"
                             else:
                                 res += readable(list(l)[0], True)
                     else: 
@@ -409,11 +409,11 @@ class TransformElements:
 
 class OutputString:
     def __init__(self, toklist):
-        self.str = u""
+        self.str = ""
         self.error = False
         self.isreordering = False
         for t in toklist:
-            if isinstance(t, str) or isinstance(t, basestring):
+            if isinstance(t, str):
                 self.str += t
             elif isinstance(t, Token) and t.type == 'KEYWORD':
                 if t.value == 'beep':
@@ -434,7 +434,7 @@ class OutputString:
         return self.str
 
     def __eq__(self, other):
-        return self.str == unicode(other)
+        return self.str == str(other)
 
 def load_kmn(kmnfile, platform):
     with codecs.open(kmnfile, "r", encoding="utf-8-sig") as f:
@@ -452,7 +452,7 @@ def preprocess_kmn(p):
         for r in p.allRules[u]:
             for rf in r.flatten(p.allStores):
                 outs = OutputString(rf.output)
-                for c in unicode(outs):
+                for c in str(outs):
                     allchars.add(c)
     return allchars
 
@@ -475,20 +475,20 @@ def process_kmn(ldml, p, reorder=False, reorderfile=None, base=None, name=None):
             try:
                 k = mapkey(rf.match)
             except KeyError:
-                print(u"Warning: Failed to map {}".format(rf.match))
+                print("Warning: Failed to map {}".format(rf.match))
                 continue
             if k[1] not in maps:
                 maps[k[1]] = {}
             outs = OutputString(rf.output).replace(args.charreorder, "")
-            if len(unicode(outs)) and any(outs == x and (k[0] != w or k[1] != y) \
+            if len(str(outs)) and any(outs == x and (k[0] != w or k[1] != y) \
                                         for y in maps.values() for w,x in y.items()):
-                s = unichr(DeadKey.missing)
+                s = chr(DeadKey.missing)
                 DeadKey.increment()
                 simples[s] = outs
                 outs = OutputString(s)
             maps[k[1]][k[0]] = outs
             if outs.isreordering:
-                prebases[unicode(outs)] = True
+                prebases[str(outs)] = True
     if name is not None:
         ldml.setname(name)
     elif '&NAME' in p.allHeaders:
@@ -602,12 +602,12 @@ def process_basefile(basef):
 def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups, prebases):
     if not len(r.before):
         return
-    isdead = any(filter(lambda x: isinstance(x, DeadKey), r.before))
+    isdead = any(x for x in r.before if isinstance(x, DeadKey))
     for rf in r.flatten(p.allStores):
         bs = []
         for b in rf.before:
             bs.extend(b)
-        btxt = u"".join(bs)
+        btxt = "".join(bs)
         otxt = OutputString(rf.output)
         if args.debug & 4:
             otxt.comment = str(r)
@@ -619,26 +619,26 @@ def make_transform(r, p, maps, bmaps, deadkeys, simples, finals, backups, prebas
         if k is not None:
             if k[0] == 'bksp':
                 if args.charreorder:
-                    btxt = btxt.replace(args.charreorder, u"\uFDDF")
-                    backups[btxt] = otxt.replace(args.charreorder, u"\uFDDF")
+                    btxt = btxt.replace(args.charreorder, "\uFDDF")
+                    backups[btxt] = otxt.replace(args.charreorder, "\uFDDF")
                 else:
                     backups[btxt] = otxt
                 continue
             mp = maps[k[1]]
             if k[0] not in mp and (k[1] not in bmaps or k[0] not in bmaps[k[1]]):
-                mp[k[0]] = unichr(DeadKey.missing)
-                finals[unichr(DeadKey.missing)] = ""
+                mp[k[0]] = chr(DeadKey.missing)
+                finals[chr(DeadKey.missing)] = ""
                 DeadKey.increment()
             m = mp.get(k[0], bmaps[k[1]][k[0]])
-            btxt += unicode(m)
-        if btxt[0] in prebases and len(btxt) > 1 and unicode(otxt)[-1] == btxt[0] and unicode(otxt) != btxt:
+            btxt += str(m)
+        if btxt[0] in prebases and len(btxt) > 1 and str(otxt)[-1] == btxt[0] and str(otxt) != btxt:
             continue
         if args.charreorder is not None and btxt[0] == args.charreorder and btxt[1] in prebases \
-                and len(btxt) > 2 and unicode(otxt)[-1] == btxt[1] and unicode(otxt) != btxt:
+                and len(btxt) > 2 and str(otxt)[-1] == btxt[1] and str(otxt) != btxt:
             continue
-        if (any(x not in unicode(otxt) for x in btxt) and \
-              any(x not in unicode(otxt) for x in (btxt.replace(args.charreorder, "") if args.charreorder else btxt))) or \
-             unicode(otxt) == unicode(btxt): # skip reorderings
+        if (any(x not in str(otxt) for x in btxt) and \
+              any(x not in str(otxt) for x in (btxt.replace(args.charreorder, "") if args.charreorder else btxt))) or \
+             str(otxt) == str(btxt): # skip reorderings
             if k is not None:
                 if btxt not in simples:
                     simples[btxt] = otxt
@@ -675,7 +675,7 @@ def preprocess_layout(linfo):
 def process_layout(ldml, linfo, platform = {}, extras=False):
     layertype = platform['form']
     if layertype not in linfo:
-        layertype = linfo.keys()[0]
+        layertype = list(linfo.keys())[0]
     layers = dict((l["id"], i) for i, l in enumerate(linfo[layertype]["layer"]))
     jobs = set(["default"])
     jobsdone = set()
@@ -704,12 +704,12 @@ def process_layer(ldml, linfo, layertype, layers, lid, extras):
                 (_, sto) = process_key(ldml, mods, sk, isSubKey=True)
                 longpress.append(sto)
             if len(longpress):
-                ldml.keyAddAttrs(mods, kid, {"longPress": u" ".join(longpress)})
+                ldml.keyAddAttrs(mods, kid, {"longPress": " ".join(longpress)})
             if "width" not in k:
                 currrow.append((kid, "100"))
             else:
                 v = k["width"]
-                if not re.match(ur'[0-9]+$', v):
+                if not re.match(r'[0-9]+$', v):
                     v = "100"
                 currrow.append((kid, v))
             if "nextlayer" in k:
@@ -739,7 +739,7 @@ def process_key(ldml, mods, k, isSubKey=False):
             kid = vk[0]
     elif k["id"].startswith("U_"):
         kid = k["id"].replace("_", "").lower()
-        to = unichr(int(k["id"][2:], 16))
+        to = chr(int(k["id"][2:], 16))
         if not isSubKey:
             ldml.addKey(mods, kid, to)
     else:
@@ -774,7 +774,7 @@ ldml = LDMLKeyboard(args.locale, args.basefile)
 platform = dict((x, getattr(args, x)) for x in ('form', 'ui', 'os'))
 
 if args.charreorder is not None:
-    args.charreorder = unichr(int(args.charreorder, 16))
+    args.charreorder = chr(int(args.charreorder, 16))
 
 if args.kmn:
     p = load_kmn(args.kmn, platform)

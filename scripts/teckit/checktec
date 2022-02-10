@@ -1,10 +1,9 @@
+#!/usr/bin/env python3
 '''
 Created on Jul 1, 2009
 
 @author: tim
 '''
-from __future__ import with_statement
-
 from palaso.teckit import compiler,engine
 
 import codecs, contextlib, os, sys
@@ -14,8 +13,8 @@ class RoundTripError(UnicodeError): pass
 def check_round_trip(mapping, data):
     if not isinstance(mapping, engine.Mapping): 
         raise TypeError("'mapping' is '%s' object: expected 'Mapping' object" % type(mapping))
-    if not isinstance(data, unicode): 
-        raise TypeError("'data' is '%s' object: expected 'unicode' str" % type(data))
+    if not isinstance(data, str): 
+        raise TypeError("'data' is '%s' object: expected a unicode str" % type(data))
 
     encoder = engine.Converter(mapping, False)
     decoder = engine.Converter(mapping, True)
@@ -48,7 +47,7 @@ def stage(title):
 def main(cmd, map_src, test_data, *argv):
     try:
         data = codecs.open(test_data,'rb','utf-8_sig').read()
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write("%s: cannot read test data: %s: '%s'\n" % (cmd, err.strerror, err.filename))
         sys.exit(1)
     
@@ -56,10 +55,10 @@ def main(cmd, map_src, test_data, *argv):
         src  = open(map_src,'rb').read()
         with stage('compiling %r' % map_src):
             mapping = compiler.compile(src)
-    except IOError, err:
+    except IOError as err:
         sys.stderr.write("%s: cannot read TECKit source: %s: '%s'\n" % (cmd, err.strerror, err.filename))
         sys.exit(2)
-    except compiler.CompilationError, msg:
+    except compiler.CompilationError as msg:
         sys.stderr.write('%s: %r: %s\n' % (cmd, map_src, msg))
         sys.exit(3)
         
@@ -67,7 +66,7 @@ def main(cmd, map_src, test_data, *argv):
     try:
         with stage('checking roundtrip encoding'):
             check_round_trip(mapping, data)
-    except RoundTripError, msg:
+    except RoundTripError as msg:
         sys.stderr.write('%s: %s: %r\n' % (cmd,msg,map_src))
     except err:
         sys.stderr.write("%s: %s\n" % (cmd,err))

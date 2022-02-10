@@ -34,7 +34,6 @@ otherl = langtag('en-Latn')
 # SUCH DAMAGE.
 
 import json, os
-from six import with_metaclass
 from collections import namedtuple
 
 class _Singleton(type):
@@ -138,7 +137,7 @@ def langtag(s):
                     (extensions if len(extensions) else None))
 
 
-class LangTags(with_metaclass(_Singleton)):
+class LangTags(metaclass=_Singleton):
     '''Collection of TagSets'''
 
     def __init__(self, fname=None):

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import fontforge
 from palaso.font.fontforge import addAnchorClass
@@ -37,7 +37,7 @@ class Glyph :
         self.props[name] = value
 
     def handleboths(self, pointinfo) :
-        s = set(map(lambda x: x.name, self.aps))
+        s = {x.name for x in self.aps}
         self.marks = {}
         for p in self.aps :
             if p.name not in pointinfo or pointinfo[p.name] != "both" : continue

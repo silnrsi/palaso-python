@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 import PyICU
 from optparse import OptionParser
@@ -21,12 +21,12 @@ with defaultapp() :
     else :
         brk = PyICU.RuleBasedBreakIterator()
 
-    print brk.getRules()
+    print(brk.getRules())
 
     if opts.codes :
-        text = u"".join(map(lambda x: unichr(int(x, 16)), args))
+        text = "".join(chr(int(x, 16)) for x in args)
     elif opts.file :
-        text = u"".join(file(args[0]).readlines())
+        text = "".join(file(args[0]).readlines())
     else :
         text = args[0]
 
@@ -36,14 +36,16 @@ with defaultapp() :
     try :
         while True :
             next = brk.next()
-#            print next, " ", brk.getRuleStatus()
+#            print(next, " ", brk.getRuleStatus())
             res.append(text[last:next])
             last = next
     except :
         res.append(text[last:])
 
     if opts.hex :
-        print((" " + opts.separator + " ").join(map(lambda y:" ".join(map(lambda x:hex(ord(x)), y)), res)))
+        print(f" {opts.separator} ".join(
+                " ".join(hex(ord(x)) for x in res)
+                for y in res))
     else :
         print(opts.separator.join(res))
 

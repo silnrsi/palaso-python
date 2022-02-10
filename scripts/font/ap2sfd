@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import fontforge
 from palaso.font.fontforge import addAnchorClass

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import codecs
 from palaso.font.shape import make_shaper
@@ -146,9 +146,9 @@ class HTMLLog(object) :
 
     def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
-        self.out.write(u"  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, u"<br/>".join(x[0] for x in bases), label))
+        self.out.write("  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, "<br/>".join(x[0] for x in bases), label))
         if len(gglyphs) < 2 :
-            self.out.write(u"    <td class='eq'>{0}</td>\n".format(u"<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
+            self.out.write("    <td class='eq'>{0}</td>\n".format("<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
             self.out.write("    </tr>\n")
             return
 
@@ -177,8 +177,8 @@ class HTMLLog(object) :
                         lprev = gglyphs[0][i]
                         rprev = gglyphs[l][i-o[1]+o[3]]
             for inf in zip(*info) :
-                self.out.write(u"    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
-            self.out.write(u"    <td class='text{0}'{2}>{1}</td>\n".format(l+1, string, langstr))
+                self.out.write("    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
+            self.out.write("    <td class='text{0}'{2}>{1}</td>\n".format(l+1, string, langstr))
         self.out.write("  </tr>\n")
 
     def logend(self) :
@@ -188,7 +188,7 @@ class JsonLog(object) :
     def __init__(self, f, fpaths, args, inputs) :
         self.out = f
         self.opts = args
-        self.out.write(u"{\n")
+        self.out.write("{\n")
         self.encoder = json.JSONEncoder()
 
     def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
@@ -201,7 +201,7 @@ class JsonLog(object) :
         self.out.write(',\n')
 
     def logend(self) :
-        self.out.write(u'"":[]}\n')
+        self.out.write('"":[]}\n')
 
 def dosafecopy(inf, outf, opts, i) :
     pid = os.getpid()

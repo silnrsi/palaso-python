@@ -2,6 +2,7 @@
 """FontForge support module"""
 
 from collections import namedtuple
+from functools import reduce
 from math import sin, cos, pi
 
 Box = namedtuple('Box','xmin ymin xmax ymax')

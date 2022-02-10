@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 import palaso.collation.tailor, xml.sax, sys, codecs
 

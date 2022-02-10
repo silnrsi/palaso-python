@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 from setuptools import setup
 from glob import glob
@@ -50,8 +50,7 @@ setup(name='palaso',
       url='http://github.com/silnrsi/palaso-python',
       packages=packages,
       ext_modules=ext,
-      cmdclass=cmd,
-      scripts=scripts,
+      scripts=list(scripts),
       license='LGPL',
       platforms=['Linux', 'Win32', 'Mac OS X'],
       package_dir={'': 'lib'},

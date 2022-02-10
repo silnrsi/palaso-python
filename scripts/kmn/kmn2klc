@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 '''
 Generate a Microsoft Keyboard Layout Creator file from a keyman keyboard.
 This program will also handle deadkeys in the KMN file.
@@ -22,15 +22,15 @@ def res_str(res) :
 
 def item_type(x) : return (x >> 24) & 0xFF
 
-def myprint(str) :
-    print str.replace("\n", "\r\n") + "\r\n",
+def myprint(s):
+    print(s, end='\r\n')
 
 key_tops  = r'''`1234567890-=QWERTYUIOP[]\ASDFGHJKL;'ZXCVBNM,./'''
 shifted   = r'''~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?'''
 unshifted = r'''`1234567890-=qwertyuiop\[]\\asdfghjkl;'zxcvbnm,./'''
 
 
-header = u'''\
+header = '''\
 KBD	{0}	"{1}"
 
 COPYRIGHT	"{2}"
@@ -56,18 +56,18 @@ LAYOUT		; an extra @ at the end is a dead key
 
 '''.format
 
-key = u'''{0:02x}	{1}	{2}	{3}	{4}	-1'''.format
+key = '''{0:02x}	{1}	{2}	{3}	{4}	-1'''.format
 
-lighead = u'''
+lighead = '''
 LIGATURE
 
 //VK_   Mod #   Char0   Char1   Char2   Char3
 //---   -----   -----   -----   -----   -----
 '''
 
-lig = u'''{0}     {1}     {2}'''.format
+lig = '''{0}     {1}     {2}'''.format
 
-footer = u'''
+footer = '''
 DESCRIPTIONS
 
 0409    {0}
@@ -96,7 +96,7 @@ myprint(header(opts.name, km.store('NAME'), km.store('COPYRIGHT') or "GPL", km.s
 
 deads = []
 ligs = []
-keys = [[None] * 2 for i in xrange(255)]    # declare array keys[255][2] !!
+keys = [[None] * 2 for i in range(255)]    # declare array keys[255][2] !!
 keynames = [None] * 255
 ekeynames = [None] * 255
 for k in shifted + unshifted :

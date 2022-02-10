@@ -29,7 +29,7 @@ args = parser.parse_args()
 
 sheet = usfm.default_stylesheet
 if not args.stylesheet:
-    args.stylesheet = filter(bool,
+    args.stylesheet = filter(None,
                              os.environ
                              .get('TESTSFM_STYLESHEETS', '')
                              .split(';'))

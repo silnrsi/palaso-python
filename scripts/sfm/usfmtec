@@ -439,11 +439,10 @@ if __name__ == '__main__':
     else:
         work.extend(
             zip(sfms,
-                map(lambda x: os.path.join(opts.output, os.path.split(x)[1]),
-                    sfms)))
+                (os.path.join(opts.output, os.path.split(x)[1]) for x  in sfms)))
     if first_def > -1:
         work.extend(zip(sfms[first_def:],
-                        map(lambda x: x+"_u", sfms[first_def:])))
+                        (f"{x}_u" for x in sfms[first_def:])))
 
     try:
         with warnings.catch_warnings():

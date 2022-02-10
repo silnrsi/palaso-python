@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import argparse, ctypes
 import numpy as np
@@ -134,5 +134,4 @@ for i in range(len(glyphs) - 1) :
     for j in range(i + 1, len(glyphs)) :
         # if two glyphs collide, report it
         if i != j and glyphs[i].clashTest(glyphs[j], args.thicken) :
-            print "Glyphs {0} and {1} collide".format(glyphs[i].name, glyphs[j].name)
-
+            print(f"Glyphs {glyphs[i].name} and {glyphs[j].name} collide")

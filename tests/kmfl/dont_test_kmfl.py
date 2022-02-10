@@ -1,7 +1,9 @@
-import unittest, os, codecs
+#!/usr/bin/env python3
+import unittest
 from palaso.kmfl import kmfl
 from palaso.kmn import keysyms_items
 from palaso.kmn.coverage import Coverage
+
 
 class TestKmfl(unittest.TestCase) :
     def runtest(self, fname, keys, output) :
@@ -20,7 +22,7 @@ class TestKmfl(unittest.TestCase) :
         self.assertEqual(res, indata, "coverage results are not the same")
 
     def test_kyu(self) :
-        self.runtest("kyu-mymr.kmn", "aaiU", u"\u1004\u1031\u1074")
+        self.runtest("kyu-mymr.kmn", "aaiU", "\u1004\u1031\u1074")
 
     def test_coverage_kyu(self) :
         self.runcoverage("kyu-mymr.kmn", "kyu-mymr-coverage.txt")

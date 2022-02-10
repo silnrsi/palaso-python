@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse, logging, os, gc
 from multiprocessing import Pool, current_process, cpu_count

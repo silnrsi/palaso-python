@@ -5,7 +5,6 @@ markers updating a master concordance CSV file with any new references
 to existing words and append any words not already found in it to it's
 end.
 '''
-from __future__ import annotations
 __version__ = '0.1'
 __date__ = '29 October 2009'
 __author__ = 'Tim Eves <tim_eves@sil.org>'

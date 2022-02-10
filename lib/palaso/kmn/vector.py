@@ -1,5 +1,6 @@
 import random
 import operator
+from functools import reduce
 from itertools import product, islice
 
 

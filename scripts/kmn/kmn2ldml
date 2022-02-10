@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from palaso import kmn
 from palaso.kmfl import kmfl
@@ -29,7 +29,7 @@ def item_index_offset(x) : return (x >> 16) & 0xFF
 xmlentities = { "<" : '&lt;', '&' : '&amp;', '>' : '&gt;', '"' : '&quot;', "'" : '&apos;' }
 
 def entity_escape(cs) :
-    r = u''
+    r = ''
     for c in cs :
         if ord(c) > 0x7F :
             ent = "&#x%04X;" % ord(c)
@@ -38,10 +38,10 @@ def entity_escape(cs) :
         r += (ent if ent else c)
     return r
 
-regexpentities = dict(map(lambda x: (x, "\\" + x), "[]{()?|."))
+regexpentities = {x: "\\" + x for x in "[]{()?|."}
 
 def regexp_escape(cs) :
-    return u"".join(map(lambda x : regexpentities.get(x, x), cs))
+    return "".join(regexpentities.get(x, x) for x in cs)
 
 class rule(object) :
     def __init__(self, inputs, outputs, deadin = 0, deadout = 0, iskey = True, contextref = False) :
@@ -123,15 +123,15 @@ def process_rule(lhs, rhs, presets, iskey = True, contextref = False) :
                     output += ["\\" + str(offset + 1)]
             else :
                 ind = presets[offset - 1]
-#                print "storenum=%d index=%d" % (storenum, ind)
-                output += [unichr(ord(kb.store(str(storenum))[ind]))]
+#                print("storenum=%d index=%d" % (storenum, ind))
+                output += [chr(ord(kb.store(str(storenum))[ind]))]
         elif item_type(r) == item_context :
             contextref = True
             output += ["\\" + str(item_base(r) + 1)]
         elif item_type(r) == item_outs :
-            output += ["".join(map(lambda x: unichr(ord(x)), kb.store(str(item_base(r)))))]
+            output += ["".join(chr(ord(x)) for x in kb.store(str(item_base(r))))]
         elif item_type(r) == item_char :
-            output += [unichr(r)]
+            output += [chr(r)]
         elif item_type(r) == item_deadkey :
             deadout = item_base(r)
 
@@ -174,17 +174,17 @@ rules = {}
 name = kb.store("NAME")
 mnemonic = kb.store("MNEMONIC")
 mnemattr = ' mnemonic="1"' if mnemonic else ""
-print """<?xml version="1.0"?>
+print("""<?xml version="1.0"?>
 <ldml>
-  <identity>"""
+  <identity>""")
 
 for k, v in id.items() :
-    print '    <%s type="%s"/>' % (k, v)
-print '    <generation date="%s"/>' % (time.strftime('%Y-%m-%d'))
-print """  </identity>
+    print('    <%s type="%s"/>' % (k, v))
+print('    <generation date="%s"/>' % (time.strftime('%Y-%m-%d')))
+print("""  </identity>
   <special>
     <keyboards xmlns="http://www.palaso.org/ldml/0.2">
-      <keyboard name="%s"%s>""" % (name, mnemattr)
+      <keyboard name="%s"%s>""" % (name, mnemattr))
 for i in range(kb._num_rules()) :
     (lhs, rhs, gpnum, flags) = kb.rule(i)
     for r in process_rule(lhs, rhs, [0] * len(lhs), iskey = (flags & 1)) :
@@ -194,10 +194,10 @@ for i in range(kb._num_rules()) :
             rules[r.key] = [r]
 for k in sorted(rules.keys()) :
     for r in sorted(rules[k], cmp = lambda a, b : cmp(len(b.inputs), len(a.inputs))) :
-        print "        " + r.asxml()
+        print("        " + r.asxml())
 
-print """      </keyboard>
+print("""      </keyboard>
     </keyboards>
   </special>
 </ldml>
-"""
+""")

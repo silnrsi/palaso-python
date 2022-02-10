@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 '''
 Generate a sorted list of all possible key presses that produce output 
 for a keyman keyboard. The results of this program used as input for  

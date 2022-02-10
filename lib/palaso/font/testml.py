@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from xml.etree import cElementTree as et
-from cStringIO import StringIO
+from io import StringIO
 import re
 
 def ETcanon(e, curr = 0, indent = 2) :

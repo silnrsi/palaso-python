@@ -1,12 +1,25 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-import re, urllib, os, time, smtplib, csv, sys, gzip, cStringIO
-from optparse import OptionParser
-from palaso.debian.sources import source_collection, package_collection, arch_expects_bin, getdistro, getarch, getbasever
+import csv
+import os
+import re
+import smtplib
+import urllib.error
+import urllib.parse
+import urllib.request
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from optparse import OptionParser
+from palaso.debian.sources import (
+    source_collection,
+    package_collection,
+    arch_expects_bin,
+    getdistro, getarch,
+    getbasever)
+from time import time, sleep
 
 def load_packages(times, opts, host) :
-    f = urllib.urlopen(host + "/dists/" + opts.distro + "/" + opts.section + "/binary-" + opts.arch + "/Packages")
+    f = urllib.request.urlopen(host + "/dists/" + opts.distro + "/" + opts.section + "/binary-" + opts.arch + "/Packages")
     ptime = f.info().getdate('Last-modified')
     y = package_collection(f)
     f.close()
@@ -19,7 +32,7 @@ def build_package(src, sources, opts, host, indep=True, updatep=False) :
     version = re.sub('^[0-9]+:', '', src['version'])
     if updatep :
         cmd = "sudo pbuilder --update --override-config --configfile " + opts.conf
-        print cmd
+        print(cmd)
         os.system(cmd)
     dir = "%s-%s" % (src['package'], getbasever(version))
     sources.download(src['package'], dir, host)
@@ -30,24 +43,24 @@ def build_package(src, sources, opts, host, indep=True, updatep=False) :
     if indep : cmd += "-b"
     else : cmd += "-B"
     cmd += " --buildresult .. -- --logfile ../" + src['package'] + ".log"
-    print cmd
+    print(cmd)
     state = os.system(cmd)
     os.chdir("..")
     if state == 0 :
         cmd = "debsign \"-e$DEBEMAIL\" %s_%s_%s.changes" % (src['package'], version, opts.arch)
-        print cmd
+        print(cmd)
         state = os.system(cmd)
     return state
 
 def email(addr, fname, opts) :
-    print "Email " + addr + " with " + fname
+    print(f"Email {addr} with {fname}")
     if opts.server != None :
         msg = MIMEMultipart()
         msg['Subject'] = 'Autobuild failure of %s on %s for %s' % (fname.replace(".log", ""), opts.arch, opts.distro)
         msg['From'] = opts.mfrom
         msg['To'] = addr
         msg.preamble = 'I tried to build this package and failed. Here is the build log. Can you help me out by submitting a fixed source package?\n\nThanks'
-        fp = file(fname)
+        fp = open(fname)
         addition = MIMEText(fp.read(), _subtype="x-log")
         fp.close()
         addition.add_header('Content-Disposition', 'attachment', filename=fname)
@@ -63,7 +76,7 @@ def email(addr, fname, opts) :
 
 def dput(file, opts) :
     cmd = "dput " + opts.put + " " + file
-    print cmd
+    print(cmd)
     res = os.system(cmd)
     if res > 0 : return False
     else : return True
@@ -88,14 +101,14 @@ p.add_option('--mail-pwd', dest = 'password', help = "password to login to mail 
 (opts, args) = p.parse_args()
 host = args[0]
 
-baseurl = host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources"
+baseurl = f"{host}/dists/{opts.distro}/{opts.section}/source/Sources"
 x = source_collection(baseurl)
 
 times = {}
 (y, ptime) = load_packages(times, opts, host)
 
 if opts.failures != None :
-    f = file(opts.failures)
+    f = open(opts.failures)
     r = csv.reader(f)
     failures = dict(s for s in r)
     f.close()
@@ -107,7 +120,7 @@ todo = []
 buildindep = set()
 for s in res :
     if opts.list :
-        print "Testing " + s
+        print(f"Testing {s}")
     for b in re.split(r"\s*,\s*", x.sources[s]['binary']) :
         if not b in y.sources and arch_expects_bin(opts.arch, b) :
             if len(todo) == 0 or todo[-1] != s : todo.append(s)
@@ -115,7 +128,7 @@ for s in res :
                 buildindep.add(s)
 
 for s in todo :
-    print "Need to build " + s
+    print(f"Need to build {s}")
     if opts.list : continue
     src = x.sources[s]
     if s in failures and failures[s] == src['version'] : continue
@@ -126,21 +139,21 @@ for s in todo :
     # do we have to wait and get a new packages due to dependency timings?
     for d in src.local_dependencies :
         if not d in times :
-            print "Dependency for %s unavailable, skipping." % (s)
+            print(f"Dependency for {s!s} unavailable, skipping.")
             skip = True
             break
         elif times[d] > ptime :
-            sleep(times[d] - time.time() + 30)
+            sleep(times[d] - time() + 30)
             (y, ptime) = load_packages(times, opts, host)
             update_required = True
     if skip : continue
 
     state = build_package(src, x, opts, host, True if s in buildindep else False, update_required)
-    print "Build result " + str(state)
+    print(f"Build result {state!s}")
     if state :
         email(src['maintainer'], src['package'] + ".log", opts)
     else :
         if dput(src['package'] + "_" + re.sub('^[0-9]+:', '', src['version']) + "_" + opts.arch + ".changes", opts) :
-            times[s] = (int(time.time() / opts.wait / 60) + 1) * opts.wait * 60
+            times[s] = (int(time() / opts.wait / 60) + 1) * opts.wait * 60
 
 

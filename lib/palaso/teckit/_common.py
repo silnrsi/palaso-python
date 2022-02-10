@@ -19,12 +19,13 @@ __email__ = "tim_eves@sil.org"
 # 10-Jun-2009     tse     Created ctypes bindings and added the status_check
 #                         function for the ctypes errcheck protocol.
 
+import ctypes
 import ctypes.util
 import platform
 
-from typing import List, Callable
-from enum import IntFlag, unique
-from ctypes import c_char_p, c_long
+from typing import Any, List, Callable
+from enum import IntFlag, IntEnum, unique
+from ctypes import POINTER, c_char, c_long
 
 LOCALFUNCTYPE: Callable = (ctypes.WINFUNCTYPE if platform.system() == "Windows"
                            else ctypes.CFUNCTYPE)
@@ -49,9 +50,10 @@ def load_teckit_library(component: str = ''):
 
 
 @unique
-class Status(IntFlag):
-    NoError = 0
+class Status(IntEnum):
     BasicMask = 0x000000FF
+    WarningMask = 0x0000FF00
+    NoError = 0
 
 # positive values are informational status values
     OutputBufferFull = 1
@@ -65,7 +67,6 @@ class Status(IntFlag):
     UnmappedChar = 3
     # ConvertBuffer or Flush: stopped at unmapped character
 
-    WarningMask = 0x0000FF00
 # additional warning status in 2.1, only returned if 2.1-specific options are
 # used.
     UsedReplacement = 0x00000100
@@ -111,6 +112,7 @@ class Status(IntFlag):
 #
 class Form(IntFlag):
     EncodingMask = 0x000F
+    NormalizationMask = 0x0F00
     Unspecified = 0  # invalid as argument to TECkit_CreateConverter
     Bytes = 1
     UTF8 = 2
@@ -118,7 +120,6 @@ class Form(IntFlag):
     UTF16LE = 4
     UTF32BE = 5
     UTF32LE = 6
-    NormalizationMask = 0x0F00
     NFC = 0x0100
     NFD = 0x0200
 
@@ -148,7 +149,7 @@ class UnmappedChar(Exception):
 
 
 # Define some 'typedefs' these make the argtypes list slight less opaque.
-mapping = c_char_p
+mapping = POINTER(c_char)
 status = c_long
 
 
@@ -178,7 +179,7 @@ def dispatch_error_status_code(s: Status, fn, args: List):
     raise RuntimeError(f'unknown status code {s} returned')
 
 
-def status_code(s_: status, fn, args: List) -> List:
+def status_code(s_: status, fn, args: List[Any]) -> List[Any]:
     s = Status(s_)
     if s < Status.NoError:
         dispatch_error_status_code(s, fn, args)

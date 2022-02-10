@@ -1,12 +1,8 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse
 from palaso.langtag import LangTags, langtag
 
-try:
-    unicode
-except NameError:
-    unicode = str
 
 def addtag(t, alltags, regioncode, regionlangs):
     alltags.add(t)
@@ -51,11 +47,11 @@ if not len(alltags) and args.tag is not None:
     except KeyError:
         pass
 if args.verbose:
-    formatstr = u"{tag!s} = {full!s} {tags!s}, {name!s}, {names!s}"
+    formatstr = "{tag!s} = {full!s} {tags!s}, {name!s}, {names!s}"
 else:
-    formatstr = u"{tag!s} = {full!s}\t {name!s}"
-    
-print(u"\n".join(formatstr.format(**(t.asdict(format=unicode, tags="", names=""))) for t in alltags))
+    formatstr = "{tag!s} = {full!s}\t {name!s}"
+
+print("\n".join(formatstr.format(**(t.asdict(format=str, tags="", names=""))) for t in alltags))
 if args.region and regioncode is not None:
     print("Region: {} = {}".format(regioncode, regionname))
     print("    " + " ".join(str(x.tag) for x in sorted(regionlangs, key=str)))

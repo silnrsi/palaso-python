@@ -1,5 +1,4 @@
-#!/usr/bin/python2.6
-
+#!/usr/bin/env python3
 from mercurial import ui, commands, util
 from mercurial import hg as _hg
 import os, operator, subprocess, re
@@ -28,7 +27,7 @@ class hg :
         res = []
         for c in range(self.tip, len(self.repo)) :
             change = list(self.repo[c].changeset());
-            change[0] = "".join(map (lambda y: "%02X" % (ord(y)), change[0][:6])).upper()
+            change[0] = "".join(f"{ord(y)}:02X" for y in change[0][:6]).upper()
             change[2] = util.datestr(change[2], "%y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)")
             res.append(change)
         return res
@@ -94,8 +93,9 @@ class git :
         os.chdir(self.dir)
         currev = backquote('git show --pretty=format:%h')
         if not currev == self.tip :
-            log = backquote('git log ' + self.tip + '..' + currev)
-            print "git log " + self.tip + '..' + currev
+            cmdstr = f"git log {self.tip}..{currev}"
+            log = backquote(cmdstr)
+            print(cmdstr)
             state = ""
             change = []
             for l in log.splitlines() :
@@ -149,10 +149,10 @@ with defaultapp() :
     if os.path.exists(options.list) :
         res = []
         flist = open(options.list)
-        for dir in map(os.path.expanduser, map(operator.methodcaller('strip'), flist.readlines())) :
+        for dir in (os.path.expanduser(ln.strip()) for ln in flist.readlines()) :
             vcs = None
             if not os.path.exists(dir) : continue
-            print dir
+            print(dir)
             if os.path.exists(os.path.join(dir, ".hg")) :
                 vcs = hg(dir)
             elif os.path.exists(os.path.join(dir, ".svn")) :
@@ -169,14 +169,15 @@ with defaultapp() :
                 info.append((dir, res))
 
     for dir, changes in info :
-        htmlstr += """
-<h2>%s</h2>
-<table cellspacing="10">
-""" % (dir)
+        htmlstr += (f'\n<h2>{dir!s}</h2>\n'
+                    '<table cellspacing="10">\n')
         for c in changes :
-            htmlstr += """
-<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td>
-""" % (" ".join(c[2].split(" ")[0:2]), c[0], c[1], c[4])
+            htmlstr += (f'\n<tr>'
+                        f'<td>{" ".join(c[2].split(" ")[0:2])!s}</td>'
+                        f'<td>{c[0]!s}</td>'
+                        f'<td>{c[1]!s}</td>'
+                        f'<td>{c[4]!s}</td>'
+                        '</tr>\n')
         htmlstr += "</table>\n"
 
     if htmlstr != "" :

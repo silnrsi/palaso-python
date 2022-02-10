@@ -1,9 +1,14 @@
 """Module to handle sort tailorings"""
 
-import xml.sax, sys, palaso.reggen, unicodedata, re
-from xml.sax.xmlreader import AttributesImpl
-from xml.sax.saxutils import XMLGenerator
+import palaso.reggen
+import re
+import sys
+import unicodedata
 import warnings
+import xml.sax
+from functools import reduce
+from xml.sax.saxutils import XMLGenerator
+from xml.sax.xmlreader import AttributesImpl
 
 class Duplicate(RuntimeError) : 
     def __init__(self, str) :

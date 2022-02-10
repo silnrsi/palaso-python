@@ -17,8 +17,9 @@ __email__ = "tim_eves@sil.org"
 import codecs
 import ctypes
 import sys
-from typing import AnyStr, Tuple, Union, cast
+from typing import Any, AnyStr, Tuple, Union, cast
 from functools import lru_cache
+from os import PathLike
 from palaso.teckit import _engine
 from palaso.teckit._common import (
     ConverterBusy, Form, MappingVersionError)
@@ -34,7 +35,7 @@ __all__ = ['ConverterBusy', 'MappingVersionError',
 
 
 class Mapping(bytes):
-    def __new__(cls, data: Union[str, bytes]):
+    def __new__(cls, data: Union[PathLike, bytes]):
         if isinstance(data, bytes):
             return super(Mapping, cls).__new__(cls, data)
         else:
@@ -44,11 +45,11 @@ class Mapping(bytes):
     def __init__(self, *args, **kw) -> None:
         res = []
         for arg in args:
-            res.append(repr(arg[:20] + '...'
-                            if isinstance(arg, str) else arg))
+            res.append(repr(arg[:20] + b'...'
+                            if isinstance(arg, bytes) else arg))
         for k, v in kw.items():
             res.append(
-                f'{k}={v[:20]+"..." if isinstance(v, (str,bytes)) else v!r}')
+                f'{k}={v[:20]+ b"..." if isinstance(v, bytes) else v!r}')
         self._repr_args = ','.join(res)
 
     @lru_cache(maxsize=16)
@@ -62,7 +63,7 @@ class Mapping(bytes):
             raise
         buf = ctypes.create_string_buffer(nlen)
         nlen = _engine.getMappingName(self, len(self), nid, buf, nlen)
-        return str(buf[:nlen])
+        return bytes(buf[:nlen]).decode('utf8')
 
     def __str__(self) -> str:
         return self.lhsName + ' <-> ' + self.rhsName
@@ -99,13 +100,13 @@ _unicode_decoder = codecs.getdecoder(_unicode_encoder_name)
 
 def _form_from_flags(form: Form, flags: Flags) -> Form:
     if form is Form.Unspecified or form is None:
-        if flags.expectsNFD or flags.generatesNFD:
+        if Flags.expectsNFD in flags or Flags.generatesNFD in flags:
             form = Form.NFD
-        elif flags.expectsNFC or flags.generatesNFC:
+        elif Flags.expectsNFC in flags or Flags.generatesNFC in flags:
             form = Form.NFC
     else:
-        form = cast(Form, form & Form.NormalizationMask)
-    return cast(Form, form + (_Form_UNICODE if flags.unicode else Form.Bytes))
+        form &= Form.NormalizationMask
+    return form | (_Form_UNICODE if Flags.unicode in flags else Form.Bytes)
 
 
 class Converter(object):
@@ -163,10 +164,10 @@ class Converter(object):
         cons, outs, lhc = uc.args
         _engine.resetConverter(self._converter)
         name = (self.lhsName + '<->' + self.rhsName).lower()
-        errtype = (UnicodeEncodeError if self.sourceFlags.unicode
+        errtype = (UnicodeEncodeError if Flags.unicode in self.sourceFlags
                    else UnicodeDecodeError)
-        if self.sourceFlags.unicode:
-            end = cons/4
+        if Flags.unicode in self.sourceFlags:
+            end = cons//4
             end -= (lhc if end != len(input) else 0)
             start = end - 1
         else:
@@ -177,17 +178,19 @@ class Converter(object):
                       context + ' stopped at unmapped character')
 
     def _coerce_to_target(self, data: bytes):
-        return _unicode_decoder(data)[0] if self.targetFlags.unicode else data
+        return (_unicode_decoder(data)[0]
+                if Flags.unicode in self.targetFlags
+                else data)
 
     def convert(self, input: AnyStr, finished: bool = False,
                 options: Option = Option.UseReplacementCharSilently) -> AnyStr:
         # Validate input parameters and do an necessary conversions
-        if self.sourceFlags.unicode:
+        if Flags.unicode in self.sourceFlags:
             if isinstance(input, bytes):
                 raise TypeError(
                     "source is type 'bytes' but type 'str' is expected")
             data: bytes = _unicode_encoder(input)[0]
-        if not self.sourceFlags.unicode:
+        else:
             if isinstance(input, str):
                 raise TypeError(
                     "source is type 'str' but type 'bytes' is expected")
@@ -196,7 +199,7 @@ class Converter(object):
 
         buf = self._buffer
         cons = outs = 0
-        res = '' if self.targetFlags.unicode else b''
+        res = '' if Flags.unicode in self.targetFlags else b''
         while data:
             try:
                 cons, outs, lhc = _engine.convertBufferOpt(
@@ -225,7 +228,7 @@ class Converter(object):
 
         buf = self._buffer
         outs = 0
-        res = '' if self.targetFlags.unicode else b''
+        res = '' if Flags.unicode in self.targetFlags else b''
         while True:
             try:
                 outs, lhc = _engine.flushOpt(

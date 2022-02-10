@@ -1,6 +1,11 @@
-import unittest, palaso, os, codecs
+import codecs
+import os
+import palaso.collation.icu
+import palaso.collation.tailor
+import unittest
 from palaso.collation import *
 import xml.sax
+
 
 class TestCollation(unittest.TestCase) :
     def sortldml(self, ldml, infile, alt='', depth=15) :
@@ -11,7 +16,7 @@ class TestCollation(unittest.TestCase) :
         ldmlparser = xml.sax.make_parser()
         ldmlparser.setContentHandler(handler)
         ldmlparser.setFeature(xml.sax.handler.feature_namespaces, 1)
-        ldmlparser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
+        # ldmlparser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
         ldmlparser.parse(os.path.join(os.path.dirname(__file__), 'data', ldml))
         collation = handler.collations[0]
         for c in handler.collations :
@@ -25,16 +30,18 @@ class TestCollation(unittest.TestCase) :
 
         collation.flattenOrders()
         errors = collation.testPrimaryMultiple()
-        self.failIf(len(errors), "\n".join("Reset had multiple elements: %s" % (f) for f in errors))
+        self.assertFalse(
+            len(errors),
+            "\n".join(f"Reset had multiple elements: {f!s}" for f in errors))
         tailor = collation.asICU()
         outdata = palaso.collation.icu.sorted(tailor, indata, level = depth)
         self.assertEqual(indata, outdata, "lists do not sort equally")
-       
-#    def test_my(self) :
-#        self.sortldml('my-reg1.xml', 'my-reg1.txt')
 
-#    def test_kht(self) :
-#        self.sortldml('kht.xml', 'kht_words.txt')
+    # def test_my(self) :
+    #    self.sortldml('my-reg1.xml', 'my-reg1.txt')
+
+    # def test_kht(self) :
+    #    self.sortldml('kht.xml', 'kht_words.txt')
 
 if __name__ == "__main__" :
     unittest.main()

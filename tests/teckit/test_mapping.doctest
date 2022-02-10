@@ -14,8 +14,8 @@ Check left and right sides encoding info
 'Unicode'
 
 Check the representation and str conversion methods
->>> repr(m); str(m)
-"Mapping('data/silipa93.tec')"
+>>> repr(m); str(m) #doctest: +ELLIPSIS
+"Mapping(...)"
 'SIL-IPA93-2001 <-> Unicode'
 
 Check extended info from UTR-22 these are optional and may return None if not 
@@ -26,13 +26,16 @@ included in the mapping
 'SIL International'
 'IPA93'
 
-This attribute is absent for silipa93.tec and so returns None
+This attribute is absent for silipa93.tec and so throws an exception
 >>> m.copyright
+Traceback (most recent call last):
+    ...
+IndexError: TECkit: nameID index out of range
 
 Check the flags come out as expected:
->>> print m.lhsFlags; print m.rhsFlags
-()
-(expectsNFD + generatesNFD + unicode)
+>>> print(m.lhsFlags); print(m.rhsFlags)
+Flags.none
+Flags.unicode|generatesNFD|expectsNFD
 
 -----------
 
@@ -48,8 +51,8 @@ Check left and right sides encoding info
 'Unicode'
 
 Check the representation and str conversion methods
->>> repr(m); str(m)
-"Mapping('data/academy.tec')"
+>>> repr(m); str(m) #doctest: +ELLIPSIS
+"Mapping(...)"
 'SIL-Academy-2001 <-> Unicode'
 
 Check extended info from UTR-22 these are optional and may None if not included 
@@ -60,11 +63,17 @@ tec mapping.
 'mailto:martin_hosken@sil.org'
 'none'
 
-These attributes are absent from the academy encoding so return None.
+These attributes are absent from the academy encoding so throw an IndexError.
 >>> m.regName
+Traceback (most recent call last):
+    ...
+IndexError: TECkit: nameID index out of range
 >>> m.copyright
+Traceback (most recent call last):
+    ...
+IndexError: TECkit: nameID index out of range
 
 Check the flags come out as expected:
->>> print m.lhsFlags; print m.rhsFlags
-()
-(expectsNFD + generatesNFD + unicode)
+>>> print(m.lhsFlags); print(m.rhsFlags)
+Flags.none
+Flags.unicode|generatesNFD|expectsNFD

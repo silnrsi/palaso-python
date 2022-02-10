@@ -66,7 +66,7 @@ prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, c_bool, teckit_error_fn,
 paramflags = ((1, 'txt'), (1, 'len'), (1, 'doCompression'), (1, 'errFunc'),
               (1, 'userData'), (2, 'outTable'), (2, 'outLen'))
 compile = prototype(('TECkit_Compile', __library__), paramflags)
-compile.err_check = status_code
+compile.errcheck = status_code
 
 
 prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn,
@@ -75,7 +75,7 @@ prototype = LOCALFUNCTYPE(status, c_char_p, c_size_t, teckit_error_fn,
 paramflags = ((1, 'txt'), (1, 'len'), (1, 'errFunc'), (1, 'userData'),
               (2, 'outTable'), (2, 'outLen'), (1, 'opts'))
 compileOpt = prototype(('TECkit_CompileOpt', __library__), paramflags)
-compileOpt.err_check = status_code
+compileOpt.errcheck = status_code
 
 prototype = LOCALFUNCTYPE(None, mapping)
 paramflags = (1, 'table'),
@@ -92,7 +92,7 @@ getCompilerVersion = prototype(('TECkit_GetCompilerVersion', __library__))
 prototype = LOCALFUNCTYPE(c_char_p, c_uint32)
 paramflags = (1, 'usv'),
 getUnicodeName = prototype(('TECkit_GetUnicodeName', __library__), paramflags)
-getUnicodeName.err_check = key_error(0, 'no name for U+%x')
+getUnicodeName.errcheck = key_error(0, 'no name for U+%x')
 
 # returns the TECkit form of the name of usv, or "U+xxxx" if no name
 # NB: returns value is a pointer to a static string, which will be
@@ -100,10 +100,10 @@ getUnicodeName.err_check = key_error(0, 'no name for U+%x')
 prototype = LOCALFUNCTYPE(c_char_p, c_uint32)
 paramflags = (1, 'usv'),
 getTECkitName = prototype(('TECkit_GetTECkitName', __library__), paramflags)
-getTECkitName.err_check = key_error(0, 'no name for U+%x')
+getTECkitName.errcheck = key_error(0, 'no name for U+%x')
 
 prototype = LOCALFUNCTYPE(c_int, c_char_p)
 paramflags = (1, 'name'),
 getUnicodeValue = prototype(('TECkit_GetUnicodeValue', __library__),
                             paramflags)
-getUnicodeValue.err_check = key_error(-1, 'no USV for %s')
+getUnicodeValue.errcheck = key_error(-1, 'no USV for %s')

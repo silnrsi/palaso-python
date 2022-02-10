@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-import urllib, ConfigParser, os, re
+import urllib.request, urllib.parse, urllib.error, configparser, os, re
 from optparse import OptionParser
 from palaso.debian.sources import source_collection, getdistro, getbasever
 
@@ -17,14 +17,14 @@ p.add_option('-s', '--section', help = 'distribution section to process')
 (opts, args) = p.parse_args()
 host = args[0]
 
-url = host + "/dists/" + opts.distro + "/" + opts.section + "/source/Sources"
+url = f"{host}/dists/{opts.distro}/{opts.section}/source/Sources"
 x = source_collection(url)
-print "Found %d packages in the original repository" % len(x.sources)
+print(f"Found {len(x.sources)} packages in the original repository")
 
-y = source_collection(host + "/dists/" + opts.newdistro + "/" + opts.section + "/source/Sources")
-print "Found %d packages in the target repository" % len(y.sources)
+y = source_collection(f"{host}/dists/{opts.newdistro}/{opts.section}/source/Sources")
+print(f"Found {len(y.sources)} packages in the target repository")
 
-edits = ConfigParser.ConfigParser()
+edits = configparser.ConfigParser()
 if opts.edits :
     edits.read(opts.edits)
     
@@ -44,13 +44,13 @@ for s in x.sources :
             newv = v
         newv = newv + "+" + opts.newdistro + "1"
     basever = getbasever(v)
-    print "%s: %s(%s) -> %s" % (s, v, basever, newv)
+    print(f"{s!s}: {v!s}({basever!s}) -> {newv!s}")
     if opts.list : continue
     dir = "%s-%s" % (s, basever)
     x.download(s, dir, host)
     os.chdir(dir)
-    cmd = "dch --force-distribution -v '" + newv + "' -D " + opts.newdistro + " -m 'Transfer from " + opts.distro + "'"
-    print cmd
+    cmd = f"dch --force-distribution -v '{newv}' -D {opts.newdistro} -m 'Transfer from {opts.distro}'"
+    print(cmd)
     os.system(cmd)
     os.chdir("..")
     cmd = "dpkg-source"
@@ -58,20 +58,18 @@ for s in x.sources :
         for e in edits.items(s) :
             if e[0].lower() != 'version' :
                 cmd += " -D%s='%s'" % e
-    cmd += " -b " + dir
-    print cmd
+    cmd += f" -b {dir!r}"
+    print(cmd)
     if os.system(cmd) == 0 :
-        changes = "'%s_%s_source.changes'" % (s, re.sub(r"^\d:", "", newv))
+        newv = re.sub(r"^\d:", "", newv)
+        changes = f"'{s!s}_{newv}_source.changes'"
         os.chdir(dir)
-        cmd = "dpkg-genchanges -sa -S > ../" + changes
-        os.system(cmd)
+        os.system(f"dpkg-genchanges -sa -S > ../{changes}")
         os.chdir('..')
-        cmd = "debsign -m'" + os.environ['DEBEMAIL'] + "' " + changes
-        os.system(cmd)
-        cmd = "dput " + opts.put + " " + changes
-        print cmd
-        os.system(cmd)
+        os.system(f"debsign -m'{os.environ['DEBEMAIL']}' {changes}")
+        os.system(f"dput {opts.put} {changes}")
+        print(f"dput {opts.put} {changes}")
     else :
-        print "ERROR: BUILD %s FAILED" % s
-    os.system("rm -fr " + dir)
+        print(f"ERROR: BUILD {s!s} FAILED")
+    os.system(f"rm -fr {dir!r}")
 

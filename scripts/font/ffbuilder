@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import psMat, fontforge, os, re, sys
 from optparse import OptionParser
@@ -24,7 +24,7 @@ def findGlyph(e) :
     try :
         font = fonts[int(e.get("font", 0))]
     except IndexError :
-        print("You need to specify at least {} extra fonts using -f".format(e.get("font")))
+        print(f"You need to specify at least {e.get('font')} extra fonts using -f")
         sys.exit(1)
     name = e.get("PSName")
     if not name and e.get("UID") :
@@ -301,7 +301,7 @@ opts.font.insert(0, args.pop(0))
 for f in opts.font :
     fabs = os.path.abspath(f)
     if not os.path.exists(fabs) :
-        print("font {} at {} is missing".format(f, fabs))
+        print(f"font {f} at {fabs} is missing")
         sys.exit(1)
     font = fontforge.open(fabs)
     fonts.append(font)
@@ -324,7 +324,7 @@ count = 0
 for f in fonts :
     for k, v in f.temporary['names'].items() :
         if not v :
-            v = Glyph("_temp" + str(count), "")
+            v = Glyph(f"_temp{count!s}", "")
             v.glyph = f[k]
             v.scale = psMat.identity()
             glyphs.append(v)

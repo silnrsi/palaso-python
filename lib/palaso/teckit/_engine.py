@@ -44,6 +44,7 @@ class Flags(IntFlag):
     mapping is normalization-form-agnostic on input, and may generate an
     unspecified mixture.
     """
+    none = 0
 
     expectsNFC = auto()
     """expects fully composed text (NFC)."""
@@ -258,6 +259,7 @@ getMappingFlags.errcheck = status_code
 #
 prototype = LOCALFUNCTYPE(c_uint32)
 getVersion = prototype(('TECkit_GetVersion', __library__))
+
 
 #
 #   ***** New APIs for version 2.1 of the engine *****

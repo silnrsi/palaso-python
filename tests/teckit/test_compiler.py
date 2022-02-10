@@ -1,9 +1,7 @@
-from __future__ import with_statement
-
 import unittest
 import os.path
 from palaso.teckit.compiler import compile, translate, CompilationError
-from palaso.teckit.engine   import Converter, Form, Mapping
+from palaso.teckit.engine import Mapping
 
 def resource(name):
     return os.path.join(os.path.dirname(__file__), 'data', name)

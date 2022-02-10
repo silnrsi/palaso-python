@@ -43,9 +43,8 @@ for line in lf.readlines() :
             print("Failed at line %d: %s %r, %r" % (count, text.encode('utf_8'), hbnres, grnres))
     elif opts.compare == "icu":
         iculayout.layoutChars(text, 0)
-        icures = filter(lambda x: x != 65535, list(iculayout.getGlyphs()))
+        icures = [x for x in iculayout.getGlyphs() if x != 65535]
         if hbres != icures :
             hbnres = [tt.getGlyphName(x) for x in hbres]
             icunres = [tt.getGlyphName(x) for x in icures]
             print("Failed at line %d: %s %r, %r" % (count, text.encode('utf_8'), hbnres, icunres))
-

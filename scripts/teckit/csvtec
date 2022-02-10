@@ -1,7 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from palaso.teckit.engine import Converter, Mapping
-import palaso.unicsv as unicsv
 import csv
 from optparse import OptionParser
 
@@ -25,5 +24,3 @@ for row in rdr :
         if opts.unicode : chrs = chrs.decode('utf-8').encode(opts.codepage)
         row[c] = eng.convert(row[c].decode('utf-8').encode('cp1252'), finished=True).encode('utf-8')
     wtr.writerow(row)
-
-

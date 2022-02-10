@@ -5,12 +5,12 @@ Created on Nov 2, 2009
 @author: tim_eves@sil.org
 '''
 import copy
+import palaso.sfm as sfm
 import unittest
 import warnings
-import palaso.sfm as sfm
+from itertools import chain
 from palaso.sfm import usfm, Text
 from pathlib import Path
-from itertools import chain
 
 
 def elem(name, *content):
@@ -142,19 +142,19 @@ class USFMTestCase(unittest.TestCase):
 
         # Try for perfect match first
         if source == rt_src:
-            self.assert_(True)
+            self.assertTrue(True)
             return
 
         # Normalise line endings
-        source = [l.rstrip() for l in source]
-        rt_src = [l.rstrip() for l in rt_src]
+        source = [x.rstrip() for x in source]
+        rt_src = [x.rstrip() for x in rt_src]
         if source == rt_src:
-            self.assert_(True)
+            self.assertTrue(True)
             return
 
         # Normalise the \f ..\f* marker forms in the source
-        source = [l.replace(r'\ft ', r'\fr*') for l in source]
-        rt_src = [l.replace(r'\ft ', r'\fr*') for l in rt_src]
+        source = [x.replace(r'\ft ', r'\fr*') for x in source]
+        rt_src = [x.replace(r'\ft ', r'\fr*') for x in rt_src]
 
         if leave_file and src_name:
             with open(src_name+'.normalised', 'w', encoding=src_encoding) as f:

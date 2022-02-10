@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-import ConfigParser, os, sys
+import configparser, os, sys
 
-conf = ConfigParser.RawConfigParser(allow_no_value = 1)
+conf = configparser.RawConfigParser(allow_no_value = 1)
 base = os.path.abspath('.')
 while base and not os.path.isdir(os.path.join(base, '.hg')) :
     base = os.path.split(base)[0]
@@ -16,13 +16,13 @@ if os.path.isfile(hgrc) :
 
 try:
     conf.set('merge-patterns', '**.sfd', 'sfdmerge')
-except ConfigParser.NoSectionError :
+except configparser.NoSectionError :
     conf.add_section('merge-patterns')
     conf.set('merge-patterns', '**.sfd', 'sfdmerge')
 
 try:
     conf.set('merge-tools', 'sfdmerge.executable', 'sfdmerge')
-except ConfigParser.NoSectionError :
+except configparser.NoSectionError :
     conf.add_section('merge-tools')
     conf.set('merge-tools', 'sfdmerge.executable', 'sfdmerge')
 
