@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, xml.sax, palaso, pprint, PyICU, re, codecs
+import sys, xml.sax, palaso, pprint, icu, re, codecs
 from optparse import OptionParser
 from palaso.collation import *
 from palaso.contexts import defaultapp
@@ -66,6 +66,6 @@ with defaultapp() :
     if options.z :
         print(tailor.encode("utf-8"))
         if collation :
-            icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
+            icuCollation = icu.RuleBasedCollator(tailor, options.depth)
             for s in palaso.collation.icu.sorted(tailor, collation.getElements(), level=options.depth, preproc = collation.reorders if options.preprocess else ()) :
                 print("%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s))))

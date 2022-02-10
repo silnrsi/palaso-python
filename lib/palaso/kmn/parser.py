@@ -1,10 +1,8 @@
-#!/usr/bin/python
-
-import re, os
+import re
 import itertools
 from pprint import pformat
-from palaso.contrib.funcparserlib.lexer import make_tokenizer, Token, LexerError
-from palaso.contrib.funcparserlib.parser import (some, a, maybe, many, skip, finished, NoParseError)
+from funcparserlib.lexer import make_tokenizer, Token, LexerError
+from funcparserlib.parser import (some, a, maybe, many, skip, finished, NoParseError)
 
 keyrowmap = {
     "E" : "1234567890-=",

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys, xml.sax, palaso, pprint, PyICU, re
+import sys, xml.sax, palaso, pprint, icu, re
 from optparse import OptionParser
 from palaso.collation import *
 from palaso.contexts import defaultapp
@@ -42,7 +42,7 @@ with defaultapp() :
     if str :
         if options.z :
             print(tailor.encode("utf-8"))
-        icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
+        icuCollation = icu.RuleBasedCollator(tailor, options.depth)
         if options.z :
             for s in sorted(collation.getElements()) :
                 print("%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s))))
@@ -57,6 +57,6 @@ with defaultapp() :
             print(f"--- {collation.type!s} ---")
             tailor = collation.asICU()
             if options.z : print(tailor.encode("utf-8"))
-            icuCollation = PyICU.RuleBasedCollator(tailor, options.depth)
+            icuCollation = icu.RuleBasedCollator(tailor, options.depth)
             for s in sorted(collation.getElements()) :
                 print("%s : %s" % (pprint.pformat(s), palaso.collation.icu.strkey(icuCollation.getCollationKey(s))))

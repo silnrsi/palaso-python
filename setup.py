@@ -5,10 +5,6 @@ from glob import glob
 
 packages = ['palaso',
             'palaso.collation',
-            'palaso.contrib',
-            'palaso.contrib.freetype',
-            'palaso.contrib.freetype.ft_enums',
-            'palaso.contrib.funcparserlib',
             'palaso.font',
             'palaso.kmn',
             'palaso.sfm',

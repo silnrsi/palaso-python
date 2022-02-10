@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import PyICU
+import icu
 from optparse import OptionParser
 from palaso.contexts import defaultapp
 
@@ -17,9 +17,9 @@ with defaultapp() :
 
     if opts.input :
         spec = "".join(file(opts.input).readlines())
-        brk = PyICU.RuleBasedBreakIterator(spec)
+        brk = icu.RuleBasedBreakIterator(spec)
     else :
-        brk = PyICU.RuleBasedBreakIterator()
+        brk = icu.RuleBasedBreakIterator()
 
     print(brk.getRules())
 
@@ -31,7 +31,7 @@ with defaultapp() :
         text = args[0]
 
     res = []
-    brk.setText(PyICU.UnicodeString(text))
+    brk.setText(icu.UnicodeString(text))
     last = brk.first()
     try :
         while True :

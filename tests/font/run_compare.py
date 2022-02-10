@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
-import palaso.contrib.freetype as ft
+import freetype as ft
 import palaso.font.hbng as hbng
 import palaso.font.graphite as gr
 import sys, codecs

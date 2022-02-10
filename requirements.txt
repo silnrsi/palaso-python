@@ -1,0 +1,14 @@
+beziers==0.4.0
+Cython==0.29.27
+fontTools==4.29.1
+freetype_py==2.2.0
+funcparserlib==0.3.6
+icu==0.0.1
+mercurial==6.0.2
+numpy==1.19.5
+PyGObject==3.42.0
+pycairo==1.20.1
+pygtk==2.24.2
+python_debian==0.1.39
+scikit_learn==1.0.2
+setuptools==52.0.0
