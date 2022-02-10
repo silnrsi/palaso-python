@@ -174,7 +174,7 @@ class Converter(object):
             start = cons - 1
             end = start + lhc
         end = min(end, len(input))
-        raise errtype(name, input, start, end,
+        raise errtype(name, cast(Any, input), start, end,
                       context + ' stopped at unmapped character')
 
     def _coerce_to_target(self, data: bytes):
@@ -194,12 +194,12 @@ class Converter(object):
             if isinstance(input, str):
                 raise TypeError(
                     "source is type 'str' but type 'bytes' is expected")
-            data = input
+            data: bytes = input
         options |= finished and Option.InputIsComplete
 
         buf = self._buffer
         cons = outs = 0
-        res = '' if Flags.unicode in self.targetFlags else b''
+        res: Any = '' if Flags.unicode in self.targetFlags else b''
         while data:
             try:
                 cons, outs, lhc = _engine.convertBufferOpt(
@@ -228,7 +228,7 @@ class Converter(object):
 
         buf = self._buffer
         outs = 0
-        res = '' if Flags.unicode in self.targetFlags else b''
+        res: Any = '' if Flags.unicode in self.targetFlags else b''
         while True:
             try:
                 outs, lhc = _engine.flushOpt(

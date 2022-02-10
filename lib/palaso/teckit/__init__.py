@@ -1,21 +1,23 @@
 import codecs
+from typing import Dict, Optional, Union, cast
+from os import PathLike
+from pathlib import Path
 from palaso.teckit import engine, compiler
-import glob
-import os.path
 from palaso.teckit._engine import Option
 
 __all__ = ['engine', 'compiler']
 
-_tec_mapping_cache_ = {}
-
 
 class _mapping(object):
-    def __init__(self, mapping):
+    def __init__(self, mapping: engine.Mapping):
         self.map = mapping
-        self.replacement = None
+        self.replacement = ''
 
 
-def register(mapping):
+_tec_mapping_cache_: Dict[str, _mapping] = {}
+
+
+def register(mapping: Union[PathLike, engine.Mapping]):
     if isinstance(mapping, str):
         mapping = engine.Mapping(mapping)
     elif not isinstance(mapping, engine.Mapping):
@@ -25,16 +27,16 @@ def register(mapping):
     _tec_mapping_cache_[key] = _mapping(mapping)
 
 
-def register_library(path):
-    for mapfile in glob.glob(os.path.join(path, '*.tec')):
+def register_library(path: Path):
+    for mapfile in path.glob('*.tec'):
         register(mapfile)
 
 
-def list_mappings():
-    return dict((n, repr(m.map)) for (n, m) in _tec_mapping_cache_.items())
+def list_mappings() -> Dict[str, str]:
+    return {n: repr(m.map) for (n, m) in _tec_mapping_cache_.items()}
 
 
-def _teckit_search(mapping):
+def _teckit_search(mapping: str) -> Optional[codecs.CodecInfo]:
     mapobj = _tec_mapping_cache_.get(mapping)
     if not mapobj:
         return None
@@ -63,7 +65,7 @@ def _teckit_search(mapping):
 
 
 class Codec(codecs.Codec):
-    def __init__(self, mapping):
+    def __init__(self, mapping: _mapping):
         self.__enc = engine.Converter(mapping.map, forward=False)
         self.__dec = engine.Converter(mapping.map, forward=True)
         mapping.replacement = self.__dec.convert(
@@ -81,14 +83,15 @@ class Codec(codecs.Codec):
             rep, rp = codecs.lookup_error(errors)(uerr)
             try:
                 prefix = conv.convert(
-                            uerr.object[:uerr.start] + rep,
+                            uerr.object[:uerr.start] + cast(str, rep),
                             finished=final,
                             options=Option.DontUseReplacementChar)
             except UnicodeEncodeError:
-                raise UnicodeEncodeError(
-                    *(uerr.args[:4].append(
-                        f'cannot convert replacement {rep} to target encoding'
-                    )))
+                raise UnicodeEncodeError(uerr.args[0], uerr.args[1],
+                                         uerr.args[2], uerr.args[3],
+                                         f'cannot convert replacement {rep}'
+                                         ' to target encoding') \
+                    from None
             suffix = Codec.convert(conv, data[rp:], final, errors)
             return (prefix+suffix[0], rp+suffix[1])
         except UnicodeDecodeError as uerr:
@@ -105,16 +108,12 @@ class Codec(codecs.Codec):
         return Codec.convert(self.__dec, input, True, errors)
 
 
-class IncrementalCommon(object):
-    def __init__(self, forward, mapping, errors):
-        if forward:
-            base = codecs.IncrementalDecoder
-        else:
-            base = codecs.IncrementalEncoder
-        base.__init__(self, errors)
-        self._conv = engine.Converter(mapping.map, forward)
+class IncrementalEncoder(codecs.IncrementalEncoder):
+    def __init__(self, mapping, errors='strict'):
+        super(IncrementalEncoder).__init__(errors)
+        self._conv = engine.Converter(mapping.map, False)
 
-    def convert(self, object, final=False):
+    def encode(self, object, final=False):
         return Codec.convert(self._conv, object, final, self.errors)[0]
 
     def reset(self): return self._conv.reset()
@@ -124,18 +123,19 @@ class IncrementalCommon(object):
     def setstate(self, state): return self._conv
 
 
-class IncrementalEncoder(IncrementalCommon, codecs.IncrementalEncoder):
+class IncrementalDecoder(codecs.IncrementalDecoder):
     def __init__(self, mapping, errors='strict'):
-        super(IncrementalEncoder, self).__init__(False, mapping, errors)
+        super(IncrementalEncoder).__init__(errors)
+        self._conv = engine.Converter(mapping.map, True)
 
-    encode = IncrementalCommon.convert
+    def decode(self, object, final=False):
+        return Codec.convert(self._conv, object, final, self.errors)[0]
 
+    def reset(self): return self._conv.reset()
 
-class IncrementalDecoder(IncrementalCommon, codecs.IncrementalDecoder):
-    def __init__(self, mapping, errors='strict'):
-        super(IncrementalDecoder, self).__init__(True, mapping, errors)
+    def getstate(self): return self._conv
 
-    decode = IncrementalCommon.convert
+    def setstate(self, state): return self._conv
 
 
 class StreamWriter(Codec, codecs.StreamWriter):

@@ -3,6 +3,7 @@ import os.path
 from palaso.teckit.compiler import compile, translate, CompilationError
 from palaso.teckit.engine import Mapping
 
+
 def resource(name):
     return os.path.join(os.path.dirname(__file__), 'data', name)
 
@@ -11,45 +12,66 @@ def open_resource(name):
         res = f.read()
     return res
 
-class TestCompiler:
-    def test_compilation(self):
-        if not hasattr(self, 'reference_file'): return
-        ref_map = Mapping(resource(self.reference_file))
-        source  = open_resource(self.source_file)
-        com_map = compile(source, self.compress)
-        self.assertEqual(str(com_map), str(ref_map))
-        self.assertEqual(com_map, ref_map,
-                         'compiled %r (%scompressed) does not match reference %r' % 
-                            (self.source_file, '' if self.compress else 'un', self.reference_file))
-        del com_map
 
-    def test_translation(self):
-        if not hasattr(self, 'reference_file_xml'): return
-        ref_map = open_resource(self.reference_file_xml)
-        source  = open_resource(self.source_file)
-        com_map = translate(source)
-        self.assertEqual(com_map, ref_map,
-                         'translated %r (xml) does not match reference %r' % 
-                            (self.source_file, self.reference_file_xml))
-        del com_map
+class Test:
+    '''
+    The Test class is here to soley to prevent these two base classes from
+    being discovered as tests in their own right. These are shared
+    implementations for suppling common test code to derived classes below.
+    '''
+
+    class Compiler(unittest.TestCase):
+        reference_file: str
+        source_file: str
+        compress: bool = False
+
+        def test_compilation(self):
+            assert self.reference_file.endswith('.tec'), \
+                'Not a complied reference file (.tec).'
+            ref_map = Mapping(resource(self.reference_file))
+            source  = open_resource(self.source_file)
+            com_map = compile(source, self.compress)
+            self.assertEqual(str(com_map), str(ref_map))
+            self.assertEqual(
+                com_map,
+                ref_map,
+                f'compiled {self.source_file!r}'
+                f' ({"" if self.compress else "un"}compressed)'
+                f' does not match reference {self.reference_file!r}')
+            del com_map
+
+    class Translator(unittest.TestCase):
+        reference_file: str
+        source_file: str
+
+        def test_translation(self):
+            assert self.reference_file.endswith('.xml'), \
+                'Not a translated reference file (.xml).'
+            ref_map = open_resource(self.reference_file_xml)
+            source  = open_resource(self.source_file)
+            com_map = translate(source)
+            self.assertEqual(
+                com_map,
+                ref_map,
+                f'translated {self.source_file!r} (xml) does not match'
+                f' reference {self.reference_file!r}')
+            del com_map
 
 
-class CompileGreekMapping(TestCompiler):
-    mapping_name   = 'SIL-GREEK_GALATIA-2001 <-> UNICODE'
-    source_file    = 'SILGreek2004-04-27.map'
-
-class CompileGreekMappingUncrompressed(unittest.TestCase, CompileGreekMapping):
+class CompileGreekMappingUncrompressed(Test.Compiler):
+    source_file = 'SILGreek2004-04-27.map'
     reference_file = 'SILGreek2004-04-27.uncompressed.reference.tec'
-    compress       = False
 
-class CompileGreekMappingCompressed(unittest.TestCase, CompileGreekMapping):
+
+class CompileGreekMappingCompressed(Test.Compiler):
+    source_file = 'SILGreek2004-04-27.map'
     reference_file = 'SILGreek2004-04-27.reference.tec'
-    compress       = True
+    compress = True
 
-class TranslateISO_8859_1_XML(unittest.TestCase, TestCompiler):
-    source_file    = 'ISO-8859-1.map'
-    reference_file_xml = 'ISO-8859-1.map.reference.xml'
 
+class TranslateISO_8859_1_XML(Test.Translator):
+    source_file = 'ISO-8859-1.map'
+    reference_file = 'ISO-8859-1.map.reference.xml'
 
 
 class TestCompilerFailure(unittest.TestCase):

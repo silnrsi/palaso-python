@@ -133,11 +133,9 @@ class SFMTestCase(unittest.TestCase):
 
 
 class USFMTestCase(unittest.TestCase):
-    def _test_round_trip_source(self, source, parser, leave_file=False,
+    def _test_round_trip_source(self, file_obj, parser, leave_file=False,
                                 *args, **kwds):
-        src_name = getattr(source, 'name', None)
-        src_encoding = getattr(source, 'encoding', None)
-        source = list(source)
+        source = list(file_obj)
         rt_src = sfm.generate(parser(source, *args, **kwds)).splitlines(True)
 
         # Try for perfect match first
@@ -156,20 +154,21 @@ class USFMTestCase(unittest.TestCase):
         source = [x.replace(r'\ft ', r'\fr*') for x in source]
         rt_src = [x.replace(r'\ft ', r'\fr*') for x in rt_src]
 
-        if leave_file and src_name:
-            with open(src_name+'.normalised', 'w', encoding=src_encoding) as f:
-                f.writelines(l+'\n' for l in source)
-            with open(src_name+'.roundtrip', 'w', encoding=src_encoding) as f:
-                f.writelines(l+'\n' for l in rt_src)
+        if leave_file and hasattr(file_obj, 'name'):
+            path = Path(Path(file_obj.name).name)
+            enc = getattr(file_obj, 'encoding', None)
+
+            with path.with_suffix('.normalised').open('w', encoding=enc) as f:
+                f.writelines(x+'\n' for x in source)
+            with path.with_suffix('.roundtrip').open('w', encoding=enc) as f:
+                f.writelines(x+'\n' for x in rt_src)
 
         self.assertEqual(source, rt_src, 'roundtriped source not equal')
 
-    def _test_round_trip_parse(self, source, parser,
+    def _test_round_trip_parse(self, file, parser,
                                leave_file=False,
                                *args, **kwds):
-        src_name = getattr(source, 'name', None)
-        src_encoding = getattr(source, 'encoding', None)
-        doc = list(parser(source, *args, **kwds))
+        doc = list(parser(file, *args, **kwds))
         regenerated = sfm.generate(doc)
         try:
             doc = list(flatten(doc))
@@ -181,9 +180,10 @@ class USFMTestCase(unittest.TestCase):
                              rt_doc,
                              'roundtrip parse unequal')
         except (SyntaxError, AssertionError) as se:
-            if leave_file and src_name:
-                out_path = Path(src_name + '.regenerated')
-                with out_path.open('w', encoding=src_encoding) as f:
+            if leave_file and hasattr(file, 'name'):
+                path = Path(Path(file.name).name).with_suffix('.regenerated')
+                enc = getattr(file, 'encoding', None)
+                with path.open('w', encoding=enc) as f:
                     f.write(regenerated)
                     se.filename = f.name
             if isinstance(se, AssertionError):
