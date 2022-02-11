@@ -3,7 +3,7 @@ These are tests of the engine.Mapping object
 >>> from palaso.teckit.engine import Mapping
 
 Test access to the meta data and flags for silipa93.tec
->>> m = Mapping('data/silipa93.tec')
+>>> m = Mapping(resources / 'silipa93.tec')
 
 Check left and right sides encoding info
 >>> m.lhsName; m.lhsDescription
@@ -40,7 +40,7 @@ Flags.unicode|generatesNFD|expectsNFD
 -----------
 
 Test access to the meta data and flags for academy.tec
->>> m = Mapping('data/academy.tec')
+>>> m = Mapping(resources / 'academy.tec')
 
 Check left and right sides encoding info
 >>> m.lhsName; m.lhsDescription

@@ -3,21 +3,21 @@ import os
 import palaso.collation.icu
 import palaso.collation.tailor
 import unittest
+from . import resources
 from palaso.collation import *
 import xml.sax
 
 
 class TestCollation(unittest.TestCase) :
     def sortldml(self, ldml, infile, alt='', depth=15) :
-        inf = codecs.open(os.path.join(os.path.dirname(__file__), 'base', infile), "r", "utf-8")
-        indata = inf.readlines()
-        inf.close()
+        with resources.joinpath(infile).open(encoding='utf-8') as f:
+            indata = f.readlines()
         handler = palaso.collation.tailor.LDMLHandler()
         ldmlparser = xml.sax.make_parser()
         ldmlparser.setContentHandler(handler)
         ldmlparser.setFeature(xml.sax.handler.feature_namespaces, 1)
         # ldmlparser.setFeature(xml.sax.handler.feature_namespace_prefixes, 1)
-        ldmlparser.parse(os.path.join(os.path.dirname(__file__), 'data', ldml))
+        ldmlparser.parse(resources.joinpath(ldml))
         collation = handler.collations[0]
         for c in handler.collations :
             if c.type == alt :

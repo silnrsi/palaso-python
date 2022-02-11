@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import unittest
+from . import resources
 from palaso.kmfl import kmfl
 from palaso.kmn import keysyms_items
 from palaso.kmn.coverage import Coverage
@@ -7,17 +8,17 @@ from palaso.kmn.coverage import Coverage
 
 class TestKmfl(unittest.TestCase) :
     def runtest(self, fname, keys, output) :
-        k = kmfl("kbds/" + fname)
+        k = kmfl(resources / fname)
         res = k.run_items(keysyms_items(keys))
         self.assertEqual(res, output, ("Keying difference for: {0}\n"
                                        "expected:\t{1!r}\n"
                                        "     got:\t{2!r}\n").format(keys,output,res))
 
     def runcoverage(self, fname, testfile) :
-        x = Coverage("kbds/" + fname)
-        inf = codecs.open(os.path.join('base', testfile), "r", "utf-8")
-        indata = [l.rstrip() for l in inf.readlines()]
-        inf.close
+        x = Coverage(resources / fname)
+        with (resources / testfile).open(encoding='utf-8') as f:
+            indata = [l.rstrip() for l in f.readlines()]
+
         res = list(x.coverage_test(mode = 'all'))
         self.assertEqual(res, indata, "coverage results are not the same")
 

@@ -4,7 +4,7 @@ These are some fairly simple tests of the engine module object
 
 ---- Test with silipa93.tec ----
 Make an decoder and encoder
->>> m = Mapping('data/silipa93.tec')
+>>> m = Mapping(resources / 'silipa93.tec')
 >>> dec = Converter(m); enc = Converter(m, forward=False)
 
 Check left and right sides decoding info in teh coverter object
@@ -83,7 +83,7 @@ Test clean-up of the engines
 
 ---- Test with academy.tec ----
 Make an decoder and encoder
->>> m = Mapping('data/academy.tec')
+>>> m = Mapping(resources / 'academy.tec')
 >>> dec = Converter(m); enc = Converter(m, forward=False)
 
 Test forward direction

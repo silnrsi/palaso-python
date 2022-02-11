@@ -1,16 +1,7 @@
 import unittest
-import os.path
+from . import resources
 from palaso.teckit.compiler import compile, translate, CompilationError
 from palaso.teckit.engine import Mapping
-
-
-def resource(name):
-    return os.path.join(os.path.dirname(__file__), 'data', name)
-
-def open_resource(name):
-    with open(resource(name),'rb') as f:
-        res = f.read()
-    return res
 
 
 class Test:
@@ -28,8 +19,8 @@ class Test:
         def test_compilation(self):
             assert self.reference_file.endswith('.tec'), \
                 'Not a complied reference file (.tec).'
-            ref_map = Mapping(resource(self.reference_file))
-            source  = open_resource(self.source_file)
+            ref_map = Mapping(resources / self.reference_file)  # type: ignore
+            source = (resources / self.source_file).read_bytes()
             com_map = compile(source, self.compress)
             self.assertEqual(str(com_map), str(ref_map))
             self.assertEqual(
@@ -47,8 +38,8 @@ class Test:
         def test_translation(self):
             assert self.reference_file.endswith('.xml'), \
                 'Not a translated reference file (.xml).'
-            ref_map = open_resource(self.reference_file_xml)
-            source  = open_resource(self.source_file)
+            ref_map = (resources / self.reference_file).read_bytes()
+            source = (resources / self.source_file).read_bytes()
             com_map = translate(source)
             self.assertEqual(
                 com_map,
@@ -76,5 +67,5 @@ class TranslateISO_8859_1_XML(Test.Translator):
 
 class TestCompilerFailure(unittest.TestCase):
     def test_compile_fail(self):
-        source = open_resource('ISO-8859-1.map.reference.xml')
+        source = (resources / 'ISO-8859-1.map.reference.xml').read_bytes()
         self.assertRaises(CompilationError, compile, source)

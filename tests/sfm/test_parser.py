@@ -8,6 +8,7 @@ import copy
 import palaso.sfm as sfm
 import unittest
 import warnings
+from . import resources
 from itertools import chain
 from palaso.sfm import usfm, Text
 from pathlib import Path
@@ -247,18 +248,12 @@ class USFMTestCase(unittest.TestCase):
              (8, 1, 'JHN', '3', '16', '\\v 16 ')])
 
     def test_round_trip_parse(self):
-        data_dir = Path(__file__).parent / 'data'
-        self._test_round_trip_parse(
-            (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser,
-            leave_file=True)
+        with (resources / '41MATWEBorig.SFM').open(encoding='utf_8_sig') as f:
+            self._test_round_trip_parse(f, usfm.parser, leave_file=True)
 
     def test_round_trip_src(self):
-        data_dir = Path(__file__).parent / 'data'
-        self._test_round_trip_source(
-            (data_dir / '41MATWEBorig.SFM').open(encoding='utf_8_sig'),
-            usfm.parser,
-            leave_file=True)
+        with (resources / '41MATWEBorig.SFM').open(encoding='utf_8_sig') as f:
+            self._test_round_trip_source(f, usfm.parser, leave_file=True)
 
 
 def load_tests(loader, standard_tests, ignore):
