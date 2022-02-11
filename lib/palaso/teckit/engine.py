@@ -158,7 +158,7 @@ class Converter(object):
     def reset(self):
         _engine.resetConverter(self._converter)
 
-    def _handle_unmapped_char(self, input: AnyStr, context: str,
+    def _unmapped_char(self, input: AnyStr, context: str,
                               uc: UnmappedChar):
         # This looks like a nasty hack because it is. Sorry
         cons, outs, lhc = uc.args
@@ -174,8 +174,8 @@ class Converter(object):
             start = cons - 1
             end = start + lhc
         end = min(end, len(input))
-        raise errtype(name, cast(Any, input), start, end,
-                      context + ' stopped at unmapped character')
+        return errtype(name, cast(Any, input), start, end,
+                       context + ' stopped at unmapped character')
 
     def _coerce_to_target(self, data: bytes):
         return (_unicode_decoder(data)[0]
@@ -209,11 +209,12 @@ class Converter(object):
                                     options)
             except FullBuffer as err:
                 cons, outs, lhc = err.args
-            except EmptyBuffer:
+            except EmptyBuffer as err:
                 if finished:
                     raise
+                cons, outs, lhc = err.args
             except UnmappedChar as err:
-                self._handle_unmapped_char(input, 'convert', err)
+                raise self._unmapped_char(input, 'convert', err) from None
 
             res += self._coerce_to_target(cast(bytes, buf[:outs]))
             data = data[cons:]
@@ -238,4 +239,4 @@ class Converter(object):
                 outs, lhc = err.args
                 res += self._coerce_to_target(cast(bytes, buf[:outs]))
             except UnmappedChar as err:
-                self._handle_unmapped_char('', 'flush', err)
+                raise self._unmapped_char('', 'flush', err) from None
