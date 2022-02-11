@@ -180,11 +180,11 @@ class parser(sfm.parser):
 
     Test for error detection and reporting for USFM specific parses
     Chapter numbers
-    >>> list(parser(['\\id TEST\\c\\p \\v 1 text']))
+    >>> list(parser([r'\\id TEST\\c\\p \\v 1 text']))
     Traceback (most recent call last):
     ...
     SyntaxError: <string>: line 1,9: missing chapter number after \\c
-    >>> list(parser(['\\id TEST\\c A\\p \\v 1 text']))
+    >>> list(parser([r'\\id TEST\\c A\\p \\v 1 text']))
     Traceback (most recent call last):
     ...
     SyntaxError: <string>: line 1,9: missing chapter number after \\c
@@ -446,13 +446,11 @@ class parser(sfm.parser):
 
 class Reference(sfm.Position):
     def __new__(cls, pos, ref):
-        return super().__new__(cls, *pos)
-
-    def __init__(self, pos, ref):
-        super().__init__(*pos)
-        self.book = ref[0]
-        self.chapter = ref[1]
-        self.verse = ref[2]
+        p = super().__new__(cls, *pos)
+        p.book = ref[0]
+        p.chapter = ref[1]
+        p.verse = ref[2]
+        return p
 
     def advance(self, n):
         return Reference(super().advance(n),
@@ -460,14 +458,14 @@ class Reference(sfm.Position):
 
 
 def decorate_references(source):
-    ref = ['', '', '']
+    ref = [None, None, None]
 
     def _g(_, e):
         if isinstance(e, sfm.Element):
             if e.name == 'id':
-                ref[0] = str(e[0]).split()[0]
+                ref[:] = [str(e[0]).split()[0], None, None]
             elif e.name == 'c':
-                ref[1] = e.args[0]
+                ref[1:3] = [e.args[0],None]
             elif e.name == 'v':
                 ref[2] = e.args[0]
             e.pos = Reference(e.pos, ref)
