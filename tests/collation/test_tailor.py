@@ -42,6 +42,3 @@ class TestCollation(unittest.TestCase) :
 
     # def test_kht(self) :
     #    self.sortldml('kht.xml', 'kht_words.txt')
-
-if __name__ == "__main__" :
-    unittest.main()

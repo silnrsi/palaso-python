@@ -78,8 +78,3 @@ class TestCompilerFailure(unittest.TestCase):
     def test_compile_fail(self):
         source = open_resource('ISO-8859-1.map.reference.xml')
         self.assertRaises(CompilationError, compile, source)
-
-
-if __name__ == "__main__":
-    unittest.main()
-    

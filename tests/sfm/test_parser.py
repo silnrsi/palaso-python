@@ -227,28 +227,24 @@ class USFMTestCase(unittest.TestCase):
         for r in run_tests:
             self.assertEqual(*r)
 
-#    def test_reference(self):
-#        p = usfm.parser('\\id MAT EN\n\\c 1 \\v 1 \\v 2-3\n'
-#                        '\\id JHN\n\\c 3 \\v 16')
-#        self.assertEqual([tuple(e.pos) for e in p],
-#                         [(1, 1, None, None, None),     # start{}   id
-#                          (1, 5, 'MAT', None, None),    # text{id}  'MAT EN\n'
-#                          (1, 12, 'MAT', None, None),   # end{}     id
-#                          (2, 1, 'MAT', '1', None),     # start{}   c 1
-#                          (2, 6, 'MAT', '1', '1'),      # start{c}  v 1
-#                          (2, 11, 'MAT', '1', '1'),     # end{c}    v
-#                          (2, 11, 'MAT', '1', '2-3'),   # start{c}  v 2-3
-#                          (2,17, 'MAT','1','2-3'),      # text{v}   '\n'
-#                          (2,18, 'MAT','1','2-3'),      # end{c}    v
-#                          (2,18, 'MAT','1','2-3'),      # end{}     c
-#                          (3, 1, None, None, None),     # start{}   id
-#                          (3, 5, 'JHN', None, None),    # text{id}  'JHN\n'
-#                          (3, 9, 'JHN', None, None),    # end{}     id
-#                          (4, 1, 'JHN', '3', None),     # start{}   c 3
-#                          (4, 6, 'JHN', '3', '16'),     # start{c}  v 16
-#                          (4, 11, 'JHN', '3', '16'),    # end{c}    v
-#                          (4, 11, 'JHN', '3', '16')])   # end{}     c
-#
+    def test_reference(self):
+        p = flatten(
+                usfm.decorate_references(
+                    usfm.parser('\\id MAT EN\n\\c 1\n\\p\n\\v 1 \\v 2-3\n'
+                                '\\id JHN DE\n\\c 3\n\\p\n\\v 16'.splitlines())))
+        self.assertEqual(
+            [(*e.pos, e.pos.book, e.pos.chapter, e.pos.verse, str(e)) for e in p],
+            [(1, 1, 'MAT', None, None, '\\id'),
+             (1, 5, 'MAT', None, None, 'MAT EN'),
+             (2, 1, 'MAT', '1', None, '\\c 1'),
+             (3, 1, 'MAT', '1', None, '\\p'),
+             (4, 1, 'MAT', '1', '1', '\\v 1 '),
+             (4, 6, 'MAT', '1', '2-3', '\\v 2-3 '),
+             (5, 1, 'JHN', None, None, '\\id'),
+             (5, 5, 'JHN', None, None, 'JHN DE'),
+             (6, 1, 'JHN', '3', None, '\\c 3'),
+             (7, 1, 'JHN', '3', None, '\\p'),
+             (8, 1, 'JHN', '3', '16', '\\v 16 ')])
 
     def test_round_trip_parse(self):
         data_dir = Path(__file__).parent / 'data'
@@ -265,14 +261,21 @@ class USFMTestCase(unittest.TestCase):
             leave_file=True)
 
 
-if __name__ == "__main__":
+def load_tests(loader, standard_tests, ignore):
     import doctest
-    suite = unittest.TestSuite(
-        [doctest.DocTestSuite('palaso.sfm'),
-         doctest.DocTestSuite('palaso.sfm.records'),
-         doctest.DocTestSuite('palaso.sfm.style'),
-         doctest.DocTestSuite('palaso.sfm.usfm'),
-         unittest.defaultTestLoader.loadTestsFromName(__name__)
-         ])
+    return unittest.TestSuite(
+        [
+            doctest.DocTestSuite('palaso.sfm'),
+            doctest.DocTestSuite('palaso.sfm.records'),
+            doctest.DocTestSuite('palaso.sfm.style'),
+            doctest.DocTestSuite('palaso.sfm.usfm'),
+            standard_tests,
+        ])
+
+
+def setUpModule():
     warnings.simplefilter("ignore", SyntaxWarning)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+
+
+def tearDownModule():
+    warnings.resetwarnings()

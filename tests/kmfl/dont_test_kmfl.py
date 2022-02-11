@@ -26,7 +26,3 @@ class TestKmfl(unittest.TestCase) :
 
     def test_coverage_kyu(self) :
         self.runcoverage("kyu-mymr.kmn", "kyu-mymr-coverage.txt")
-
-if __name__ == "__main__" :
-    unittest.defaultTestLoader.loadTestsFromName('test_compiler').debug()
-#    unittest.main()
