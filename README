@@ -1,14 +1,20 @@
 Palaso-Python
--------------
+----
 This contains python scripts, modules and packages created by SIL at the Payap 
 Linguistic Institute Computing Unit. These are used by - and made available for 
 future use - by Payap language software developed at the Computing Unit.
 
 This includes modules for:
-    o Support or Unicode in CSV file (palaso.unicsv)
-    o Import, export & manipulation of collation data (palaso.collation)
-    o Data generation from regexps (palaso.reggen)
-    o A Python interface to SIL's TECkit encoding conversion library.
-    o Various font and keyboard utilities for smith.  
+    * Import, export & manipulation of collation data (palaso.collation)
+    * Data generation from regexps (palaso.reggen)
+    * A Python interface to SIL's TECkit encoding conversion library.
+    * SFM & USFM parser
 
 This is a standard python distutils project and also a debian package.
+
+Several packages have been promoted to the own external repositories these 
+included:
+    * The Smith font & keyboard build system:
+      https://github.com/silnrsi/smith
+    * palaso.sldr & scripts have moved to:
+      https://github.com/silnrsi/sldrtools
