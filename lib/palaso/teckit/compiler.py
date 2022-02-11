@@ -14,7 +14,7 @@ __email__ = "tim_eves@sil.org"
 # 10-Jun-2009 tse   Initial version using the ctypes FFI
 
 from itertools import starmap
-from typing import Any, AnyStr, List
+from typing import AnyStr, List, cast
 
 from palaso.teckit import _compiler
 from palaso.teckit import _common
@@ -34,9 +34,9 @@ __all__ = ['Form', 'Mapping',
 
 class CompilationError(_common.CompilationError):
     @staticmethod
-    def __format_err(msg: bytes, param: bytes, line: int) -> str:
-        msg = msg.decode('utf_8')
-        param = (param or b'').decode('utf_8')
+    def __format_err(msg_: bytes, param_: bytes, line: int) -> str:
+        msg = msg_.decode('utf_8')
+        param = (param_ or b'').decode('utf_8')
         return f'line {line}: {msg}{param and ": "+param}'
 
     def __init__(self, errors: List) -> None:
@@ -47,12 +47,14 @@ class CompilationError(_common.CompilationError):
         return 'compilation failed with errors:\n' + errors
 
 
-def compile(txt: AnyStr,
-            compress: bool = True,
-            form: Form = Form.Unspecified) -> Any:
+def __compile_opts(txt_: AnyStr, opts: Form):
     errors = []
-    if isinstance(txt, str):
-        txt = txt.encode('utf_8_sig')
+    if isinstance(txt_, str):
+        txt = txt_.encode('utf_8_sig')
+    elif isinstance(txt_, bytes):
+        txt = cast(str, txt_)
+    else:
+        raise TypeError("txt is not a str type (either str or bytes")
 
     @_compiler.teckit_error_fn
     def callback(_, *err): errors.append(err)
@@ -60,40 +62,34 @@ def compile(txt: AnyStr,
     try:
         (tbl, tbl_len) = _compiler.compileOpt(
                             txt, len(txt),
-                            compress,
                             callback, None,
-                            form)
+                            opts)
+        res = tbl[:tbl_len]
+        _compiler.disposeCompiled(tbl)
     except _common.CompilationError:
         if errors:
             raise CompilationError(errors) from None
         else:
             raise
+    return res
 
-    buf = Mapping(tbl[:tbl_len])
-    _compiler.disposeCompiled(tbl)
+
+def compile(txt: AnyStr,
+            compress: bool = True,
+            form: Form = Form.Unspecified) -> Mapping:
+    form &= Form.EncodingMask
+    tbl = __compile_opts(
+        txt,
+        (form | _compiler.Opt.Compress) if compress else form)
+
+    buf = Mapping(tbl)
     return buf
 
 
 def translate(txt: AnyStr, form: Form = Form.Unspecified) -> bytes:
-    errors = []
-    if isinstance(txt, str):
-        txt = txt.encode('utf_8_sig')
-
-    @_compiler.teckit_error_fn
-    def callback(_, *err): errors.append(err)
-    try:
-        (tbl, tbl_len) = _compiler.compileOpt(
-                            txt, len(txt),
-                            callback, None,
-                            _compiler.Opt.XML)
-    except _common.CompilationError:
-        if errors:
-            raise CompilationError(errors) from None
-        else:
-            raise
-
-    xml_doc = bytes(tbl[:tbl_len])
-    _compiler.disposeCompiled(tbl)
+    form &= Form.EncodingMask
+    tbl = __compile_opts(txt, form | _compiler.Opt.XML)
+    xml_doc = bytes(tbl)
     return xml_doc
 
 
