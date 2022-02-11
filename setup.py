@@ -53,12 +53,5 @@ setup(name='palaso',
       package_data={'palaso.collation': ['sort_trainer.glade'],
                     'palaso.kmn': ['keyboard.svg'],
                     'palaso.sfm': ['usfm.sty'],
-                    'palaso.sldr': ['allkeys.txt',
-                                    'language-subtag-registry.txt',
-                                    'ldml.dtd',
-                                    'likelySubtags.xml',
-                                    'supplementalData.xml',
-                                    'supplementalMetadata.xml'],
-                    'palaso.unicode': ['ucdata_pickle.bz2'],
-                    'palaso': ['langtags.json']}
+                    'palaso.unicode': ['ucdata_pickle.bz2']}
       )
