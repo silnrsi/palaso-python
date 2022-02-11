@@ -1,7 +1,7 @@
-#!/usr/bin/python
+import warnings
+from sldr.langtags_full import * # noqa
 
-# This is a placeholder redirect. Please use the referenced module instead
-
-print("""palaso.langtags is deprecated. Please use palaso.sldr.langtags_full instead.
-Or change your code to use palaso.langtag""")
-from palaso.sldr.langtags_full import *
+warnings.warn(
+    "palaso.langtags is deprecated. Please use sldr.langtags_full instead.",
+    DeprecationWarning,
+    stacklevel=2)
