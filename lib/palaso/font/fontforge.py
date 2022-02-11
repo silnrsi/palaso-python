@@ -1,9 +1,14 @@
 
 """FontForge support module"""
-
+import warnings
 from collections import namedtuple
 from functools import reduce
 from math import sin, cos, pi
+
+warnings.warn(
+    "palaso.font.fontforge is deprecated.",
+    DeprecationWarning,
+    stacklevel=2)
 
 Box = namedtuple('Box','xmin ymin xmax ymax')
 Box.xmid = property(lambda self: self[0]/2 + self[2]/2)
