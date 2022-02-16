@@ -12,3 +12,4 @@ pygtk==2.24.2
 python_debian==0.1.39
 scikit_learn==1.0.2
 setuptools==52.0.0
+git+https://github.com/silnrsi/sldrtools#sldr==0.7.5
