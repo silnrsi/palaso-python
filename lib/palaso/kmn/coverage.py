@@ -7,7 +7,7 @@ class Coverage :
 
     def __init__(self, fname) :
         self.kmfl = kmfl(fname)
-        self.numrules = self.kmfl.num_rules()
+        self.numrules = self.kmfl.numrules
 
     def create_sequences(self, input, mode = 'all', cache = None, history=None) :
         cache = cache or {}

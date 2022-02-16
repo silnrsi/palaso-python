@@ -1,7 +1,10 @@
-import itertools, functools, re
-from palaso.kmn.vector import VectorIterator
+# cython: language_level=3
 
-ctypedef unsigned int UINT
+import functools, re
+from palaso.kmn.vector import VectorIterator
+from os import PathLike
+
+ctypedef public unsigned int UINT
 
 cdef extern from "kmfl/kmfl.h" :
     struct _xstore :
@@ -137,12 +140,12 @@ cdef class kmfl :
 
     cdef KMSI *kmsi
     cdef int kbd
-    cdef int numrules
+    cdef public int numrules
     cdef int beep
 
-    def __init__(self, fname) :
+    def __init__(self, fname: PathLike) :
         self.kmsi = kmfl_make_keyboard_instance(self)
-        self.kbd = kmfl_load_keyboard(fname)
+        self.kbd = kmfl_load_keyboard(bytes(fname))
         if self.kbd >= 0 :
             kmfl_attach_keyboard(self.kmsi, self.kbd)
         else :
@@ -194,7 +197,7 @@ cdef class kmfl :
         res = []
         for 1 <= i <= self.kmsi.nhistory :
             if item_type(self.kmsi.history[i]) == 0 :
-                res.insert(0,unichr(self.kmsi.history[i]))
+                res.insert(0, chr(self.kmsi.history[i]))
         return "".join(res)
 
     def interpret_items(self, items) :
@@ -254,7 +257,7 @@ cdef class kmfl :
                         indices[index[0]] = index[1]
                 linput = linput - lcount
         expand_rule_context = functools.partial(self.expand_context, rulenum, side= 'l')
-        return (len(input) - linput - 1, itertools.imap(expand_rule_context,VectorIterator(indices, mode)))
+        return (len(input) - linput - 1, map(expand_rule_context, VectorIterator(indices, mode)))
 
     def test_match(self, UINT charitem, UINT ritem) :
         """ Compares two items to see if the first is matched by the second in a rule context """
@@ -274,7 +277,10 @@ cdef class kmfl :
         """ returns an expansion of a context string (either left or right - output)
             based on the vector which specifies which element to take in a store, for example """
         cdef XSTORE s
-        cdef UINT *items, *context, clen, ci
+        cdef UINT *items
+        cdef UINT *context
+        cdef UINT clen
+        cdef UINT ci
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
             clen = self.kmsi.rules[rulenum].olen
@@ -314,7 +320,8 @@ cdef class kmfl :
                        random-all-depth - all strings in a random order, bottom up
                        random1  - just one random string
         """
-        cdef UINT *context, clen, ci
+        cdef UINT *context 
+        cdef UINT clen, ci
         if side == 'r' :
             context = self.kmsi.strings + self.kmsi.rules[rulenum].rhs
             clen = self.kmsi.rules[rulenum].olen
@@ -330,7 +337,7 @@ cdef class kmfl :
             elif ruleitem == item_index :
                 indices[item_index_offset(ci) - 1] = range(0, self.kmsi.stores[item_base(ci)].len)
         expand_rule_context = functools.partial(self.expand_context,rulenum,side=side)
-        return itertools.imap(expand_rule_context, VectorIterator(indices, mode = mode))
+        return map(expand_rule_context, VectorIterator(indices, mode = mode))
 
     def match_store(self, UINT snum, UINT item) :
         """ Returns whether an item is matched in a store, and if so, its index, else None """
@@ -359,11 +366,11 @@ cdef class kmfl :
             snum = int(sname)
 
         if snum >= self.kmsi.keyboard.nstores : 
-            print "%d >= %d" % (snum, self.kmsi.keyboard.nstores)
+            print("%d >= %d" % (snum, self.kmsi.keyboard.nstores))
             return res
         s = self.kmsi.stores[snum]
         items = self.kmsi.strings + s.items
         for 0 <= i < s.len :
-            res = res + unichr(items[i])
+            res = res + chr(items[i])
         return res
 
