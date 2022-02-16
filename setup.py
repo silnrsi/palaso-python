@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
+import cmd
+import platform
+import sys
+from glob import glob
+from pathlib import Path
 from setuptools import setup
-scripts = {s for s in glob('scripts/*/*') if s.rfind('.') == -1}
+
+scripts = {s for s in Path('scripts').glob('*/*') if s.is_file()}
 # Exclude testusfm for now: it's a debugging tool
-scripts -= {'scripts/sfm/testusfm'}
+scripts -= {Path('scripts/sfm/testusfm')}
 
 try:
     from Cython.Build import cythonize
@@ -13,16 +19,29 @@ try:
 except ImportError:
     print("No Cython found: not building keyman support", sys.stderr)
     ext = []
-    scripts -= {'scripts/kmn/keymancoverage',
-                'scripts/kmn/kmfltestkeys',
-                'scripts/kmn/kmn2c',
-                'scripts/kmn/kmn2klc',
-                'scripts/kmn/kmn2ldml',
-                'scripts/kmn/kmn2xml',
-                'scripts/kmn/kmnxml2svg'}
+    scripts -= {Path('scripts/kmn/keymancoverage'),
+                Path('scripts/kmn/kmfltestkeys'),
+                Path('scripts/kmn/kmn2c'),
+                Path('scripts/kmn/kmn2klc'),
+                Path('scripts/kmn/kmn2ldml'),
+                Path('scripts/kmn/kmn2xml'),
+                Path('scripts/kmn/kmnxml2svg')}
+
+scripts = list(scripts)
+print(scripts)
+
+if platform.system() == "Windows":
+    cmd_scripts = [s for s in scripts if s.suffix != '.py']
+    py_scripts = [s.with_suffix('.py') for s in cmd_scripts]
+    for o,t in zip(cmd_scripts, py_scripts):
+        o.rename(t)
+    scripts = py_scripts
 
 setup(
     #   ext_modules=ext,
-          scripts=list(scripts)
+    scripts=[str(s) for s in scripts])
 
-      )
+if platform.system() == "Windows":
+    for o,p in zip(cmd_scripts, py_scripts):
+        p.rename(o)
+
