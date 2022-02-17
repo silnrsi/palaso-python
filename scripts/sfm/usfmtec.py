@@ -235,7 +235,7 @@ class usfm_transducer(object):
                     and wd in self.dict
                     and (wd not in self.tags
                          or parent_node.name in self.tags[wd])):
-                    wd = self.dict[wd]
+                    wd = self.dict[wd] or wd
                     found = True
                 elif self.morph_keys and not found:
                     def _g(m):
