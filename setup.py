@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
-import cmd
+from contextlib import contextmanager
 import platform
 import sys
 from glob import glob
 from pathlib import Path
 from setuptools import setup
 
+
+@contextmanager
+def strip_suffix(suffix, paths):
+    if platform.system() == "Windows":
+        yield [str(s) for s in paths]
+    else:
+        unsuffixed = [s.with_suffix('') for s in paths if s.suffix == suffix]
+        for s in unsuffixed:
+            s.with_suffix(suffix).rename(s)
+        yield [str(s) for s in unsuffixed]
+        for s in unsuffixed:
+            s.rename(s.with_suffix(suffix))
+
+
 scripts = {s for s in Path('scripts').glob('*/*') if s.is_file()}
 # Exclude testusfm for now: it's a debugging tool
-scripts -= {Path('scripts/sfm/testusfm')}
+scripts -= {Path('scripts/sfm/testusfm.py')}
 
 try:
     from Cython.Build import cythonize
@@ -19,29 +33,16 @@ try:
 except ImportError:
     print("No Cython found: not building keyman support", sys.stderr)
     ext = []
-    scripts -= {Path('scripts/kmn/keymancoverage'),
-                Path('scripts/kmn/kmfltestkeys'),
-                Path('scripts/kmn/kmn2c'),
-                Path('scripts/kmn/kmn2klc'),
-                Path('scripts/kmn/kmn2ldml'),
-                Path('scripts/kmn/kmn2xml'),
-                Path('scripts/kmn/kmnxml2svg')}
+    kmn = Path('scripts/kmn')
+    scripts -= {kmn / p for p in ('keymancoverage.py',
+                                  'kmfltestkeys.py',
+                                  'kmn2c.py',
+                                  'kmn2klc.py',
+                                  'kmn2ldml.py',
+                                  'kmn2xml.py',
+                                  'kmnxml2svg.py')}
 
-scripts = list(scripts)
-print(scripts)
-
-if platform.system() == "Windows":
-    cmd_scripts = [s for s in scripts if s.suffix != '.py']
-    py_scripts = [s.with_suffix('.py') for s in cmd_scripts]
-    for o,t in zip(cmd_scripts, py_scripts):
-        o.rename(t)
-    scripts = py_scripts
-
-setup(
-    #   ext_modules=ext,
-    scripts=[str(s) for s in scripts])
-
-if platform.system() == "Windows":
-    for o,p in zip(cmd_scripts, py_scripts):
-        p.rename(o)
-
+with strip_suffix('.py', scripts) as scripts:
+    setup(
+        ext_modules=ext,
+        scripts=scripts)
