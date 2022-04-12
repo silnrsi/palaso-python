@@ -1,5 +1,6 @@
+from importlib import resources
 import unittest
-from . import resources
+from . import pkg_data
 from palaso.teckit.compiler import compile, translate, CompilationError
 from palaso.teckit.engine import Mapping
 
@@ -12,51 +13,52 @@ class Test:
     '''
 
     class Compiler(unittest.TestCase):
-        reference_file: str
-        source_file: str
+        reference: str
+        source: str
         compress: bool = False
 
         def test_compilation(self):
-            assert self.reference_file.endswith('.tec'), \
+            assert self.reference.endswith('.tec'), \
                 'Not a complied reference file (.tec).'
-            ref_map = Mapping(resources / self.reference_file)  # type: ignore
-            source = (resources / self.source_file).read_bytes()
+            with resources.as_file(pkg_data / self.reference) as path:
+                ref_map = Mapping(path)  # type: ignore
+            source = (pkg_data / self.source).read_bytes()
             com_map = compile(source, self.compress)
             self.assertEqual(str(com_map), str(ref_map))
             self.assertEqual(
                 com_map,
                 ref_map,
-                f'compiled {self.source_file!r}'
+                f'compiled {self.source!r}'
                 f' ({"" if self.compress else "un"}compressed)'
-                f' does not match reference {self.reference_file!r}')
+                f' does not match reference {self.reference!r}')
             del com_map
 
     class Translator(unittest.TestCase):
-        reference_file: str
-        source_file: str
+        reference: str
+        source: str
 
         def test_translation(self):
-            assert self.reference_file.endswith('.xml'), \
+            assert self.reference.endswith('.xml'), \
                 'Not a translated reference file (.xml).'
-            ref_map = (resources / self.reference_file).read_bytes()
-            source = (resources / self.source_file).read_bytes()
+            ref_map = (pkg_data / self.reference).read_bytes()
+            source = (pkg_data / self.source).read_bytes()
             com_map = translate(source)
             self.assertEqual(
                 com_map,
                 ref_map,
-                f'translated {self.source_file!r} (xml) does not match'
-                f' reference {self.reference_file!r}')
+                f'translated {self.source!r} (xml) does not match'
+                f' reference {self.reference!r}')
             del com_map
 
 
 class CompileGreekMappingUncrompressed(Test.Compiler):
-    source_file = 'SILGreek2004-04-27.map'
-    reference_file = 'SILGreek2004-04-27.uncompressed.reference.tec'
+    source = 'SILGreek2004-04-27.map'
+    reference = 'SILGreek2004-04-27.uncompressed.reference.tec'
 
 
 class CompileGreekMappingCompressed(Test.Compiler):
-    source_file = 'SILGreek2004-04-27.map'
-    reference_file = 'SILGreek2004-04-27.reference.tec'
+    source = 'SILGreek2004-04-27.map'
+    reference = 'SILGreek2004-04-27.reference.tec'
     compress = True
 
 
@@ -67,5 +69,5 @@ class TranslateISO_8859_1_XML(Test.Translator):
 
 class TestCompilerFailure(unittest.TestCase):
     def test_compile_fail(self):
-        source = (resources / 'ISO-8859-1.map.reference.xml').read_bytes()
+        source = (pkg_data / 'ISO-8859-1.map.reference.xml').read_bytes()
         self.assertRaises(CompilationError, compile, source)

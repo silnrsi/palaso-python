@@ -6,4 +6,4 @@ try:
 except OSError as err:
     raise unittest.SkipTest(*err.args) from err
 
-resources = importlib.resources.files(__name__).joinpath('data')
+pkg_data = importlib.resources.files(__name__) / 'data'

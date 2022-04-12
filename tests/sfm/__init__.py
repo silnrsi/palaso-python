@@ -1,3 +1,3 @@
 import importlib.resources
 
-resources = importlib.resources.files(__name__) / 'data'
+pkg_data = importlib.resources.files(__name__) / 'data'
