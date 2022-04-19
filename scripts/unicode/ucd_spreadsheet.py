@@ -23,6 +23,7 @@ Then with LibreOffice Calc, do the following:
 - Freeze columns (USV, Glyph, and Name) and row (headings)
 - Change font to Arial
 - Change language to US English
+- convert to Excel (soffice --convert-to xlsx ucd-14.0.0.ods)
 """
 
 from palaso.unicode.ucd import UCD
@@ -144,7 +145,7 @@ def write_data(writer, ucd, fields):
                 if data == 'none':
                     data = ''
             if field in ('dm', 'uc', 'lc', 'tc', 'bmg'):
-                # Some fields returns the actual characters,
+                # Some fields return the actual characters,
                 # for the spreadsheet, we want to display the USV
                 mapping = list()
                 for char in data:
