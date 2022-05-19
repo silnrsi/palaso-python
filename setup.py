@@ -45,4 +45,5 @@ except ImportError:
 with strip_suffix('.py', scripts) as scripts:
     setup(
         ext_modules=ext,
-        scripts=scripts)
+        scripts=scripts,
+        package_data={'palaso.unicode': ['ucdata_pickle.bz2']})
