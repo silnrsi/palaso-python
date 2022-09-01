@@ -31,9 +31,18 @@ scalings = {'x': lambda o, v: (v - o.xi) / (o.xa - o.xi),
 
 class Octabox(object):
     """Holds a list of segments and calculates its bounding octabox"""
-    def __init__(self, segs, subbox=None, scale=None, **kw):
+    def __init__(self, segs, subbox=None, scale=None, clip=None, **kw):
         """ Either pass in a list of segments or a fonttools.Glat.octabox.subbox
             And/or you can supplement with explicit xa, xi type values"""
+        def clipv(x, y=None):
+            if clip is None:
+                return None
+            elif y is None:
+                return clip[x]
+            elif y < 0:
+                return clip[x] - clip[-y]
+            else:
+                return clip[x] + clip[y]
         self.segs = segs
         for a in 'xysd':
             setattr(self, a+'i', 1e6)
@@ -43,10 +52,10 @@ class Octabox(object):
                 self._update_box(s[0])
                 self._update_box(s[-1])
                 if len(s) == 3:
-                    self._update_curve(s, 'x', lambda p: p.x)
-                    self._update_curve(s, 'y', lambda p: p.y)
-                    self._update_curve(s, 's', lambda p: p.x + p.y)
-                    self._update_curve(s, 'd', lambda p: p.x - p.y)
+                    self._update_curve(s, 'x', lambda p: p.x, (clipv(0), clipv(2)))
+                    self._update_curve(s, 'y', lambda p: p.y, (clipv(1), clipv(3)))
+                    self._update_curve(s, 's', lambda p: p.x + p.y, (clipv(0, 1), clipv(2, 3)))
+                    self._update_curve(s, 'd', lambda p: p.x - p.y, (clipv(0, -3), clipv(2, -1)))
         elif subbox is not None and scale is not None:
             for k, v in subbox_map.items():
                 r = getattr(subbox, k, 0.) / 255.
@@ -78,17 +87,26 @@ class Octabox(object):
     def as_tuple(self):
         return tuple([self.xi, self.xa, self.yi, self.ya, self.si, self.sa, self.di, self.da])
 
-    def _update_curve(self, s, attrib, fn):
+    def _update_curve(self, s, attrib, fn, clip):
         d2 = fn(s[0]) - 2*fn(s[1]) + fn(s[2])
         if isclose(d2, 0):
             return
         t = (fn(s[0]) - fn(s[1])) / d2
         if 0 <= t <= 1:
             p = s.pointAtTime(t)
-            if fn(p) < getattr(self, attrib+"i"):
-                setattr(self, attrib+"i", fn(p))
-            if fn(p) > getattr(self, attrib+"a"):
-                setattr(self, attrib+"a", fn(p))
+            v = fn(p)
+            if clip[0] is not None and v < clip[0]:
+                if clip[0] - v > 0.1:
+                    print(f"Clipping out of box curve point underflow {v} to {clip[0]}")
+                v = clip[0]
+            elif clip[1] is not None and v > clip[0]:
+                if v - clip[1] > 0.1:
+                    print(f"Clipping out of box curve point overflow {v} to {clip[1]}")
+                v = clip[1]
+            if v < getattr(self, attrib+"i"):
+                setattr(self, attrib+"i", v)
+            if v > getattr(self, attrib+"a"):
+                setattr(self, attrib+"a", v)
 
     def _update_box(self, p):
         if p.x < self.xi:
@@ -124,8 +142,8 @@ class Octabox(object):
             splitline = Line(Point(d[0]*self.xi, d[1]*self.yi), Point(d[0]*self.xa, d[1]*self.ya))
             for sl in findshifts(self.segs, splitline):
                 r, l = splitWith(self.segs, sl)
-                rightbox = Octabox(r)
-                leftbox = Octabox(l)
+                rightbox = Octabox(r, clip=self.clip)
+                leftbox = Octabox(l, clip=self.clip)
                 score = rightbox.area + leftbox.area
                 if args is not None and args.detail & 8:
                     print("    {}:L[{}, {}], R[{}, {}]".format("xysd"[x], leftbox.area, sum(s.area for s in leftbox.segs),
@@ -295,6 +313,7 @@ def removeEncompassed(paths, verbose):
 
 def calcStart(f, n, verbose):
     g = f['glyf'][n]
+    bbox = (g.xMin, g.yMin, g.xMax, g.yMax)
     #bs = BezierPath.fromFonttoolsGlyph(g, gset, f['glyf'])
     bs = BezierPath.fromFonttoolsGlyph(f, n)
 #    for b in bs:
@@ -302,7 +321,7 @@ def calcStart(f, n, verbose):
     bs = removeEncompassed(bs, verbose)
     segs = sum((b.asSegments() for b in bs), [])
     area = sum(s.area for s in segs)
-    start = Octabox(segs)
+    start = Octabox(segs, clip=bbox)
     return start
 
 def processone(f, hasOctaBoxes, n, verbose):
