@@ -34,6 +34,7 @@ class Octabox(object):
     def __init__(self, segs, subbox=None, scale=None, clip=None, **kw):
         """ Either pass in a list of segments or a fonttools.Glat.octabox.subbox
             And/or you can supplement with explicit xa, xi type values"""
+        self.clip = clip
         def clipv(x, y=None):
             if clip is None:
                 return None
@@ -324,7 +325,7 @@ def calcStart(f, n, verbose):
     start = Octabox(segs, clip=bbox)
     return start
 
-def processone(f, hasOctaBoxes, n, verbose):
+def processone(f, hasOctaBoxes, n, verbose, args):
     """ Process a single glyph to calculate the best set of Octabox objects
         to cover this glyph. """
     if verbose:
@@ -436,14 +437,14 @@ if args.merge is None:
     if args.jobs is not None:
         pool = Pool(args.jobs or None)
         def multiproc(jobs):
-            ress = pool.imap_unordered(multiprocessone, ((f, hasOctaBoxes, n, args.verbose) for n in jobs))
+            ress = pool.imap_unordered(multiprocessone, ((f, hasOctaBoxes, n, args.verbose, args) for n in jobs))
             for curr, n, start in ress:
                 outputone(f, outjson, start, hasOctaBoxes, args, curr, n)
         process = multiproc
     else:
         def singleproc(jobs):
             for n in jobs:
-                (curr, _, start) = processone(f, hasOctaBoxes, n, args.verbose)
+                (curr, _, start) = processone(f, hasOctaBoxes, n, args.verbose, args)
                 outputone(f, outjson, start, hasOctaBoxes, args, curr, n)
         process = singleproc
 
