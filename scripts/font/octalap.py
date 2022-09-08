@@ -100,7 +100,7 @@ class Octabox(object):
                 if clip[0] - v > 0.1:
                     print(f"Clipping out of box curve point underflow {v} to {clip[0]}")
                 v = clip[0]
-            elif clip[1] is not None and v > clip[0]:
+            elif clip[1] is not None and v > clip[1]:
                 if v - clip[1] > 0.1:
                     print(f"Clipping out of box curve point overflow {v} to {clip[1]}")
                 v = clip[1]
