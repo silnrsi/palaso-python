@@ -12,11 +12,20 @@ from beziers.utils import isclose
 from beziers.line import Line
 from beziers.point import Point
 from beziers.affinetransformation import AffineTransformation
+from beziers.utils.pens import BezierPathCreatingPen
 from fontTools.ttLib import TTFont
 from collections import namedtuple
 from math import floor
 import argparse, json
 from multiprocessing import Pool
+
+def fromFonttoolsGlyph(font, glyphname):
+    """Returns an *array of BezierPaths* from a FontTools font object and glyph name."""
+    glyphset = font.getGlyphSet()
+    pen = BezierPathCreatingPen(glyphset)
+    _glyph = font.getGlyphSet()[glyphname]
+    _glyph.draw(pen)
+    return pen.paths
 
 class _Object():
     pass
