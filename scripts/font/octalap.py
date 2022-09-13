@@ -325,7 +325,7 @@ def calcStart(f, n, verbose):
     g = f['glyf'][n]
     bbox = (g.xMin, g.yMin, g.xMax, g.yMax)
     #bs = BezierPath.fromFonttoolsGlyph(g, gset, f['glyf'])
-    bs = BezierPath.fromFonttoolsGlyph(f, n)
+    bs = fromFonttoolsGlyph(f, n)
 #    for b in bs:
 #        b.removeOverlap()
     bs = removeEncompassed(bs, verbose)
