@@ -1,3 +1,0 @@
-graft scripts
-graft tests
-prune tests/*/data/private

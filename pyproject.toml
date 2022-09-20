@@ -1,5 +1,91 @@
 [build-system]
-# These are the assumed default build requirements from pip:
-# https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support
-requires = ["setuptools>=43.0.0", "wheel"]
+requires = ["setuptools>=61.0", "cython"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "palaso"
+version = "0.7.7"
+description = "Payap Language Software python package and scripts"
+readme = "README.rst"
+license = { file = "LICENSE.txt" }
+authors = [
+    {name = "Tim Eves", email = "tim_eves@sil.org"},
+    {name = "Martin Hosken", email = "martin_hosken@sil.org"}
+]
+maintainers = [
+    {name = "Tim Eves"},
+    {name = "Martin Hosken"},
+    {name = "Nicholas Spalinger", email = "nicholas_spalinger@sil.org"}
+]
+requires-python = ">= 3.7"
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "Programming Language :: Python :: 3.7",
+]
+dependencies = [
+    "beziers >= 0.4.0",
+    "fontTools >= 4.29.1",
+    "freetype_py >= 2.2.0",
+    "icu >= 0.0.1",
+    "numpy >= 1.21.0"
+]
+
+[project.optional-dependencies]
+sklearn = ["scikit_learn == 1.0.2"]
+kmn = ["funcparserlib == 0.3.6"]
+vcs = ["mercurial == 6.0.2"]
+gtk = ["PyGObject >= 3.42.0"]
+debian = ["python_debian == 0.1.39"]
+sldr = ["sldr @ git+https://github.com/silnrsi/sldrtools"]
+
+[project.urls]
+"Homepage" = "http://github.com/silnrsi/palaso-python/README.rst"
+"Repository" = "http://github.com/silnrsi/palaso-python"
+
+[project.scripts]
+brktest = "palaso.collation.tool.brktest:main"
+flattenldml = "palaso.collation.tool.flattenldml:main"
+ldml2icu = "palaso.collation.tool.ldml2icu:main"
+sortldml = "palaso.collation.tool.sortldml:main"
+testldml = "palaso.collation.tool.testldml:main"
+repo_build = "palaso.debian.tool.repo_build:main"
+repo_transfer = "palaso.debian.tool.repo_transfer:main"
+addsfdmerge = "palaso.font.tool.addsfdmerge:main"
+ap2sfd = "palaso.font.tool.ap2sfd:main"
+cmptxtrender = "palaso.font.tool.cmptxtrender:main"
+ffbuilder = "palaso.font.tool.ffbuilder:main"
+ffpointreplace = "palaso.font.tool.ffpointreplace:main"
+ftcollide = "palaso.font.tool.ftcollide:main"
+grkern2fea = "palaso.font.tool.grkern2fea:main"
+octalap = "palaso.font.tool.octalap:main"
+testmlnorm = "palaso.font.tool.testmlnorm:main"
+ufo2sfd = "palaso.font.tool.ufo2sfd:main"
+getclip = "palaso.gtk.tool.getclip:main"
+gladerunner = "palaso.gtk.tool.gladerunner:main"
+keyman2ldml = "palaso.kmn.tool.keyman2ldml:main"
+keymancoverage = "palaso.kmn.tool.keymancoverage:main"
+kmfltestkeys = "palaso.kmn.tool.kmfltestkeys:main"
+kmn2c = "palaso.kmn.tool.kmn2c:main"
+kmn2klc = "palaso.kmn.tool.kmn2klc:main"
+kmn2ldml = "palaso.kmn.tool.kmn2ldml:main"
+kmn2xml = "palaso.kmn.tool.kmn2xml:main"
+kmnreverse = "palaso.kmn.tool.kmnreverse:main"
+kmnxml2svg = "palaso.kmn.tool.kmnxml2svg:main"
+concordance = "palaso.sfm.tool.concordance:main"
+testusfm = "palaso.sfm.tool.testusfm:main"
+usfmlint = "palaso.sfm.tool.usfmlint:main"
+usfmloom = "palaso.sfm.tool.usfmloom:main"
+usfmtec = "palaso.sfm.tool.usfmtec:main"
+checktec = "palaso.teckit.tool.checktec:main"
+csvtec = "palaso.teckit.tool.csvtec:main"
+langtag = "palaso.tool.langtag:main"
+vcsagro = "palaso.tool.vcsagro:main"
+ucd_spreadsheet = "palaso.unicode.tool.ucd_spreadsheet:main"
+
+[tools.setuptools]
+platforms = ["Linux", "Win32", "Mac OS X"]
+zip-safe = false
+
+[tool.flit.sdist]
+include = ["tests", "LICENSE"]
+exclude = ["tests/__pycache__"]
