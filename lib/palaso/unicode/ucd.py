@@ -201,6 +201,7 @@ def find_ucd(key, val):
 
 if __name__ == '__main__':
     import sys
+    from palaso.unicode.ucd import UCD, get_ucd
 
     if len(sys.argv) < 2:
         print(get_ucd(0x0041, "sc"))
