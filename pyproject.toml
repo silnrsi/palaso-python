@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "cython"]
+requires = ["setuptools>=62.0", "setuptools-scm", "cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -82,10 +82,11 @@ langtag = "palaso.tool.langtag:main"
 vcsagro = "palaso.tool.vcsagro:main"
 ucd_spreadsheet = "palaso.unicode.tool.ucd_spreadsheet:main"
 
-[tools.setuptools]
+[tool.setuptools]
 platforms = ["Linux", "Win32", "Mac OS X"]
 zip-safe = false
+packages.find = { where = ["src"] }
 
 [tool.flit.sdist]
 include = ["tests", "LICENSE"]
-exclude = ["tests/__pycache__"]
+exclude = ["tests/__pycache__", "tests/**/private"]

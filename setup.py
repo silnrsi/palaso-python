@@ -1,18 +1,12 @@
-from setuptools import setup
+from setuptools import setup, Extension
+from Cython.Build import cythonize
 
-try:
-    from Cython.Build import cythonize
-    from setuptools import Extension
-    ext = cythonize([
-            Extension(
-                name="palaso.kmfl",
-                sources=["src/palaso.kmfl.pyx"],
-                libraries=["kmfl", "kmflcomp"]
-            )
-        ])
-except ImportError:
-    import sys
-    print("No Cython found: not building keyman support", sys.stderr)
-    ext = []
-
-setup(ext_modules=ext)
+setup(
+    ext_modules=cythonize(
+        [Extension(
+            name="palaso.kmfl",
+            sources=["src/palaso.kmfl.pyx"],
+            libraries=["kmfl", "kmflcomp"]
+        )]
+    )
+)
