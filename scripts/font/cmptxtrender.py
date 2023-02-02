@@ -41,9 +41,9 @@ def name(tt, gl, rounding = 0.1) :
     return (x, roundfloat(gl[1][0], rounding), roundfloat(gl[1][1], rounding))
 
 def cmaplookup(tt, c) :
-    cmap = tt['cmap'].getcmap(3, 10) or tt['cmap'].getcmap(3, 1) or tt['cmap'].getcmap(0, 4) or tt['cmap'].getcmap(0, 3)
-    if cmap :
-        return cmap.cmap.get(ord(c), '.notdef')
+    cmap = tt.getBestCmap()
+    if cmap:
+        return cmap.get(ord(c), '.notdef')
     return '.nocmap'
 
 def makelabel(name, line, word) :
@@ -396,4 +396,3 @@ for label, words, lang, feats in reader :
 if log is not None : log.logend()
 outfile.close()
 sys.exit(0 if opts.keep else errors)
-
