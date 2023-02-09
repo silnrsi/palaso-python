@@ -1,10 +1,10 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """ucd_spreadsheet
 
 To create an updated spreadsheet for new versions of Unicode, run
 
-./ucd_spreadsheet -a PropertyAliases.txt ucd.nounihan.flat.zip ucd-14.0.0.csv
+./ucd_spreadsheet -a PropertyAliases.txt ucd.nounihan.flat.zip ucd-15.0.0.csv
 
 Then with LibreOffice Calc, do the following:
 
@@ -20,9 +20,14 @@ Then with LibreOffice Calc, do the following:
 - Left justify all columns headers
 - Left justify age column
 - Auto filter headings
-- Freeze columns (USV, Glyph, and Name) and row (headings)
 - Change font to Arial
 - Change language to US English
+- convert to Excel (soffice --convert-to xlsx ucd-15.0.0.ods)
+- In both Excel (for .xlsx) and LibreOffice Calc (for .ods)
+  - Freeze columns (USV, Glyph, and Name) and row (headings)
+- mkdir Unicode-15-0-0-UCD
+- mv ucd-*.* Unicode-15-0-0-UCD
+- zip -r Unicode-15-0-0-UCD Unicode-15-0-0-UCD
 """
 
 from palaso.unicode.ucd import UCD
@@ -144,7 +149,7 @@ def write_data(writer, ucd, fields):
                 if data == 'none':
                     data = ''
             if field in ('dm', 'uc', 'lc', 'tc', 'bmg'):
-                # Some fields returns the actual characters,
+                # Some fields return the actual characters,
                 # for the spreadsheet, we want to display the USV
                 mapping = list()
                 for char in data:

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """ucd
 
@@ -199,7 +199,7 @@ def find_ucd(key, val):
     return _get_local_ucd().findall(key, val)
 
 
-if __name__ == '__main__':
+def main():
     import sys
 
     if len(sys.argv) < 2:
@@ -221,3 +221,6 @@ if __name__ == '__main__':
                 outf = open(sys.argv[2], "wb")
             pickle.dump(ucdata, outf)
             outf.close()
+
+if __name__ == '__main__':
+    main()

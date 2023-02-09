@@ -2,6 +2,7 @@
 *~
 .vscode
 *.code-workspace
+/venv/
 
 # Python runtime caching
 __pycache__

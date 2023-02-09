@@ -1,7 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse, tempfile, os, sys, re
-from palaso.font.graphite import gr2, grversion
+from palaso.font.graphite import gr2
 from palaso.font.shape import GrFont
 from fontTools import ttLib
 import json
@@ -93,55 +93,3 @@ def parseftml(fnameorstr, feats=None):
             s.rtl = rtl
             strs.append(s)
     return strs
-
-if __name__ == '__main__':
-    from multiprocessing import Pool, current_process
-
-    def initprocess(fname, rtl, strings):
-        proc = current_process()
-        proc.grface = GrFont(fname, rtl=(1 if rtl else 0))
-        proc.strings = strings
-    def proc_makestring(s):
-        proc = current_process()
-        return makestring(proc.grface, s)
-
-    parser=argparse.ArgumentParser()
-    parser.add_argument("outfile",help="Output file of results")
-    parser.add_argument("-i","--input",action="append",help="Input test text file")
-    parser.add_argument("-t","--text",action="store_true",help="Output text rather than binary")
-    parser.add_argument("-f","--font",required=True,help="Path to font file")
-    parser.add_argument("-d","--directory",action="append",default=[],help="Directories to search for input test files")
-    parser.add_argument("-r","--rtl",action="store_true",help="Render strings rtl")
-    parser.add_argument("-z","--single",action="store_true",help="Single process for debugging")
-    args = parser.parse_args()
-
-    tt = ttLib.TTFont(args.font)
-    cmap = tt.getGlyphOrder()
-    strings = []
-    for inf in args.input:
-        for d in (['.'] + args.directory):
-            fname = os.path.join(d, inf)
-            if not os.path.exists(fname):
-                continue
-            if fname.endswith(".xml") or fname.endswith(".ftml"):
-                strings.extend(parseftml(fname))
-            else:
-                with open(fname, "r") as fh:
-                    strings.extend([UserString(x.strip()) for l in fh.readlines() for x in l.split()])
-            break
-    if args.single:
-        grfont = GrFont(args.font, 1 if args.rtl else 0)
-        res = [makestring(grfont, s) for s in strings]
-    else:
-        pool = Pool(initializer=initprocess, initargs=[args.font, args.rtl, strings])
-        res = pool.imap_unordered(proc_makestring, strings)
-
-    if args.text:
-        with open(args.outfile, "w") as fh:
-            for s in res:
-                fh.write(s.asStr(cmap)+"\n")
-    else:
-        with open(args.outfile, "wb") as fh:
-            for s in res:
-                fh.write(s.asBytes())
-

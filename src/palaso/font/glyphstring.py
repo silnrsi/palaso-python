@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from struct import pack
 from collections import namedtuple
 import itertools

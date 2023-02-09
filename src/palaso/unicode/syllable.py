@@ -1,4 +1,3 @@
-
 import re, inspect
 from itertools import groupby
 from palaso.unicode.ucd import get_ucd

@@ -27,7 +27,7 @@ dependencies = [
     "fontTools >= 4.29.1",
     "freetype_py >= 2.2.0",
     "icu >= 0.0.1",
-    "numpy >= 1.21.0"
+    "numpy >= 1.22.0"
 ]
 
 [project.optional-dependencies]
