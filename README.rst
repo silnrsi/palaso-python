@@ -36,5 +36,7 @@ Some tools and modules require packages from the OS package manager, that
 have no pypi distributed versions.  
 You will need these packages installed if you wish to run the
 following:
+:gir1.2-webkit2-4.0: ``vcsaggro``
+:gir1.2-gtk-3.0: ``getclip``, ``gladerunner``
 :fontforge: ``ap2sfd``, ``ffbuilder``, ``ffpointreplace``, ``ufo2sfd`` and
             the ``palaso.font.fontforge`` module.

@@ -1,10 +1,10 @@
-import gtk
+from gi.repository import Gtk
 from palaso.gtk.templang import lang
 
 class View :
 
     def __init__(self, gfile) :
-        self.builder = gtk.Builder()
+        self.builder = Gtk.Builder()
         self.builder.add_from_file(gfile)
         self.parse_file(gfile)
         self.properties = {}
@@ -45,7 +45,7 @@ class Simple :
         self.vars={}
 
     def do_window_destroy(self, widget, data=None) :
-        gtk.main_quit()
+        Gtk.main_quit()
 
     def do_popup(self, widget, data=None, data1=None) :
         print(data)

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-
-import pygtk
-pygtk.require('2.0')
-import gtk, sys
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
+import sys
 from palaso.gtk.actionpack import Simple
 
 
 class App :
     def __init__(self, glade) :
-        self.builder = gtk.Builder()
+        self.builder = Gtk.Builder()
         self.builder.add_from_file(glade)
         self.pack = Simple()
         self.builder.connect_signals(self.pack)
@@ -16,7 +16,7 @@ class App :
         self.window.show()
 
     def run(self) :
-        gtk.main()
+        Gtk.main()
 
 
 def main():

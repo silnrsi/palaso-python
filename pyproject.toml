@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 sklearn = ["scikit_learn"]
 kmn = ["funcparserlib"]
-vcs = ["mercurial"]
+vcs = ["mercurial", "PyGObject"]
 gtk = ["PyGObject"]
 debian = ["python_debian"]
 sldr = ["sldr @ git+https://github.com/silnrsi/sldrtools"]
@@ -79,7 +79,7 @@ usfmtec = "palaso.sfm.tool.usfmtec:main"
 checktec = "palaso.teckit.tool.checktec:main"
 csvtec = "palaso.teckit.tool.csvtec:main"
 langtag = "palaso.tool.langtag:main"
-vcsagro = "palaso.tool.vcsagro:main"
+vcsaggro = "palaso.tool.vcsaggro:main"
 ucd_spreadsheet = "palaso.unicode.tool.ucd_spreadsheet:main"
 
 [tool.setuptools]

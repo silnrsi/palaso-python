@@ -125,8 +125,10 @@ class git :
 
 def main():
     from optparse import OptionParser
-    import webkit
-    import gtk
+    import gi
+    gi.require_versions({'Gtk':'3.0', 'WebKit2':'4.0'})
+    from gi.repository import Gtk
+    from gi.repository import WebKit2
 
     htmlhdr="""
     <?xml version="1.0"?>
@@ -182,17 +184,16 @@ def main():
         htmlstr += "</table>\n"
 
     if htmlstr != "" :
-        base = gtk.Window()
-        scroll = gtk.ScrolledWindow()
-        view = webkit.WebView()
+        base = Gtk.Window()
+        scroll = Gtk.ScrolledWindow()
+        view = WebKit2.WebView()
         view.load_html_string(htmlhdr + htmlstr + htmlftr, "home")
         scroll.add(view)
         base.add(scroll)
         base.set_default_size(750, 400)
-        base.connect('delete-event', gtk.main_quit)
+        base.connect('delete-event', Gtk.main_quit)
         base.show_all()
-        gtk.main()
-
+        Gtk.main()
 
 
 if __name__ == "__main__":
