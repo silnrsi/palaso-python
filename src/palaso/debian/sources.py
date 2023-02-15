@@ -115,7 +115,7 @@ def getdistro() :
     return Popen(["lsb_release", "-cs"], stdout = PIPE).communicate()[0].strip()
 
 def getarch() :
-    return re.findall(r"^DEB_BUILD_ARCH=([^\n]*)", Popen(["dpkg-architecture"], stdout = PIPE).communicate()[0])[0]
+    return re.findall(rb"^DEB_BUILD_ARCH=([^\n]*)", Popen(["dpkg-architecture"], stdout = PIPE).communicate()[0])[0]
 
 def getbasever(version) :
     return re.sub(r"^(\d:)?(.*)[-].*?$", r"\2", version)

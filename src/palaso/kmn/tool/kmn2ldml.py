@@ -158,7 +158,7 @@ def process_rule(lhs, rhs, presets, iskey = True, contextref = False) :
 
 
 def main():
-    parser = OptionParser()
+    parser = OptionParser(usage="Usage: %prog [options] kmnfile")
     parser.add_option("-l","--lang",help="Language tag for this LDML")
 
     (opts, argv) = parser.parse_args()
@@ -171,6 +171,12 @@ def main():
         elif m.group(2) :
             id['territory'] = m.group(2)
 
+    if len(argv) < 1:
+        import sys
+        print(f"missing KMN file", file=sys.stderr)
+        parser.print_help()
+        exit(1)
+    
     kb = kmfl(argv[0])
     rules = {}
     name = kb.store("NAME")

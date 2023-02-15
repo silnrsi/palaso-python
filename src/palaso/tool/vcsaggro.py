@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from mercurial import ui, commands, util
+from mercurial import ui, commands
 from mercurial import hg as _hg
-import os, operator, subprocess, re
+from mercurial.utils.dateutil import datestr
+import os, subprocess, re
 
 def backquote(cmd) :
     return subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True).communicate()[0].strip()
@@ -28,7 +29,7 @@ class hg :
         for c in range(self.tip, len(self.repo)) :
             change = list(self.repo[c].changeset());
             change[0] = "".join(f"{ord(y)}:02X" for y in change[0][:6]).upper()
-            change[2] = util.datestr(change[2], "%y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)")
+            change[2] = datestr(change[2], b"%y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)")
             res.append(change)
         return res
 
@@ -37,7 +38,7 @@ class svn :
         self.dir = dir
         cdir = os.getcwd()
         os.chdir(dir)
-        self.tip = int(re.sub("[^0-9].*", "", backquote('svnversion')))
+        self.tip = int(re.sub(b"[^0-9].*", b"", backquote('svnversion')))
         os.chdir(cdir)
 
     def update(self) :
@@ -50,19 +51,19 @@ class svn :
         res = []
         cdir = os.getcwd()
         os.chdir(self.dir)
-        currver = re.sub("[^0-9].*", "", backquote('svnversion'))
+        currver = re.sub(b"[^0-9].*", b"", backquote('svnversion'))
         if int(currver) > self.tip :
-            log = backquote('svn log -r ' + str(self.tip) + ':' + currver)
+            log = backquote('svn log -r ' + str(self.tip) + ':' + currver.decode('utf8'))
             state = ""
             change = []
             for line in log.splitlines() :
-                if line.startswith('------') :
+                if line.startswith(b'------') :
                     if state == "description" :
                         res.append(change)
                     change = []
                     state = "init"
                 elif state == "init" :
-                    change.extend(line.split(" | "))
+                    change.extend(line.split(b" | "))
                     state = "postinit"
                 elif state == "postinit" :
                     change.extend(["", ""])
@@ -99,23 +100,23 @@ class git :
             state = ""
             change = []
             for l in log.splitlines() :
-                if l.startswith('commit') :
+                if l.startswith(b'commit') :
                     if state == "descripton" :
                         res.append(change)
                     state = ""
                     change = [l[7:12]]
-                elif l.startswith('Author:') :
+                elif l.startswith(b'Author:') :
                     change.append(l[8:])
-                elif l.startswith('Date:') :
+                elif l.startswith(b'Date:') :
                     change.append(l[8:])
-                    change.append("")
+                    change.append(b"")
                 elif state == "" and l == "" :
                     state = "description"
-                    change.append("")
+                    change.append(b"")
                 elif change[-1] == "" :
                     change[-1] = l
                 else :
-                    change[-1] = change[-1] + "\n" + l
+                    change[-1] = change[-1] + b"\n" + l
             if state == "description" :
                 res.append(change)
         os.chdir(cdir)
@@ -124,7 +125,6 @@ class git :
 
 def main():
     from optparse import OptionParser
-    from palaso.contexts import defaultapp
     import webkit
     import gtk
 
@@ -139,60 +139,60 @@ def main():
     </html>
     """
 
-    with defaultapp() :
-        parser = OptionParser()
-        parser.set_defaults(list = os.path.expanduser("~/.config/vcsaggro/vcsaggro.cfg"))
-        parser.add_option("-l", "--list", help = "List of directories to aggregate [~/.config/vcsaggro/vcsaggro.cfg]")
-        parser.add_option("-d", "--debug", action = "store_true", help = "do internal testing")
-        (options, args) = parser.parse_args()
+    parser = OptionParser()
+    parser.set_defaults(list = str(os.path.expanduser("~/.config/vcsaggro/vcsaggro.cfg")))
+    parser.add_option("-l", "--list", help = "List of directories to aggregate [~/.config/vcsaggro/vcsaggro.cfg]")
+    parser.add_option("-d", "--debug", action = "store_true", help = "do internal testing")
+    (options, args) = parser.parse_args()
 
-        info = []
-        htmlstr = ""
-        if os.path.exists(options.list) :
-            res = []
-            flist = open(options.list)
-            for dir in (os.path.expanduser(ln.strip()) for ln in flist.readlines()) :
-                vcs = None
-                if not os.path.exists(dir) : continue
-                print(dir)
-                if os.path.exists(os.path.join(dir, ".hg")) :
-                    vcs = hg(dir)
-                elif os.path.exists(os.path.join(dir, ".svn")) :
-                    vcs = svn(dir)
-                elif os.path.exists(os.path.join(dir, ".git")) :
-                    vcs = git(dir)
-                if vcs :
-                    if options.debug :
-                        vcs.tip -= 1
-                    else :
-                        vcs.update()
-                    res = vcs.recent_changes()
-                if len(res) :
-                    info.append((dir, res))
+    info = []
+    htmlstr = ""
+    if os.path.exists(options.list) :
+        res = []
+        flist = open(options.list)
+        for dir in (os.path.expanduser(ln.strip()) for ln in flist.readlines()) :
+            vcs = None
+            if not os.path.exists(dir) : continue
+            print(dir)
+            if os.path.exists(os.path.join(dir, ".hg")) :
+                vcs = hg(dir)
+            elif os.path.exists(os.path.join(dir, ".svn")) :
+                vcs = svn(dir)
+            elif os.path.exists(os.path.join(dir, ".git")) :
+                vcs = git(dir)
+            if vcs :
+                if options.debug :
+                    vcs.tip -= 1
+                else :
+                    vcs.update()
+                res = vcs.recent_changes()
+            if len(res) :
+                info.append((dir, res))
 
-        for dir, changes in info :
-            htmlstr += (f'\n<h2>{dir!s}</h2>\n'
-                        '<table cellspacing="10">\n')
-            for c in changes :
-                htmlstr += (f'\n<tr>'
-                            f'<td>{" ".join(c[2].split(" ")[0:2])!s}</td>'
-                            f'<td>{c[0]!s}</td>'
-                            f'<td>{c[1]!s}</td>'
-                            f'<td>{c[4]!s}</td>'
-                            '</tr>\n')
-            htmlstr += "</table>\n"
+    for dir, changes in info :
+        htmlstr += (f'\n<h2>{dir!s}</h2>\n'
+                    '<table cellspacing="10">\n')
+        for c in changes :
+            htmlstr += (f'\n<tr>'
+                        f'<td>{" ".join(c[2].split(" ")[0:2])!s}</td>'
+                        f'<td>{c[0]!s}</td>'
+                        f'<td>{c[1]!s}</td>'
+                        f'<td>{c[4]!s}</td>'
+                        '</tr>\n')
+        htmlstr += "</table>\n"
 
-        if htmlstr != "" :
-            base = gtk.Window()
-            scroll = gtk.ScrolledWindow()
-            view = webkit.WebView()
-            view.load_html_string(htmlhdr + htmlstr + htmlftr, "home")
-            scroll.add(view)
-            base.add(scroll)
-            base.set_default_size(750, 400)
-            base.connect('delete-event', gtk.main_quit)
-            base.show_all()
-            gtk.main()
+    if htmlstr != "" :
+        base = gtk.Window()
+        scroll = gtk.ScrolledWindow()
+        view = webkit.WebView()
+        view.load_html_string(htmlhdr + htmlstr + htmlftr, "home")
+        scroll.add(view)
+        base.add(scroll)
+        base.set_default_size(750, 400)
+        base.connect('delete-event', gtk.main_quit)
+        base.show_all()
+        gtk.main()
+
 
 
 if __name__ == "__main__":

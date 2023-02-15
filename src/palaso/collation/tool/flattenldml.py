@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import palaso.collation.dont_test_tailor
+import palaso.collation.tailor
 import xml.sax
 import xml.sax.handler
 import xml.sax.saxutils
@@ -12,7 +12,7 @@ class Flattener(xml.sax.saxutils.XMLFilterBase):
         # super(Flattener, self).__init__(*args)
         xml.sax.saxutils.XMLFilterBase.__init__(self, *args)
         self.processing = 0
-        self.ldmlhandler = palaso.collation.dont_test_tailor.LDMLHandler()
+        self.ldmlhandler = palaso.collation.tailor.LDMLHandler()
 
     def startElementNS(self, nsname, qname, attributes):
         if nsname[1] == 'collations':

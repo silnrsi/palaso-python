@@ -23,19 +23,19 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
 ]
 dependencies = [
-    "beziers >= 0.4.0",
-    "fontTools >= 4.29.1",
-    "freetype_py >= 2.2.0",
-    "icu >= 0.0.1",
-    "numpy >= 1.22.0"
+    "beziers",
+    "fontTools",
+    "freetype_py",
+    "pyicu",
+    "numpy"
 ]
 
 [project.optional-dependencies]
-sklearn = ["scikit_learn == 1.0.2"]
-kmn = ["funcparserlib == 0.3.6"]
-vcs = ["mercurial == 6.0.2"]
-gtk = ["PyGObject >= 3.42.0"]
-debian = ["python_debian == 0.1.39"]
+sklearn = ["scikit_learn"]
+kmn = ["funcparserlib"]
+vcs = ["mercurial"]
+gtk = ["PyGObject"]
+debian = ["python_debian"]
 sldr = ["sldr @ git+https://github.com/silnrsi/sldrtools"]
 
 [project.urls]

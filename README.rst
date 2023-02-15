@@ -19,3 +19,22 @@ included:
 
 * The Smith font & keyboard build system: https://github.com/silnrsi/smith
 * palaso.sldr & scripts have moved to: https://github.com/silnrsi/sldrtools
+
+This package has several extra dependency sets for enabling less frequently
+used modules or features:
+:debian: Enable ``palaso.debian`` and it tools.
+:fontforge: Enable the deprecated ``palaso.font.fontforge`` module and
+            several tools that depend on it.
+:gtk: Enables the ``palaso.gtk`` package and tools.
+:kmn: ``palaso.kmn`` dependecies, particularly the ``keyman2ldml`` tool.
+:sklearn: Enables ``grkern2fea`` tool.
+:sldr: Enable the deprecated ``palaso.sldr`` package which re-exports the
+       ``sldrtools`` package.
+:vcs: Enables the vcsaggro tool.
+
+Some tools and modules require packages from the OS package manager, that
+have no pypi distributed versions.  
+You will need these packages installed if you wish to run the
+following:
+:fontforge: ``ap2sfd``, ``ffbuilder``, ``ffpointreplace``, ``ufo2sfd`` and
+            the ``palaso.font.fontforge`` module.

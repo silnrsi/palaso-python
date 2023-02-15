@@ -1,22 +1,7 @@
 from contextlib import contextmanager
-import sys, codecs
+import sys
 import errno
 import sre_parse
-
-from contextlib import ExitStack
-
-
-@contextmanager
-def defaultapp():
-    """Sets up common default contexts used at the application level. Includes:
-        * console
-        * relaxedsubs"""
-    with ExitStack() as stack:
-        stack.enter_context(utf8out())
-        stack.enter_context(console())
-        stack.enter_context(relaxedsubs())
-        yield
-
 
 @contextmanager
 def console(ctrlc=sys.exit) :
@@ -56,24 +41,3 @@ def relaxedsubs() :
         yield
     finally :
         sre_parse.expand_template = temp
-
-@contextmanager
-def utf8out() :
-    """Wraps sys.stdout to always output as UTF-8"""
-    old_stdout = sys.stdout
-    sys.stdout = codecs.getwriter('UTF-8')(old_stdout)
-    try:
-        yield
-    finally:
-        sys.stdout = old_stdout
-
-@contextmanager
-def utf8in() :
-    """Wraps sys.stdout to always output as UTF-8"""
-    old_stdin = sys.stdin
-    sys.stdin = codecs.getreader('UTF-8')(sys.stdin)
-    try:
-        yield
-    finally:
-        sys.stdin = old_stdin
-

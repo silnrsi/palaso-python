@@ -1,35 +1,41 @@
 #!/usr/bin/env python3
-import palaso.collation.tailor, xml.sax, sys
+import palaso.collation.tailor
+import sys
+import xml.sax
+import xml.sax.handler
 
 
-class Flattener(xml.sax.handler.ContentHandler) :
-    def __init__(self, *args) :
-#        super(Flattener, self).__init__(*args)
+class Flattener(xml.sax.handler.ContentHandler):
+    def __init__(self, *args):
+        super().__init__(*args)
         xml.sax.handler.ContentHandler.__init__(self)
         self.processing = 0
         self.ldmlhandler = palaso.collation.tailor.LDMLHandler()
-    def startElementNS(self, nsname, qname, attributes) :
-        if nsname[1] == 'collations' :
+
+    def startElementNS(self, nsname, qname, attributes):
+        if nsname[1] == 'collations':
             self.processing = 1
-        if self.processing :
+        if self.processing:
             self.ldmlhandler.startElementNS(nsname, qname, attributes)
-    def endElementNS(self, nsname, qname) :
-        if nsname[1] == 'collations' :
-            for c in self.ldmlhandler.collations :
-                if len(c.reorders) :
+
+    def endElementNS(self, nsname, qname):
+        if nsname[1] == 'collations':
+            for c in self.ldmlhandler.collations:
+                if len(c.reorders):
                     c.flattenOrders()
             self.processing = 0
             self.icu = ""
-            for c in self.ldmlhandler.collations :
+            for c in self.ldmlhandler.collations:
                 self.icu = c.asICU()
-        elif self.processing :
+        elif self.processing:
             self.ldmlhandler.endElementNS(nsname, qname)
-    def characters(self, data) :
-        if self.processing :
+
+    def characters(self, data):
+        if self.processing:
             self.ldmlhandler.characters(data)
 
 
-def main() :
+def main():
     infile = sys.argv[1]
     parser = xml.sax.make_parser()
     handler = Flattener(parser)
