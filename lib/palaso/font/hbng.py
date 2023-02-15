@@ -38,6 +38,7 @@ class GlyphPosition(Structure) :
                 ('var', c_uint32)]
 
 fndestroy = CFUNCTYPE(None, c_void_p)
+fnmessage = CFUNCTYPE(c_bool, c_void_p, c_void_p, c_char_p, c_void_p)
 fn('hb_buffer_create', c_void_p)
 fn('hb_buffer_get_empty', c_void_p)
 fn('hb_buffer_reference', c_void_p, c_void_p)
@@ -63,6 +64,8 @@ fn('hb_buffer_set_length', c_int, c_void_p, c_uint)
 fn('hb_buffer_get_length', c_int, c_void_p)
 fn('hb_buffer_get_glyph_infos', POINTER(GlyphInfo), c_void_p, POINTER(c_uint))
 fn('hb_buffer_get_glyph_positions', POINTER(GlyphPosition), c_void_p, POINTER(c_uint))
+fn('hb_buffer_serialize', c_int, c_void_p, c_uint, c_uint, c_char_p, c_uint, POINTER(c_uint), c_void_p, c_uint, c_uint)
+fn('hb_buffer_set_message_func', None, c_void_p, fnmessage, c_void_p, fndestroy)
 
 # hb-common.h
 fn('hb_tag_from_string', c_uint32, c_char_p)
@@ -236,6 +239,18 @@ fn('hb_ft_font_get_face', c_void_p, c_void_p)
 #fn('hb_glib_script_from_script', c_int, c_int)
 #fn('hb_glib_get_unicode_funcs', c_void_p)
 
+def printbuf(hbbuf, hbfont, prefix=""):
+    bufstr = create_string_buffer(32768)
+    hbbuf = cast(hbbuf, c_void_p)
+    hblen = hbng.hb_buffer_get_length(hbbuf)
+    mode = hbng.hb_tag_from_string(b'TEXT')
+    res = hbng.hb_buffer_serialize(hbbuf, 0, hblen, bufstr, 32767, None, hbfont, mode,  0)
+    print(prefix + bufstr.value.decode("utf-8"))
+
+def trace(hbbuf, hbfont, msg, userdat):
+    printbuf(hbbuf, hbfont, prefix=msg.decode("utf-8") + ": ")
+    return True
+
 class Glyph(object) :
     def __init__(self, ginfo, position) :
         self.gid = ginfo.codepoint
@@ -271,6 +286,8 @@ class Buffer(object) :
 #        elif (major < 1 and minor <= 9 and macro <= 20) :
 #            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
 #            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
+        if kwds.get('trace', False):
+            hbng.hb_buffer_set_message_func(self.buffer, fnmessage(trace), 0, fndestroy(0))
 
     def __del__(self) :
         hbng.hb_buffer_destroy(self.buffer)
@@ -298,6 +315,7 @@ class Buffer(object) :
             shapersinfo = shaperstype(*parms)
         else :
             shapersinfo = None
+        printbuf(self.buffer, font.font)
         hbng.hb_shape_full(font.font, self.buffer, featinfo, lenfeats, shapersinfo)
 
     @property

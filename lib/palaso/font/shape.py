@@ -91,9 +91,8 @@ class HbFont(Font) :
         self.feats = {} if feats is None else feats
 
     def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, **kw) :
-        kws = {}
-        if self.rtl : kws['rtl'] = 1
-        buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), **kws)
+        if self.rtl : kw['rtl'] = 1
+        buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), **kw)
         buf.shape(self.font, shapers = self.shapers, feats = self.feats if feats is None else feats)
         res = []
         clus = []

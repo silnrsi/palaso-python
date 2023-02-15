@@ -253,7 +253,8 @@ outputtypes = {
 def LineReader(infile, spliton=None) :
     f = codecs.open(infile, encoding="utf_8")
     for l in f.readlines() :
-        l = l.strip()
+        #l = l.rstrip("\n")
+        l = l[:-1]
         if spliton is not None :
             res = (None, l.split(spliton), None, None)
         else :
@@ -288,6 +289,7 @@ def FtmlReader(infile, spliton=None) :
             res.extend((l, (t, )))
         res += style if style is not None else [None, None]
         yield res
+
 
 texttypes = {
     'txt' : LineReader,
@@ -377,7 +379,8 @@ for label, words, lang, feats in reader :
         if opts.verbose:
             sys.stdout.write("{}\r".format(wcount))
             sys.stdout.flush()
-        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats)]]
+            print(s.encode("unicode_escape"))
+        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, trace=opts.verbose)]]
         if gls[-1][-1][0] is None:
             gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
