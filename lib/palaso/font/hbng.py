@@ -64,6 +64,7 @@ fn('hb_buffer_set_length', c_int, c_void_p, c_uint)
 fn('hb_buffer_get_length', c_int, c_void_p)
 fn('hb_buffer_get_glyph_infos', POINTER(GlyphInfo), c_void_p, POINTER(c_uint))
 fn('hb_buffer_get_glyph_positions', POINTER(GlyphPosition), c_void_p, POINTER(c_uint))
+fn('hb_buffer_guess_segment_properties', None, c_void_p)
 fn('hb_buffer_serialize', c_int, c_void_p, c_uint, c_uint, c_char_p, c_uint, POINTER(c_uint), c_void_p, c_uint, c_uint)
 fn('hb_buffer_set_message_func', None, c_void_p, fnmessage, c_void_p, fndestroy)
 
@@ -276,10 +277,10 @@ class Buffer(object) :
         if lang is not None and lang != 0:
             tlang = hbng.hb_language_from_string(lang.encode("utf_8"), len(lang))
             hbng.hb_buffer_set_language(self.buffer, tlang)
-        if 'rtl' in kwds :
-            hbng.hb_buffer_set_direction(self.buffer, 5)
+        if kwds.get('dir', 0) != 0:   # -1 = L, 0 = unknown, +1 = RTL
+            hbng.hb_buffer_set_direction(self.buffer, (0, 4, 5)[kwds['dir']])
         else :
-            hbng.hb_buffer_set_direction(self.buffer, 4)
+            hbng.hb_buffer_guess_segment_properties(self.buffer)
         (major, minor, macro) = [int(s) for s in version_string.split('.')] if version_string else (0, 0, 0)
         if unicodefuncs :
             hbng.hb_buffer_set_unicode_funcs(unicodefuncs)

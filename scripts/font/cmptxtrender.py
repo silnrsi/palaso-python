@@ -256,9 +256,9 @@ def LineReader(infile, spliton=None) :
         #l = l.rstrip("\n")
         l = l[:-1]
         if spliton is not None :
-            res = (None, l.split(spliton), None, None)
+            res = (None, l.split(spliton), None, None, 0)
         else :
-            res = (None, (l, ), None, None)
+            res = (None, (l, ), None, None, 0)
         yield res
 
 def FtmlReader(infile, spliton=None) :
@@ -288,6 +288,7 @@ def FtmlReader(infile, spliton=None) :
         else :
             res.extend((l, (t, )))
         res += style if style is not None else [None, None]
+        res += [1] if e.get('rtl', False) else [0]
         yield res
 
 
@@ -370,7 +371,7 @@ reader = texttypes[opts.texttype](opts.text, spliton)
 count = 0
 errors = 0
 log = None
-for label, words, lang, feats in reader :
+for label, words, lang, feats, direction in reader :
     if words[0] is None : continue
     count += 1
     wcount = 0
@@ -380,7 +381,7 @@ for label, words, lang, feats in reader :
             sys.stdout.write("{}\r".format(wcount))
             sys.stdout.flush()
             print(s.encode("unicode_escape"))
-        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, trace=opts.verbose)]]
+        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, trace=opts.verbose, dir=direction)]]
         if gls[-1][-1][0] is None:
             gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
