@@ -316,7 +316,7 @@ class Buffer(object) :
             shapersinfo = shaperstype(*parms)
         else :
             shapersinfo = None
-        printbuf(self.buffer, font.font)
+        # printbuf(self.buffer, font.font)
         hbng.hb_shape_full(font.font, self.buffer, featinfo, lenfeats, shapersinfo)
 
     @property
