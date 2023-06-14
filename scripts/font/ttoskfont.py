@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 
-import argparse, re, time
+import argparse, re, time, json, sys
+import unicodedata as ud
 from palaso.font.shape import HbFont
 from fontTools import ttLib
 from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphComponent
 from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 
-def setname(font, nameid, s):
-    font['name'].setName(s, nameid, 0, 3, 0)
-    font['name'].setName(s, nameid, 3, 1, 0x409)
+def analyzeNames(font):
+    res = set()
+    for n in font['name'].names:
+        x = (n.platformID, n.platEncID, n.langID)
+        res.add(x)
+    return res
+
+def setname(font, nameid, s, platforms=None):
+    if platforms is None:
+        platforms = [(0, 3, 0), (3, 1, 0x409)]
+    for p in platforms:
+        font['name'].setName(s, nameid, *p)
 
 def copyglyph(gname, infont, outfont, lsb, x):
     lsb = min(infont['hmtx'].metrics[gname][1] + x, lsb)
@@ -54,9 +64,19 @@ def copyfont(infont, outfont, glyphs=False):
         outfont['glyf'].glyphs = {}
         outfont['hmtx'].metrics = {}
 
-    for a in ("head", "maxp", "hhea", "OS/2", "cvt ", "gasp"):
+    for a in ("head", "maxp", "hhea", "OS/2", "cvt ", "fpgm", "gasp", "prep"):
         if a in infont:
             outfont[a] = infont[a]
+
+def ofltest(font):
+    for a in (0, 13, 14):
+        s = font['name'].getDebugName(a)
+        if not s:
+            continue
+        for b in ('open font license', 'ofl'):
+            if b in s.lower():
+                return True
+    return False
 
 parser = argparse.ArgumentParser()
 parser.add_argument("infont", help="Input TTF font file")
@@ -64,11 +84,22 @@ parser.add_argument("-o", "--outfont", required=True, help="Output TTF font file
 parser.add_argument("-c", "--config", required=True, help="Input config file")
 parser.add_argument("-n", "--name", required=True, help="Output font name")
 parser.add_argument("-F", "--feat", action="append", help="feat=val repeatable")
+parser.add_argument("-B", "--base", default="25CC", help="USV of base character for strings startwith a mark")
+parser.add_argument("-L", "--license", action="store_true", help="Don't do OFL check")
+parser.add_argument("-C", "--creator", default="ttoskfont", help="Creator in copyright statement")
+parser.add_argument("-V", "--version", default="0.1", help="Version of font to create")
 args = parser.parse_args()
 
 infont = ttLib.TTFont(args.infont)
+if not args.license:
+    if not ofltest(infont):
+        print("OFL Check failed")
+        sys.exit(1)
+platforms = analyzeNames(infont)
+
 outfont = ttLib.TTFont()
 copyfont(infont, outfont, glyphs=False)
+base = chr(int(args.base, 16)) if args.base else None
 
 jobs = {}
 if args.config.lower().endswith(".txt"):
@@ -83,6 +114,16 @@ if args.config.lower().endswith(".txt"):
             except ValueError:
                 continue
             jobs[bv[0]] = "".join(chr(x) for x in bv[1:])
+elif args.config.lower().endswith(".json"):
+    with open(args.config, encoding="utf-8") as inf:
+        dat = json.load(inf)
+    for d in dat:
+        s = d['str']
+        if base and not len(s):
+            s = base
+        elif base and ud.category(s[0]).startswith("M"):
+            s = base + s
+        jobs[int(d["pua"], 16)] = s
 
 if args.feat and len(args.feat):
     feats = {b[0].strip(): b[1].strip() for x in args.feat for b in x.split("=")}
@@ -99,30 +140,53 @@ for k, v in jobs.items():
     gs = hb.glyphs(v, includewidth=True)
     adv = gs.pop()[1][0]
     lsb = 10000
-    glyph = Glyph()
-    glyph.numberOfContours = -1
-    glyph.components = []
-    glyphname = ttLib.TTFont._makeGlyphName(k)
-    outfont['glyf'][glyphname] = glyph
-    cmap[k] = glyphname
     # outglyphorder.append(glyphname) 
-    for g in gs:
-        gname = inglyphorder[g[0]]
-        lsb = copyglyph(gname, infont, outfont, lsb, g[1][0])
-        gc = GlyphComponent()
-        gc.flags = 0
-        gc.glyphName = gname
-        gc.x = g[1][0]
-        gc.y = g[1][1]
-        glyph.components.append(gc)
-    outfont['hmtx'].metrics[glyphname] = [adv, lsb]
+    if len(gs) == 1 and gs[0][1][0] == 0 and gs[0][1][1] == 0:
+        gname = inglyphorder[gs[0][0]]
+        lsb = copyglyph(gname, infont, outfont, lsb, 0)
+        cmap[k] = gname
+    else:
+        glyph = Glyph()
+        glyph.numberOfContours = -1
+        glyph.components = []
+        glyphname = ttLib.TTFont._makeGlyphName(k)
+        outfont['glyf'][glyphname] = glyph
+        cmap[k] = glyphname
+        for g in gs:
+            if g[0] == 0:
+                print("Missing glyph for {} in {:04X}".format(" ".join("0x%04X" % ord(x) for x in v), k))
+            gname = inglyphorder[g[0]]
+            lsb = copyglyph(gname, infont, outfont, lsb, g[1][0])
+            gc = GlyphComponent()
+            gc.flags = 0
+            gc.glyphName = gname
+            gc.x = g[1][0]
+            gc.y = g[1][1]
+            glyph.components.append(gc)
+        outfont['hmtx'].metrics[glyphname] = [adv, lsb]
 
+try:
+    version = float(re.sub(r"[^0-9.]", "", args.version))
+    outfont['head'].fontRevision = version
+except ValueError:
+    print("Invalid version number")
+
+t = int(time.now()) + 0x7C259DC0
+outfont['head'].created = t
+outfont['head'].modified = t
+
+# Names
 subfamily = infont['name'].getBestSubFamilyName()
 full = (" " + subfamily) if subfamily.lower() not in ("regular", "standard") else ""
-setname(outfont, 1, args.name)
-setname(outfont, 3, "{}:{}".format(args.name, time.strftime("%Y-%m-%d")))
-setname(outfont, 4, args.name + full)
-setname(outfont, 16, args.name)
-setname(outfont, 18, args.name + full)
+cright = infont['name'].getDebugName(0)
+family = infont['name'].getBestFamilyName()
+setname(outfont, 0, "Generated by {} from {}: {}".format(args.creator, family, cright), platforms)
+setname(outfont, 1, args.name, platforms)
+setname(outfont, 3, "{}:{}".format(args.name, time.strftime("%Y-%m-%d")), platforms)
+setname(outfont, 4, args.name + full, platforms)
+setname(outfont, 5, "Version {}".format(args.version), platforms)
+setname(outfont, 6, args.name.replace(" ", ""), platforms)
+setname(outfont, 16, args.name, platforms)
+setname(outfont, 18, args.name + full, platforms)
 
 outfont.save(args.outfont)
