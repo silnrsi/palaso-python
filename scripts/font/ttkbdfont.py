@@ -171,7 +171,7 @@ try:
 except ValueError:
     print("Invalid version number")
 
-t = int(time.now()) + 0x7C259DC0
+t = int(time.time()) + 0x7C259DC0
 outfont['head'].created = t
 outfont['head'].modified = t
 
