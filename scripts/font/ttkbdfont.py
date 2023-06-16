@@ -55,9 +55,9 @@ def copyfont(infont, outfont, glyphs=False):
     if not glyphs:
         cmap = CmapSubtable.newSubtable(4)
         cmap.cmap = {}
-        cmap.platformID = 0
-        cmap.platEncID = 3
-        cmap.language = 0
+        cmap.platformID = 3
+        cmap.platEncID = 1
+        cmap.language = 0x409
         cmapt = outfont['cmap']
         cmapt.tableVersion = 0
         cmapt.tables = [cmap]
@@ -84,8 +84,9 @@ parser.add_argument("-o", "--outfont", required=True, help="Output TTF font file
 parser.add_argument("-c", "--config", required=True, help="Input config file")
 parser.add_argument("-n", "--name", required=True, help="Output font name")
 parser.add_argument("-F", "--feat", action="append", help="feat=val repeatable")
-parser.add_argument("-B", "--base", default="25CC", help="USV of base character for strings startwith a mark")
+parser.add_argument("-B", "--base", help="USV of base character for strings startwith a mark")
 parser.add_argument("-L", "--license", action="store_true", help="Don't do OFL check")
+parser.add_argument("-A", "--noascii", action="store_true", help="Don't copy ASCII across")
 parser.add_argument("-C", "--creator", default="ttoskfont", help="Creator in copyright statement")
 parser.add_argument("-V", "--version", default="0.1", help="Version of font to create")
 args = parser.parse_args()
@@ -125,6 +126,11 @@ elif args.config.lower().endswith(".json"):
             s = base + s
         jobs[int(d["pua"], 16)] = s
 
+if not args.noascii:
+    for a in range(0x0020, 0x0080):
+        if a not in jobs:
+            jobs[a] = chr(a)
+
 if args.feat and len(args.feat):
     feats = {b[0].strip(): b[1].strip() for x in args.feat for b in x.split("=")}
 else:
@@ -135,7 +141,11 @@ inglyphorder = infont.getGlyphOrder()
 outglyphorder = []
 outfont.setGlyphOrder(outglyphorder)
 cmap = outfont['cmap'].getBestCmap()
-copyglyph('.notdef', infont, outfont, 10000, 0)
+for a in ('.notdef', '.null', 'nonmarkingreturn', 'space'):
+    copyglyph(a, infont, outfont, 10000, 0)
+cmap[32] = 'space'
+cmap[0xF020] = 'space'
+firstdone = False
 for k, v in jobs.items():
     gs = hb.glyphs(v, includewidth=True)
     adv = gs.pop()[1][0]
@@ -164,6 +174,9 @@ for k, v in jobs.items():
             gc.y = g[1][1]
             glyph.components.append(gc)
         outfont['hmtx'].metrics[glyphname] = [adv, lsb]
+        if not firstdone:
+            cmap[0xF041] = cmap[k]
+            firstdone = True
 
 try:
     version = float(re.sub(r"[^0-9.]", "", args.version))
@@ -173,7 +186,8 @@ except ValueError:
 
 t = int(time.time()) + 0x7C259DC0
 outfont['head'].created = t
-outfont['head'].modified = t
+outfont["OS/2"].recalcUnicodeRanges(outfont)
+outfont["OS/2"].recalcAvgCharWidth(outfont)
 
 # Names
 subfamily = infont['name'].getBestSubFamilyName()
