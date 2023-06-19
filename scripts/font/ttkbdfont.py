@@ -118,7 +118,7 @@ if args.config.lower().endswith(".txt"):
 elif args.config.lower().endswith(".json"):
     with open(args.config, encoding="utf-8") as inf:
         dat = json.load(inf)
-    for d in dat:
+    for d in dat['map']:
         s = d['str']
         if base and not len(s):
             s = base
