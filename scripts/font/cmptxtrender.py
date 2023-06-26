@@ -4,10 +4,11 @@ import codecs
 from palaso.font.shape import make_shaper
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
-import sys, os, shutil, re, argparse
+import sys, os, os.path, shutil, re, argparse
 import json
 import json.encoder
 from xml.etree.ElementTree import parse
+import csv
 
 tables = {
     'gr' : ('GDEF', 'GSUB', 'GPOS'),
@@ -31,11 +32,29 @@ def roundpt(pt, res) :
         pass
     return (0, 0)
 
+def name_mapping(filename):
+    glyph_data = dict()
+    if not os.path.exists(filename):
+        print(f'WARNING: {filename} does not exist')
+        return glyph_data
+    with open(filename, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        if 'glyph_name' not in reader.fieldnames:
+            return glyph_data
+        if 'ps_name' not in reader.fieldnames:
+            return glyph_data
+        for row in reader:
+            glyph_name = row['glyph_name']
+            ps_name = row['ps_name']
+            glyph_data[ps_name] = glyph_name
+    return glyph_data
+
 def name(tt, gl, rounding = 0.1) :
     if gl[0] is None :
         x = "_adv_"
     elif gl[0] != 0 :
-        x = tt.getGlyphName(gl[0])
+        ps = tt.getGlyphName(gl[0])
+        x = glyph_data.get(ps, ps)
     else :
         x = "0:{:04X}".format(gl[2])
     return (x, roundfloat(gl[1][0], rounding), roundfloat(gl[1][1], rounding))
@@ -43,7 +62,8 @@ def name(tt, gl, rounding = 0.1) :
 def cmaplookup(tt, c) :
     cmap = tt.getBestCmap()
     if cmap:
-        return cmap.get(ord(c), '.notdef')
+        ps = cmap.get(ord(c), '.notdef')
+        return glyph_data.get(ps, ps)
     return '.nocmap'
 
 def makelabel(name, line, word) :
@@ -315,6 +335,7 @@ parser.add_argument("-k","--keep",action="store_true",help="keep going, don't re
 parser.add_argument("-p","--split",action="store_true",help="Split on spaces")
 parser.add_argument("-L","--label",action="append",help="report font labels")
 parser.add_argument("-S","--strip",action="store_true",help="Strips smart code other than needed by engine, when copying font")
+parser.add_argument("-g","--glyphdata",action="store",help="CSV file for glyph name mappings")
 parser.add_argument("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 parser.add_argument("--outputtype",help="Type of output file [*html, json]")
 parser.add_argument("--texttype",help="Type of text input file else taken from text file extension")
@@ -356,6 +377,10 @@ if opts.copy and opts.output :
 else :
     origargs = opts.infonts
 fpaths = [os.path.relpath(x, start=(os.path.dirname(opts.output) if opts.output else '.')) for x in opts.infonts]
+
+glyph_data = dict()
+if opts.glyphdata:
+    glyph_data = name_mapping(opts.glyphdata)
 
 fonts = []
 tts = []
