@@ -148,6 +148,7 @@ class HTMLLog(object) :
             self.out.write("<tr><th></th><th>Original</th><th>{}</th>".format(args.label[0]))
             for i in range(1, len(args.label)) :
                 self.out.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
+            self.out.write("<th>style</th>")
             self.out.write("</tr>\n")
 
     def style(self, g, c = 'neq') :
@@ -164,9 +165,29 @@ class HTMLLog(object) :
             res.append(u)
         return ["".join(x) for x in zip(*res)]
 
-    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
+    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases, lang, feats) :
+        # Language from command line arguments
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
-        self.out.write("  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, "<br/>".join(x[0] for x in bases), label))
+
+        # Language and user features from FTML files
+        features = [] # for formatting the string with features
+        styles = [] # for displaying the styles (language and/or features) used
+        if lang:
+            langstr = " lang='{}'".format(lang)
+            styles.append(lang)
+        if feats:
+            for k in sorted(feats):
+                v = feats[k]
+                features.append('"{0}" {1}'.format(k, v))
+                styles.append('_'.join([k, str(v)]))
+        featstr = " style='font-feature-settings: " + ", ".join(features) + "'" if len(features) > 0 else ''
+        style = '_'.join(styles)
+
+        # If there is no style information use the language argument if it was specified
+        if style == '' and langstr:
+            style = self.opts.lang
+
+        self.out.write("  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}{6}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, "<br/>".join(x[0] for x in bases), label, featstr))
         if len(gglyphs) < 2 :
             self.out.write("    <td class='eq'>{0}</td>\n".format("<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
             self.out.write("    </tr>\n")
@@ -198,7 +219,8 @@ class HTMLLog(object) :
                         rprev = gglyphs[l][i-o[1]+o[3]]
             for inf in zip(*info) :
                 self.out.write("    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
-            self.out.write("    <td class='text{0}'{2}>{1}</td>\n".format(l+1, string, langstr))
+            self.out.write("    <td class='text{0}'{2}{3}>{1}</td>\n".format(l+1, string, langstr, featstr))
+            self.out.write("    <td>{0}</td>\n".format(style))
         self.out.write("  </tr>\n")
 
     def logend(self) :
@@ -211,7 +233,7 @@ class JsonLog(object) :
         self.out.write("{\n")
         self.encoder = json.JSONEncoder()
 
-    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases) :
+    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases, lang, feats) :
         s = makelabel(label, linenumber, wordnumber)
         self.out.write('\"'+s+'\" : ')
         # have to use iterencode here to get json.encoder.FLOAT_REP to work
@@ -420,7 +442,7 @@ for label, words, lang, feats, direction in reader :
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts)
             bases = [(cmaplookup(tts[0], x), (0,0)) for x in s]
-            log.logentry(label, count, wcount, s, gls, bases)
+            log.logentry(label, count, wcount, s, gls, bases, lang, feats)
             errors += 1
 if log is not None : log.logend()
 outfile.close()
