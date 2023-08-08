@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=62.0", "setuptools-scm", "cython"]
+requires = ["setuptools>=62.0", "setuptools-scm", "wheel', "cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,7 +15,7 @@ authors = [
 maintainers = [
     {name = "Tim Eves"},
     {name = "Martin Hosken"},
-    {name = "Nicholas Spalinger", email = "nicholas_spalinger@sil.org"}
+    {name = "Nicolas Spalinger"}
 ]
 requires-python = ">= 3.7"
 classifiers = [
@@ -80,6 +80,7 @@ checktec = "palaso.teckit.tool.checktec:main"
 csvtec = "palaso.teckit.tool.csvtec:main"
 langtag = "palaso.tool.langtag:main"
 vcsaggro = "palaso.tool.vcsaggro:main"
+ttkbdfont = "palaso.font.tool.ttkbdfont:main"
 ucd_spreadsheet = "palaso.unicode.tool.ucd_spreadsheet:main"
 
 [tool.setuptools]
