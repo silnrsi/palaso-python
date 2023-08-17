@@ -1,6 +1,6 @@
 '''
 The SFM DB file parser module.  Given a database schema defining field names
-and types it generates the necessary sytlesheet for that SFM DB to drive the
+and types it generates the necessary stylesheet for that SFM DB to drive the
 palaso.sfm module.  This guide the palaso.sfm parser to so it can correctly
 parser an SFM database document.
 
@@ -99,7 +99,7 @@ class parser(sfm.parser):
     ...     {'Marker' : (str, UnrecoverableError(
     ...                         'Start of record marker: {0} missing')),
     ...      'Name'   : (str, StructureError(
-    ...                         'Marker {0} defintion missing: {1}')),
+    ...                         'Marker {0} definition missing: {1}')),
     ...      'Description'    : (str, ''),
     ...      'OccursUnder'    : (unique(sequence(str)), {None}),
     ...      'FontSize'       : (int,                   None),
@@ -143,7 +143,7 @@ class parser(sfm.parser):
     ...                        demo_schema)))
     Traceback (most recent call last):
     ...
-    SyntaxError: <string>: line 1,1: Marker toc1 defintion missing: Name
+    SyntaxError: <string>: line 1,1: Marker toc1 definition missing: Name
     '''
     def __init__(self, source, schema, error_level=sfm.ErrorLevel.Content):
         if not isinstance(schema, _schema):

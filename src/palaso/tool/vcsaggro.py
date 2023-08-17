@@ -101,7 +101,7 @@ class git :
             change = []
             for l in log.splitlines() :
                 if l.startswith(b'commit') :
-                    if state == "descripton" :
+                    if state == "description" :
                         res.append(change)
                     state = ""
                     change = [l[7:12]]

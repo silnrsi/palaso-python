@@ -287,7 +287,7 @@ def main():
     parser.add_option("--author", action="store", help="Set author overriding the AUTHOR store")
     parser.add_option("--language", action="store", help="Override &ethnologuecode store")
     parser.add_option("--version", action="store", help="Override &version with w.x.y.z")
-    parser.add_option("--langname", action="store", help="Set langauge name")
+    parser.add_option("--langname", action="store", help="Set language name")
 
     (opts,kmns) = parser.parse_args()
     if len(kmns) == 0:

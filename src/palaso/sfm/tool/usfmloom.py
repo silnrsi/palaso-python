@@ -47,7 +47,7 @@ def merge(tags, *docs):
         if isinstance(e, sfm.Element):
             for child in e:
                 _relabel(tag, child)
-            e.name += f'{opts.seperator!s}{tag!s}'
+            e.name += f'{opts.separator!s}{tag!s}'
         else:
             return e
 
@@ -84,7 +84,7 @@ def main():
     parser.add_option(
         "-u", "--unused-warning", action='store_true',
         default=False,
-        help='Print out warnings when possibly unsused words are found.')
+        help='Print out warnings when possibly unused words are found.')
     parser.add_option(
         "-s", "--strict", action='store_const', dest='error_level',
         const=usfm.ErrorLevel.Marker,

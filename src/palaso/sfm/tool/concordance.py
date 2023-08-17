@@ -210,7 +210,7 @@ def main():
     parser.add_argument(
         "-u", "--unused-warning", action='store_true',
         default=False,
-        help='Print out warnings when possibly unsused words are found.')
+        help='Print out warnings when possibly unused words are found.')
     parser.add_argument(
         "-s", "--strict", action='store_const', dest='error_level',
         const=usfm.ErrorLevel.Marker,
@@ -278,7 +278,7 @@ def main():
             tempfile.NamedTemporaryFile("w+t",
                                         newline='',
                                         encoding="utf_8_sig") as db_new:
-            # merge in the word referneces into the new master.
+            # merge in the word references into the new master.
             prev_num_words = args.verbose and len(words_refs)
             prev_num_refs = args.verbose and sum(map(len, words_refs.values()))
             merge_master_file_with_book(db_src, db_new, words_refs)

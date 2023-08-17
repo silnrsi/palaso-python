@@ -81,7 +81,7 @@ python replacement character u'?' nor the u'&', u'#' and u';' characters
 required for the xmlcharrefreplace handlers. 
 However teckit can insert a byte replacement character specified by the TECKit 
 mapping itself in the output. This cannot always round trip and can be more 
-ambigous if the replacement character is used frequently in the byte encoding 
+ambiguous if the replacement character is used frequently in the byte encoding 
 for legitemate sequences (e.g. '?' <-> u'ʔ')
 The teckit python codec provides a new error handler 'teckitreplace' for this
 purpose.

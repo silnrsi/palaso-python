@@ -67,9 +67,9 @@ class Flags(IntFlag):
 
 @unique
 class NameID(IntEnum):
-    """Permited names stored in a TECKit mapping.
+    """Permitted names stored in a TECKit mapping.
 
-    These are the onlny permissable values for the nameid value passed to
+    These are the onlny permissible values for the nameid value passed to
     TECkit_GetMappingName() or TECkit_GetConverterName().
 
     Additional name IDs may be defined in the future.

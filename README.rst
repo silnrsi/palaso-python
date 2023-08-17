@@ -26,7 +26,7 @@ used modules or features:
 :fontforge: Enable the deprecated ``palaso.font.fontforge`` module and
             several tools that depend on it.
 :gtk: Enables the ``palaso.gtk`` package and tools.
-:kmn: ``palaso.kmn`` dependecies, particularly the ``keyman2ldml`` tool.
+:kmn: ``palaso.kmn`` dependencies, particularly the ``keyman2ldml`` tool.
 :sklearn: Enables ``grkern2fea`` tool.
 :sldr: Enable the deprecated ``palaso.sldr`` package which re-exports the
        ``sldrtools`` package.

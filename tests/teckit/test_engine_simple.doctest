@@ -54,7 +54,7 @@ Test incremental encoding
 >>> res +  enc.convert('\u02B0\u025Bst\u02B0',finished=True)
 b'D"\xe2s i\xf9z ?\xab tHEstH'
 
-Test replacment char options
+Test replacement char options
 >>> enc.convert('\u00F0i\u0303s \ufffd',finished=True, options=Option.UseReplacementCharSilently)
 b'D"\xe2s ?'
 

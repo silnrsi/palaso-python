@@ -7,9 +7,9 @@ from palaso.teckit.engine import Mapping
 
 class Test:
     '''
-    The Test class is here to soley to prevent these two base classes from
+    The Test class is here to solely to prevent these two base classes from
     being discovered as tests in their own right. These are shared
-    implementations for suppling common test code to derived classes below.
+    implementations for supplying common test code to derived classes below.
     '''
 
     class Compiler(unittest.TestCase):

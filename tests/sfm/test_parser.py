@@ -176,7 +176,7 @@ class USFMTestCase(unittest.TestCase):
             rt_doc = list(flatten(parser(regenerated.splitlines(True),
                                          *args, **kwds)))
 
-            # Check for equivilent parse.
+            # Check for equivalent parse.
             self.assertEqual(doc,
                              rt_doc,
                              'roundtrip parse unequal')

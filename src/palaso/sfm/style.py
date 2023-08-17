@@ -194,22 +194,22 @@ def _reify(sheet):
                 r[f] = str(v)
 
 
-def update_sheet(sheet, ammendments={}, field_replace=False, **kwds):
+def update_sheet(sheet, amendments={}, field_replace=False, **kwds):
     """
     Merge update an existing sheet with records from a supplied dictionary and
     any keyword arguments as well. Only non defaulted fields for each record
-    in ammendments or keyword args will overrite the fields in any marker
+    in amendments or keyword args will overwrite the fields in any marker
     records with matching marker names. The OccursUnder and TextProperties
     fields of a records are merged by taking the union of new and old, unless
     the field_replace keyword parameter is True
     This updated sheet is also returned.
 
     sheet: The sheet to be updated.
-    ammendments: A Mapping from marker names to marker records continaing
+    amendments: A Mapping from marker names to marker records containing
         the fields to be updated.
     field_replace: When True replace OccursUnder and TextProperties.
         When False merge them instead. Defaults to False.
-    **kwds: marker id keywords assigned to marker records continaing
+    **kwds: marker id keywords assigned to marker records containing
         the fields to be updated.
     >>> from pprint import pprint
     >>> base = parse(r'''
@@ -260,8 +260,8 @@ def update_sheet(sheet, ammendments={}, field_replace=False, **kwds):
               'TextType': 'Note'},
      'test2': {'Name': 'test2 - new marker'}}
     """
-    ammendments.update(**kwds)
-    for marker, new_meta in ammendments.items():
+    amendments.update(**kwds)
+    for marker, new_meta in amendments.items():
         try:
             meta = sheet[marker]
             if not field_replace:

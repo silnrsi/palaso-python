@@ -1,5 +1,5 @@
 """
-Common implmentation functions and variables for TECKit python API.
+Common implementation functions and variables for TECKit python API.
 
 Provides python definitions of the common types and defines for the
 engine and compiler.

@@ -19,7 +19,7 @@ def check_round_trip(mapping, data):
     encoder = engine.Converter(mapping, False)
     decoder = engine.Converter(mapping, True)
 
-    # Do all the coversions
+    # Do all the conversions
     byte_data  = encoder.convert(data, True)
     data2      = decoder.convert(byte_data, True)
     byte_data2 = encoder.convert(data2, True)
