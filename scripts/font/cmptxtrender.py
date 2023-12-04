@@ -46,6 +46,8 @@ def name_mapping(filename):
         for row in reader:
             glyph_name = row['glyph_name']
             ps_name = row['ps_name']
+            if glyph_name == '':
+                glyph_name = ps_name
             glyph_data[ps_name] = glyph_name
     return glyph_data
 
