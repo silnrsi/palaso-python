@@ -1,6 +1,6 @@
 beziers==0.4.0
 Cython==0.29.27
-fontTools==4.29.1
+fontTools==4.43.0
 freetype_py==2.2.0
 funcparserlib==0.3.6
 icu==0.0.1
