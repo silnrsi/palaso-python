@@ -430,7 +430,6 @@ for label, words, lang, feats, direction in reader :
             sys.stdout.write("{}\r".format(wcount))
             sys.stdout.flush()
             print(s.encode("unicode_escape"))
-        print(opts.verbose)
         gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, trace=opts.verbose, dir=direction)]]
         if gls[-1][-1][0] is None:
             gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
