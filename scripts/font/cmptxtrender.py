@@ -436,7 +436,7 @@ for label, words, lang, feats, direction in reader :
             gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
         for i in range(1, len(fonts)) :
-            gls.append([name(tts[i], x) for x in fonts[i].glyphs(s, includewidth = True, lang=lang, feats=feats)])
+            gls.append([name(tts[i], x) for x in fonts[i].glyphs(s, includewidth=True, lang=lang, feats=feats, direction=direction)])
             if gls[-1][-1][0] is None:
                 gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
             if gls[-1] != gls[0]:
