@@ -45,6 +45,8 @@ fn('hb_buffer_reference', c_void_p, c_void_p)
 fn('hb_buffer_destroy', None, c_void_p)
 fn('hb_buffer_set_user_data', c_int, c_void_p, c_void_p, c_void_p, fndestroy, c_int)
 fn('hb_buffer_get_user_data', c_void_p, c_void_p, c_void_p)
+fn('hb_buffer_set_content_type', None, c_void_p, c_int)
+fn('hb_buffer_get_content_type', c_int, c_void_p)
 fn('hb_buffer_set_unicode_funcs', c_void_p, c_void_p)
 fn('hb_buffer_get_unicode_funcs', c_void_p, c_void_p)
 fn('hb_buffer_set_direction', None, c_void_p, c_int)
@@ -64,6 +66,7 @@ fn('hb_buffer_set_length', c_int, c_void_p, c_uint)
 fn('hb_buffer_get_length', c_int, c_void_p)
 fn('hb_buffer_get_glyph_infos', POINTER(GlyphInfo), c_void_p, POINTER(c_uint))
 fn('hb_buffer_get_glyph_positions', POINTER(GlyphPosition), c_void_p, POINTER(c_uint))
+fn('hb_buffer_has_positions', c_bool, c_void_p)
 fn('hb_buffer_guess_segment_properties', None, c_void_p)
 fn('hb_buffer_serialize', c_int, c_void_p, c_uint, c_uint, c_char_p, c_uint, POINTER(c_uint), c_void_p, c_uint, c_uint)
 fn('hb_buffer_set_message_func', None, c_void_p, fnmessage, c_void_p, fndestroy)
@@ -163,6 +166,7 @@ fn('hb_font_subtract_glyph_origin_for_direction', None, c_void_p, c_uint32, c_in
 fn('hb_font_get_glyph_kerning_for_direction', None, c_void_p, c_uint32, c_uint32, c_int, POINTER(c_int32), POINTER(c_int32))
 fn('hb_font_get_glyph_extents_for_origin', c_int, c_void_p, c_uint32, c_int, POINTER(GlyphExtents))
 fn('hb_font_get_glyph_contour_point_for_origin', c_int, c_void_p, c_uint32, c_uint, c_int, POINTER(c_int32), POINTER(c_int32))
+fn('hb_font_glyph_to_string', None, c_void_p, c_uint32, c_char_p, c_uint32)
 
 fn('hb_font_create', c_void_p, c_void_p)
 fn('hb_font_create_sub_font', c_void_p, c_void_p)
@@ -240,17 +244,79 @@ fn('hb_ft_font_get_face', c_void_p, c_void_p)
 #fn('hb_glib_script_from_script', c_int, c_int)
 #fn('hb_glib_get_unicode_funcs', c_void_p)
 
-def printbuf(hbbuf, hbfont, prefix=""):
-    bufstr = create_string_buffer(32768)
-    hbbuf = cast(hbbuf, c_void_p)
-    hblen = hbng.hb_buffer_get_length(hbbuf)
-    mode = hbng.hb_tag_from_string(b'TEXT')
-    res = hbng.hb_buffer_serialize(hbbuf, 0, hblen, bufstr, 32767, None, hbfont, mode,  0)
-    print(prefix + bufstr.value.decode("utf-8"))
-
 def trace(hbbuf, hbfont, msg, userdat):
-    printbuf(hbbuf, hbfont, prefix=msg.decode("utf-8") + ": ")
+    self = cast(userdat, py_object).value
+    return self.printbuf(hbbuf, hbfont, prefix=msg.decode("utf-8") + ": ")
     return True
+
+gbuf = ctypes.create_string_buffer(128)
+def serialize(hbbuf, hbfont):
+    length = c_uint(0)
+    num_glyphs = hbng.hb_buffer_get_length(hbbuf)
+    info = hbng.hb_buffer_get_glyph_infos (hbbuf, byref(length))
+    if hbng.hb_buffer_has_positions(hbbuf):
+        pos = hbng.hb_buffer_get_glyph_positions (hbbuf, byref(length))
+    else:
+        pos = None
+    content = hbng.hb_buffer_get_content_type(hbbuf)
+    if content < 1 or content > 2:
+        return []
+    # print(hbbuf, info, content, num_glyphs, length)
+    res = []
+    for i in range(num_glyphs):
+        entry = {'type': content}
+        #g = ctypes.create_string_buffer(128)
+        if content == 2:
+            hbng.hb_font_glyph_to_string(hbfont, info[i].codepoint, gbuf, 128)
+            entry["g"] = gbuf.value.decode("utf-8")
+            entry["cl"] = info[i].cluster
+            entry["v1"] = "%08X" % info[i].var1
+            entry["v2"] = "%08X" % info[i].var2
+            if pos is not None:
+                entry["dx"] = pos[i].x_offset
+                entry["dy"] = pos[i].y_offset
+                entry["ax"] = pos[i].x_advance
+                entry["ay"] = pos[i].y_advance
+                entry["v"] = "%08X" % pos[i].var
+        elif content == 1:
+            entry["u"] = "U+%04X" % info[i].codepoint
+            entry["cl"] = info[i].cluster
+            entry["v1"] = "%08X" % info[i].var1
+            entry["v2"] = "%08X" % info[i].var2
+        res.append(entry)
+    return res
+
+def glyph_text(glyph):
+    if glyph['type'] == 1:  # Unicode
+        return "[{u}={cl}|{v1},{v2}]".format(**glyph)
+    elif "dx" in glyph:
+        return "[{g}={cl}+{ax},{ay}@{dx},{dy}|{v1},{v2},{v}]".format(**glyph)
+    else:
+        return "[{g}={cl}|{v1},{v2}]".format(**glyph)
+
+def serialize_text(hbbuf, hbfont):
+    glyphs = serialize(hbbuf, hbfont)
+    res = ", ".join(glyph_text(g) for g in glyphs)
+    return (res, len(glyphs))
+
+class Trace(list):
+    bufstr = create_string_buffer(32768)
+
+    def __init__(self, callback):
+        self.callback = callback
+
+    def printbuf(self, hbbuf, hbfont, prefix=""):
+        #hbbuf = cast(hbbuf, c_void_p)
+        #hbfont = cast(hbfont, c_void_p)
+        res, numg = serialize_text(hbbuf, hbfont)
+        #res = str(hbng.hb_buffer_get_length(hbbuf))
+        #res = hbng.hb_buffer_serialize(hbbuf, 0, hblen, self.bufstr, 32767, None, hbfont, mode,  0)
+        out = prefix + res
+        self.append(out)
+        return numg
+
+    def trace(self, hbbuf, hbfont, msg, userdat):
+        return self.printbuf(hbbuf, hbfont, prefix=msg.decode("utf-8") + ": ")
 
 class Glyph(object) :
     def __init__(self, ginfo, position) :
@@ -288,7 +354,8 @@ class Buffer(object) :
 #            unicodefuncs = hbng.hb_glib_get_unicode_funcs()
 #            hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
         if kwds.get('trace', False):
-            hbng.hb_buffer_set_message_func(self.buffer, fnmessage(trace), 0, fndestroy(0))
+            self.trace = Trace(fnmessage(trace))
+            hbng.hb_buffer_set_message_func(self.buffer, self.trace.callback, c_void_p.from_buffer(py_object(self.trace)), fndestroy(0))
 
     def __del__(self) :
         hbng.hb_buffer_destroy(self.buffer)

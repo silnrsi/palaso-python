@@ -95,6 +95,8 @@ class HbFont(Font) :
             kw['dir'] = 1
         buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), **kw)
         buf.shape(self.font, shapers = self.shapers, feats = self.feats if feats is None else feats)
+        if kw.get('trace', False):
+            print("\n".join(buf.trace))
         res = []
         clus = []
         x = 0
