@@ -312,7 +312,7 @@ def FtmlReader(infile, spliton=None) :
         l = s.get("lang", None)
         feats = {}
         for f in s.get("feats", "").split(","):
-            m = re.match("^\s*'([^']+)'\s+(\d|on|off)\s*$", f)
+            m = re.match(r"^\s*'([^']+)'\s+(\d|on|off)\s*$", f)
             if not m:
                 continue
             k = m.group(1)
