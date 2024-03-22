@@ -131,7 +131,15 @@ class UCD(list):
                     d[n] = "".join(chr(int(x, 16)) for x in d[n].split())
                 for n, v in enums.items():
                     if n in d:
-                        d[n] = v[d[n]]
+                        try:
+                            d[n] = v[d[n]]
+                        except KeyError:
+                            # add new allowed value to field:
+                            # print(f'adding "{d[n]}" to "{n}"')
+                            i = len(self.enums[n])
+                            self.enums[n].append(d[n])
+                            enums[n][d[n]] = i
+                            d[n] = i
                 dat = _Codepoint(**d)
                 firsti = int(firstcp, 16)
                 lasti = int(lastcp, 16)
@@ -155,6 +163,12 @@ class UCD(list):
         for k, v in enums.items():
             self.enums[k] = sorted(v.keys(), key=lambda x:v[x])
         return enums
+
+    def loadxml(self, filename):
+        """ Loads an additional UCDXML-formatted data file; commonly used for pipeline 
+            characters prior to inclusion in a Unicode release """
+        with open(filename) as inf:
+                self._loadxml(inf)
 
     def get(self, cp, key):
         """ Looks up a codepoint and returns the value for a given key. This
@@ -191,6 +205,9 @@ def _get_local_ucd():
     if local_ucd is None:
         local_ucd = UCD()
     return local_ucd
+
+def loadxml(filename):
+    _get_local_ucd().loadxml(filename)
 
 def get_ucd(cp, key):
     return _get_local_ucd().get(cp, key)
