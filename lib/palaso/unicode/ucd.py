@@ -22,9 +22,34 @@ For property abbreviation and value definitions, see Unicode Standard Annex #42 
 https://www.unicode.org/reports/tr42, especially section 4.4 Properties.
 
 When a new version of Unicode is released, an updated ucdata_pickle.bz2
-file should be created using the command
+file should be created using the command:
 
     python3 ucd.py ucd.all.flat.zip ucdata_pickle.bz2
+
+For characters not yet in Unicode, data for additional characters can 
+be temporarily appended to the bundled data:
+
+    from palaso.unicode.ucd import get_ucd, loadxml
+    loadxml("extra-ucd.xml")
+
+or, with the object interface:
+
+    from palaso.unicode.ucd import UCD
+    myucd = UCD().loadxml("extra-ucd.xml") 
+
+The named file must be coded in the same form as the "flat" UCD XML data, though the only 
+required character attributes are "cp" and anything needed by the calling process. For example:
+
+    <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+    <ucd xmlns="http://www.unicode.org/ns/2003/ucd/1.0">
+        <description>Some additional characters</description>
+        <repertoire>
+            <char cp="10EC2" age="16.0" gc="Lo" bc="AL" na="ARABIC LETTER DAL WITH TWO DOTS VERTICALLY BELOW"></char>
+            <char cp="10EC3" age="16.0" gc="Lo" bc="AL" na="ARABIC LETTER TAH WITH TWO DOTS VERTICALLY BELOW"></char>
+            <char cp="10EC4" age="16.0" gc="Lo" bc="AL" na="ARABIC LETTER KAF WITH TWO DOTS VERTICALLY BELOW"></char>
+        </repertoire>
+    </ucd>
+
 """
 
 import array, pickle
@@ -135,7 +160,6 @@ class UCD(list):
                             d[n] = v[d[n]]
                         except KeyError:
                             # add new allowed value to field:
-                            # print(f'adding "{d[n]}" to "{n}"')
                             i = len(self.enums[n])
                             self.enums[n].append(d[n])
                             enums[n][d[n]] = i
@@ -169,6 +193,7 @@ class UCD(list):
             characters prior to inclusion in a Unicode release """
         with open(filename) as inf:
                 self._loadxml(inf)
+        return self
 
     def get(self, cp, key):
         """ Looks up a codepoint and returns the value for a given key. This
