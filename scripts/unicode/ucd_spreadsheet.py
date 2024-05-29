@@ -38,7 +38,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser(description='Create CSV of Unicode data')
-    parser.add_argument('-a', '--alias', help='List of header names')
+    parser.add_argument('-a', '--alias', help='File of header names')
     parser.add_argument('ucd', help='UCD XML file to get (beta) data from')
     parser.add_argument('csv', help='Spreadsheet to create')
     args = parser.parse_args()
@@ -105,7 +105,8 @@ def read_header_names(alias_filename, names):
             alias = line.split(';')
             short = alias[0].strip()
             long = alias[1].strip()
-            names[short] = long.replace('_', ' ')
+            long_header = long.replace('_', ' ')
+            names[short] = f'{long_header} ({short})'
 
 
 def write_data(writer, ucd, fields):

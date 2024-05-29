@@ -16,9 +16,9 @@ the object interface:
     myucd = UCD(localfile="ucd.nounihan.flat.zip")   # localfile falls back to bundled data
     print(myucd.get(0x0041, 'scx'))
 
-The second parameter specifies the property to be queried and must be coded using the 
+The second parameter specifies the property to be queried and must be coded using the
 abbreviations that are defined in the XML expression of the Unicode Character Database.
-For property abbreviation and value definitions, see Unicode Standard Annex #42 at 
+For property abbreviation and value definitions, see Unicode Standard Annex #42 at
 https://www.unicode.org/reports/tr42, especially section 4.4 Properties.
 
 When a new version of Unicode is released, an updated ucdata_pickle.bz2
@@ -26,7 +26,7 @@ file should be created using the command:
 
     python3 ucd.py ucd.all.flat.zip ucdata_pickle.bz2
 
-For characters not yet in Unicode, data for additional characters can 
+For characters not yet in Unicode, data for additional characters can
 be temporarily appended to the bundled data:
 
     from palaso.unicode.ucd import get_ucd, loadxml
@@ -35,9 +35,9 @@ be temporarily appended to the bundled data:
 or, with the object interface:
 
     from palaso.unicode.ucd import UCD
-    myucd = UCD().loadxml("extra-ucd.xml") 
+    myucd = UCD().loadxml("extra-ucd.xml")
 
-The named file must be coded in the same form as the "flat" UCD XML data, though the only 
+The named file must be coded in the same form as the "flat" UCD XML data, though the only
 required character attributes are "cp" and anything needed by the calling process. For example:
 
     <?xml version="1.0" encoding="utf-8" standalone="yes"?>
@@ -60,7 +60,7 @@ __all__ = ['get_ucd']
 # Unicode data xml attributes
 _binfieldnames = """AHex Alpha Bidi_C Bidi_M Cased CE CI Comp_Ex CWCF CWCM CWKCF CWL CWT CWU
     Dash Dep DI Dia Ext Gr_Base Gr_Ext Gr_Link Hex Hyphen IDC Ideo IDS IDSB
-    IDST Join_C LOE Lower Math NChar OAlpha ODI OGr_Ext OIDC OIDS OLower OMath
+    IDST Join_C LOE Lower Math MCM NChar OAlpha ODI OGr_Ext OIDC OIDS OLower OMath
     OUpper Pat_Syn Pat_WS PCM QMark Radical RI SD STerm Term UIdeo Upper VS
     WSpace XIDC XIDS XO_NFC XO_NFD XO_NFKC XO_NFKD"""
 _binmap = dict((x, i) for i, x in enumerate(_binfieldnames.split()))
@@ -189,7 +189,7 @@ class UCD(list):
         return enums
 
     def loadxml(self, filename):
-        """ Loads an additional UCDXML-formatted data file; commonly used for pipeline 
+        """ Loads an additional UCDXML-formatted data file; commonly used for pipeline
             characters prior to inclusion in a Unicode release """
         with open(filename) as inf:
                 self._loadxml(inf)
@@ -222,7 +222,7 @@ class UCD(list):
         else:
             enumval = val
         return [cp for cp in range(len(self)) if self[cp] is not None and self[cp][key] == enumval]
-        
+
 
 local_ucd = None
 def _get_local_ucd():
@@ -248,7 +248,9 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(get_ucd(0x0041, "sc"))
         print(get_ucd(0x3400, "na"))
+        # print(get_ucd(0x0301, "MCM"))
         print(["{:04X}".format(cp) for cp in find_ucd("InSC", "Invisible_Stacker")])
+        print(["{:04X}".format(cp) for cp in find_ucd("MCM", True)])
     else:
         try:
             cp = int(sys.argv[1], 16)
