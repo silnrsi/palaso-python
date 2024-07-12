@@ -17,6 +17,7 @@ def main():
     parser.add_argument('langtags', help='Langtags JSON file')
     parser.add_argument('scriptfont', help='Script2Font CSV file')
     parser.add_argument('noto', help='Noto fonts repo')
+    parser.add_argument('notocjk', help='Noto CJK fonts repo')
     parser.add_argument('fontname', help='Name for autonym font')
     args = parser.parse_args()
 
@@ -29,37 +30,59 @@ def main():
         'Noto Serif Tangut',
         'Noto Sans Thaana'
     ]
+    broken = []
     for font_name in read_scriptfont(args.scriptfont):
-        if font_name == 'Noto Sans':
+        if font_name in ('Noto Sans', 'Noto Sans SC'):
             font_names.insert(0, font_name)
         elif font_name in broken:
             pass
         else:
             font_names.append(font_name)
 
-    # subset the fonts
     needed_codepoints = read_langtags(args.langtags)
-    subset_fonts = list()
+
+    # subset the fonts
+    needed_codepoints = make_font(needed_codepoints, font_names, args.noto, args.fontname)
+    needed_codepoints = make_font(needed_codepoints, font_names, args.notocjk, args.fontname, True)
+
+
+def make_font(needed_codepoints, font_names, noto_repo, fontname, CJK=False):
+
+    subset_fonts = dict()
     subset_options = fontTools.subset.Options()
     for font_name in font_names:
-        font_path = find_font(font_name)
-        font_file = os.path.join(args.noto, font_path)
+        script_name = font_name.split(' ')[-1]
+        font_path = find_font(font_name, script_name, CJK)
+        font_file = os.path.join(noto_repo, font_path)
         if os.path.exists(font_file):
             needed_codepoints, subset_font = subset(needed_codepoints, font_file, subset_options)
             if subset_font:
-                subset_fonts.append(subset_font)
+                extension = os.path.splitext(font_file)[1]
+                subset_fonts[script_name] = subset_font
 
     # report what codepoints could not be found
     for missing_codepoint in sorted(needed_codepoints):
         script = fontTools.unicodedata.script(missing_codepoint)
         print(f'missing U+{missing_codepoint:04X} {script}')
 
-    # merge the subseted fonts
-    merge_options = fontTools.merge.Options()
-    merger = fontTools.merge.Merger(options=merge_options)
-    autonym_font = merger.merge(subset_fonts)
-    outfile = f'{args.fontname}-Regular.ttf'
-    fontTools.subset.save_font(autonym_font, outfile, subset_options)
+    # output the subseted fonts
+    if CJK:
+        for script_code, subset_font in subset_fonts.items():
+            outfile = f'{fontname}{script_code}-Regular{extension}'
+            fontTools.subset.save_font(subset_font, outfile, subset_options)
+    else:
+        subset_fontfiles = list()
+        for script_code, subset_font in subset_fonts.items():
+            subset_fontfile = io.BytesIO()
+            fontTools.subset.save_font(subset_font, subset_fontfile, subset_options)
+            subset_fontfiles.append(subset_fontfile)
+        merge_options = fontTools.merge.Options(drop_tables=["vmtx", "vhea", "MATH"])
+        merger = fontTools.merge.Merger(options=merge_options)
+        autonym_font = merger.merge(subset_fontfiles)
+        outfile = f'{fontname}-Regular{extension}'
+        fontTools.subset.save_font(autonym_font, outfile, subset_options)
+
+    return needed_codepoints
 
 
 def read_langtags(filename):
@@ -89,10 +112,12 @@ def read_scriptfont(filename):
                     break
 
 
-def find_font(noto_name):
+def find_font(noto_name, script_name, CJK=False):
     notoname = noto_name.replace(' ', '')
-    fontpath = f'fonts/{notoname}/unhinted/ttf/{notoname}-Regular.ttf'
-    return fontpath
+    if CJK:
+        return f'Sans/SubsetOTF/{script_name}/{notoname}-Regular.otf'
+    else:
+        return f'fonts/{notoname}/unhinted/ttf/{notoname}-Regular.ttf'
 
 
 def subset(needed_codepoints, font_file, options):
@@ -102,11 +127,9 @@ def subset(needed_codepoints, font_file, options):
     if not codepoints_from_font:
         return needed_codepoints, None
     subsetter = fontTools.subset.Subsetter(options=options)
-    font = fontTools.subset.load_font(font_file, options)
+    subset_font = fontTools.subset.load_font(font_file, options)
     subsetter.populate(unicodes=codepoints_from_font)
-    subsetter.subset(font)
-    subset_font = io.BytesIO()
-    fontTools.subset.save_font(font, subset_font, options)
+    subsetter.subset(subset_font)
     needed_codepoints = needed_codepoints - codepoints_from_font
     return needed_codepoints, subset_font
 
