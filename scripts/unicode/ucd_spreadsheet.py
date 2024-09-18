@@ -4,7 +4,7 @@
 
 To create an updated spreadsheet for new versions of Unicode, run
 
-./ucd_spreadsheet -a PropertyAliases.txt ucd.nounihan.flat.zip ucd-15.0.0.csv
+./ucd_spreadsheet -a PropertyAliases.txt ucd.nounihan.flat.zip ucd.csv
 
 Then with LibreOffice Calc, do the following:
 
@@ -22,12 +22,10 @@ Then with LibreOffice Calc, do the following:
 - Auto filter headings
 - Change font to Arial
 - Change language to US English
-- convert to Excel (soffice --convert-to xlsx ucd-15.0.0.ods)
+- convert to Excel (soffice --convert-to xlsx ucd.ods)
 - In both Excel (for .xlsx) and LibreOffice Calc (for .ods)
   - Freeze columns (USV, Glyph, and Name) and row (headings)
-- mkdir Unicode-15-0-0-UCD
-- mv ucd-*.* Unicode-15-0-0-UCD
-- zip -r Unicode-15-0-0-UCD Unicode-15-0-0-UCD
+- Upload to https://github.com/silnrsi/unicode-resources/tree/main/ucd-spreadsheet
 """
 
 from palaso.unicode.ucd import UCD
