@@ -17,6 +17,7 @@ tables = {
     'hbot' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat'),
     'icu' : ('Gloc', 'Glat', 'Silf', 'Sill', 'Feat')
 }
+tables['uhb'] = tables['ot']
 
 def roundfloat(f, res) :
     try :
@@ -371,6 +372,8 @@ if opts.script is None : opts.script = []
 if not len(opts.script) : opts.script.append(0)
 if not opts.rtl : opts.rtl = 0
 if not opts.engine or not len(opts.engine) : opts.engine = ['gr']
+if os.getenv('CTR_UHB') == '1':
+    opts.engine = [engine.replace('ot', 'uhb') for engine in opts.engine]
 if sys.version_info.major > 2:
     outfile = open(opts.output, "w") if opts.output else sys.stdout
 elif opts.output :

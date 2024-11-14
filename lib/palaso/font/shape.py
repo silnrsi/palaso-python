@@ -1,5 +1,6 @@
 
 import palaso.font.graphite as gr
+import uharfbuzz as uhb
 import palaso.font.hbng as hb
 #import palaso.font.icule as icule
 import freetype as ft
@@ -73,6 +74,61 @@ class GrFont(Font) :
         if includewidth : res.append((None, seg.advance))
         return res
 
+
+class UHarfBuzzFont(Font) :
+    def __init__(self, fname, size, rtl, feats=None, script=0, lang=0):
+        super(UHarfBuzzFont, self).__init__(fname, size, rtl)
+        blob = uhb.Blob.from_file_path(fname)
+        face = uhb.Face(blob)
+        self.font = uhb.Font(face)
+        self.script = script
+        self.lang = 'c' if lang == 0 else lang
+        self.rtl = rtl
+        self.features = {} if feats is None else feats
+
+    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, **kw):
+        if not len(text):
+            return [(None, (0, 0))]
+
+        buf = uhb.Buffer()
+        buf.add_str(text)
+
+        # Not needed since we set the script and direction separately
+        # buf.guess_segment_properties()
+
+        # Set script
+        buf.set_script_from_ot_tag(self.script if script is None else script)
+
+        # Set language
+        # Sets the language with a modifier like -x-hbot-<digits>
+        # buf.set_language_from_ot_tag(self.lang if lang is None else lang)
+        # Simpler and gives better results
+        buf.language = self.lang if lang is None else lang
+
+        # Set direction
+        buf.direction = 'rtl' if self.rtl else 'ltr'
+
+        # Set features
+        features = self.features if feats is None else feats
+
+        uhb.shape(self.font, buf, features)
+        res = []
+        clus = []
+        x = 0
+        y = 0
+        infos = buf.glyph_infos
+        positions = buf.glyph_positions
+        for info, position in zip(infos, positions):
+            gid = info.codepoint
+            res.append((gid, (x + position.x_offset, y + position.y_offset), 0))
+            clus.append(info.cluster)
+            x += position.x_advance
+            y += position.y_advance
+        if includewidth:
+            res.append((None, (x, y)))
+        return res
+
+
 class HbFont(Font) :
     def __init__(self, fname, size, rtl, feats = None, script = 0, lang = 0) :
         super(HbFont, self).__init__(fname, size, rtl)
@@ -144,6 +200,7 @@ class IcuFont(Font) :
 
 _shapers = {
     'gr' : GrFont,
+    'uhb' : UHarfBuzzFont,
     'ot' : HbOTFont,
     'hb' : HbFont
 #    'icu' : IcuFont
