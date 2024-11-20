@@ -83,10 +83,10 @@ class UHarfBuzzFont(Font) :
         self.font = uhb.Font(face)
         self.script = script
         self.lang = 'c' if lang == 0 else lang
-        self.rtl = rtl
+        # self.rtl = rtl
         self.features = {} if feats is None else feats
 
-    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, **kw):
+    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, rtl=False, **kw):
         if not len(text):
             return [(None, (0, 0))]
 
@@ -100,13 +100,15 @@ class UHarfBuzzFont(Font) :
         buf.set_script_from_ot_tag(self.script if script is None else script)
 
         # Set language
-        # Sets the language with a modifier like -x-hbot-<digits>
+
+        ## Sets the language with a modifier like -x-hbot-<digits>
         # buf.set_language_from_ot_tag(self.lang if lang is None else lang)
-        # Simpler and gives better results
+
+        ## Simpler and gives better results
         buf.language = self.lang if lang is None else lang
 
         # Set direction
-        buf.direction = 'rtl' if self.rtl else 'ltr'
+        buf.direction = 'rtl' if rtl else 'ltr'
 
         # Set features
         features = self.features if feats is None else feats
@@ -124,6 +126,18 @@ class UHarfBuzzFont(Font) :
             clus.append(info.cluster)
             x += position.x_advance
             y += position.y_advance
+        if rtl:
+            temp = []
+            last = 0
+            currclus = -1
+            for i in range(len(clus)) :
+                if clus[i] != currclus :
+                    if currclus >= 0 :
+                        temp.extend(reversed(res[last:i]))
+                        last = i
+                    currclus = clus[i]
+            temp.extend(reversed(res[last:]))
+            res = list(reversed(temp))
         if includewidth:
             res.append((None, (x, y)))
         return res
@@ -143,13 +157,13 @@ class HbFont(Font) :
         self.shapers = None
         self.script = script
         self.lang = lang
-        self.rtl = rtl
+        # self.rtl = rtl
         self.feats = {} if feats is None else feats
 
-    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, **kw) :
-        if kw.get('dir', 0) == 0 and self.rtl:
-            kw['dir'] = 1
-        buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), **kw)
+    def glyphs(self, text, includewidth = False, lang=None, feats=None, script=None, rtl=False, **kw) :
+        # if kw.get('dir', 0) == 0 and self.rtl:
+        #     kw['dir'] = 1
+        buf = hb.Buffer(text, script = (self.script if script is None else script), lang = (self.lang if lang is None else lang), rtl=rtl, **kw)
         buf.shape(self.font, shapers = self.shapers, feats = self.feats if feats is None else feats)
         if kw.get('trace', False):
             print("\n".join(buf.trace))
@@ -162,7 +176,7 @@ class HbFont(Font) :
             clus.append(g.cluster)
             x += g.advance[0]
             y += g.advance[1]
-        if self.rtl :
+        if rtl:
             temp = []
             last = 0
             currclus = -1
@@ -209,4 +223,3 @@ _shapers = {
 def make_shaper(engine, fname, size, rtl, feats = {}, script = 0, lang = 0) :
     res = _shapers[engine](fname, size, rtl, feats, script, lang)
     return res
-

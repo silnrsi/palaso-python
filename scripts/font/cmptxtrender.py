@@ -295,18 +295,18 @@ outputtypes = {
     'json' : JsonLog
 }
 
-def LineReader(infile, spliton=None) :
+def LineReader(infile, spliton=None, rtl=False):
     f = codecs.open(infile, encoding="utf_8")
     for l in f.readlines() :
         #l = l.rstrip("\n")
         l = l[:-1]
         if spliton is not None :
-            res = (None, l.split(spliton), None, None, 0)
+            res = (None, l.split(spliton), None, None, rtl)
         else :
-            res = (None, (l, ), None, None, 0)
+            res = (None, (l, ), None, None, rtl)
         yield res
 
-def FtmlReader(infile, spliton=None) :
+def FtmlReader(infile, spliton=None, rtl=False):
     etree = parse(infile)
     styles = {}
     for s in etree.iter('style'):
@@ -418,12 +418,12 @@ for i in range(len(opts.infonts)) :
         opts.script.append(opts.script[-1])
     fonts.append(make_shaper(opts.engine[i], opts.infonts[i], 0, opts.rtl, feats, opts.script[i], opts.lang))
     tts.append(TTFont(opts.infonts[i].encode('utf_8')))
-reader = texttypes[opts.texttype](opts.text, spliton)
+reader = texttypes[opts.texttype](opts.text, spliton, opts.rtl)
 
 count = 0
 errors = 0
 log = None
-for label, words, lang, feats, direction in reader :
+for label, words, lang, feats, rtl in reader :
     if words[0] is None : continue
     count += 1
     wcount = 0
@@ -433,12 +433,12 @@ for label, words, lang, feats, direction in reader :
             sys.stdout.write("{}\r".format(wcount))
             sys.stdout.flush()
             print(s.encode("unicode_escape"))
-        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, trace=opts.verbose, dir=direction)]]
+        gls = [[name(tts[0], x) for x in fonts[0].glyphs(s, includewidth=True, lang=lang, feats=feats, rtl=rtl, trace=opts.verbose)]]
         if gls[-1][-1][0] is None:
             gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
         logme = len(fonts) < 2
         for i in range(1, len(fonts)) :
-            gls.append([name(tts[i], x) for x in fonts[i].glyphs(s, includewidth=True, lang=lang, feats=feats, dir=direction)])
+            gls.append([name(tts[i], x) for x in fonts[i].glyphs(s, includewidth=True, lang=lang, feats=feats, rtl=rtl)])
             if gls[-1][-1][0] is None:
                 gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
             if gls[-1] != gls[0]:
