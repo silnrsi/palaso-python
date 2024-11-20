@@ -93,7 +93,7 @@ def strpoint(p) :
     return "("+",".join(map(ftostr, p))+")"
 
 class HTMLLog(object) :
-    def __init__(self, f, fpaths, args, inputs) :
+    def __init__(self, f, fpaths, args, inputs, versions):
         self.out = f
         self.opts = args
         temps = ("""
@@ -143,7 +143,7 @@ class HTMLLog(object) :
 <table>
 """.format( strs,
                 args.text,
-                args.engine, 
+                [f'{engine}: {version}' for engine, version in zip(args.engine, versions)],
                 args.lang if args.lang != 0 else '', 
                 args.script if args.script != 0 else '', 
                 ", ".join(args.feat if args.feat is not None else [])))
@@ -230,7 +230,7 @@ class HTMLLog(object) :
         self.out.write("</body></html>\n");
 
 class JsonLog(object) :
-    def __init__(self, f, fpaths, args, inputs) :
+    def __init__(self, f, fpaths, args, inputs, versions):
         self.out = f
         self.opts = args
         self.out.write("{\n")
@@ -411,12 +411,15 @@ if opts.glyphdata:
 
 fonts = []
 tts = []
+versions = []
 for i in range(len(opts.infonts)) :
     while len(opts.engine) <= i :
         opts.engine.append(opts.engine[-1])
     while len(opts.script) <= i :
         opts.script.append(opts.script[-1])
-    fonts.append(make_shaper(opts.engine[i], opts.infonts[i], 0, opts.rtl, feats, opts.script[i], opts.lang))
+    shaper = make_shaper(opts.engine[i], opts.infonts[i], 0, opts.rtl, feats, opts.script[i], opts.lang)
+    fonts.append(shaper)
+    versions.append(shaper.version())
     tts.append(TTFont(opts.infonts[i].encode('utf_8')))
 reader = texttypes[opts.texttype](opts.text, spliton, opts.rtl)
 
@@ -445,7 +448,7 @@ for label, words, lang, feats, rtl in reader :
                 logme = True
         if logme :
             if log is None :
-                log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts)
+                log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts, versions)
             bases = [(cmaplookup(tts[0], x), (0,0)) for x in s]
             log.logentry(label, count, wcount, s, gls, bases, lang, feats)
             errors += 1

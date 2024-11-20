@@ -74,6 +74,10 @@ class GrFont(Font) :
         if includewidth : res.append((None, seg.advance))
         return res
 
+    def version(self):
+        (major, minor, debug) = gr.grversion()
+        return f'{major}.{minor}.{debug}'
+
 
 class UHarfBuzzFont(Font) :
     def __init__(self, fname, size, rtl, feats=None, script=0, lang=0):
@@ -142,6 +146,9 @@ class UHarfBuzzFont(Font) :
             res.append((None, (x, y)))
         return res
 
+    def version(self):
+        return uhb.version_string()
+
 
 class HbFont(Font) :
     def __init__(self, fname, size, rtl, feats = None, script = 0, lang = 0) :
@@ -190,6 +197,10 @@ class HbFont(Font) :
             res = list(reversed(temp))
         if includewidth : res.append((None, (x, y)))
         return res
+
+    def version(self):
+        return hb.version_string
+
 
 class HbOTFont(HbFont) :
     def __init__(self, fname, size, rtl, feats = {}, script = 0, lang = 0) :
