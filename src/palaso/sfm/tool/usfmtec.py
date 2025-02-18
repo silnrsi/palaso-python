@@ -316,6 +316,8 @@ def transduce(fname, opts):
 
 
 def main():
+    global parser
+
     parser = optparse.OptionParser(
         usage=f'%prog [options] <SFM FILE>\n{__doc__}')
     parser.set_defaults(
