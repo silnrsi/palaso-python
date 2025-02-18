@@ -4,7 +4,7 @@ Convert the publishable vernacular text in a USFM file according to a given
 .tec mapping file. In addition, support dictionary replacement, and automatic
 case generation.
 '''
-__version__ = '0.2.1'
+__version__ = '0.2.3'
 __date__ = '5 March 2020'
 __author__ = 'Martin Hosken <martin_hosken@sil.org>'
 __credits__ = '''\
@@ -71,11 +71,13 @@ def aswords(txt):
     return res
 
 
-class notec(object):
+class notec(Converter):
+    def __init__(self): pass
+
     def convert(self, txt, **kw): return txt
 
 
-class pyconverter(object):
+class pyconverter(Converter):
     def __init__(self, fname, fnname=None):
         self.vars = {}
         exec(compile(open(fname, "rb").read(), fname, 'exec'), self.vars)
@@ -90,7 +92,8 @@ class pyconverter(object):
 
 
 class usfm_transducer(object):
-
+    enc: Converter
+    
     def __init__(self, case='', tec=notec(), opts={}):
         self.caps = [1]
         self.oquotes = uni_unescape(opts.openquotes)

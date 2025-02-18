@@ -66,7 +66,7 @@ class Mapping(bytes):
         return bytes(buf[:nlen]).decode('utf8')
 
     def __str__(self) -> str:
-        return self.lhsName + ' <-> ' + self.rhsName
+        return self.lhsName + ' <-> ' + self.rhsName # type: ignore These are dynamically looked up.
 
     def __repr__(self) -> str:
         return (f'Mapping({self._repr_args})' if hasattr(self, '_repr_args')
@@ -163,7 +163,7 @@ class Converter(object):
         # This looks like a nasty hack because it is. Sorry
         cons, outs, lhc = uc.args
         _engine.resetConverter(self._converter)
-        name = (self.lhsName + '<->' + self.rhsName).lower()
+        name = (self.lhsName + '<->' + self.rhsName).lower() # type: ignore These are dynamically looked up.
         errtype = (UnicodeEncodeError if Flags.unicode in self.sourceFlags
                    else UnicodeDecodeError)
         if Flags.unicode in self.sourceFlags:
@@ -189,6 +189,7 @@ class Converter(object):
             if isinstance(input, bytes):
                 raise TypeError(
                     "source is type 'bytes' but type 'str' is expected")
+            assert isinstance(input, str)
             data: bytes = _unicode_encoder(input)[0]
         else:
             if isinstance(input, str):

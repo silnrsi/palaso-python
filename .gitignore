@@ -2,7 +2,7 @@
 *~
 .vscode
 *.code-workspace
-/venv/
+.venv
 
 # Python runtime caching
 __pycache__
