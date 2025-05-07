@@ -364,6 +364,7 @@ parser.add_argument("-g","--glyphdata",action="store",help="CSV file for glyph n
 parser.add_argument("--copy",help="Make a conditional copy of infont1 to the given directory relative to the output directory so that the html does not have to look up in the filesystem hierarchy to find the font. The relative directory is suffixed by the font index (1, 2)")
 parser.add_argument("--outputtype",help="Type of output file [*html, json]")
 parser.add_argument("--texttype",help="Type of text input file else taken from text file extension")
+parser.add_argument("-n","--nocompare",action="store_true",help="Show all shaping results, even if they are the same")
 parser.add_argument("-V","--verbose",action="store_true",help="Give progress indicator")
 opts = parser.parse_args()
 
@@ -372,7 +373,7 @@ if opts.script is None : opts.script = []
 if not len(opts.script) : opts.script.append(0)
 if not opts.rtl : opts.rtl = 0
 if not opts.engine or not len(opts.engine) : opts.engine = ['gr']
-if os.getenv('CTR_UHB') == '1':
+if not os.getenv('CTR_UHB') == '0':
     opts.engine = [engine.replace('ot', 'uhb') for engine in opts.engine]
 if sys.version_info.major > 2:
     outfile = open(opts.output, "w") if opts.output else sys.stdout
@@ -446,7 +447,7 @@ for label, words, lang, feats, rtl in reader :
                 gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
             if gls[-1] != gls[0]:
                 logme = True
-        if logme :
+        if logme or opts.nocompare:
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts, versions)
             bases = [(cmaplookup(tts[0], x), (0,0)) for x in s]
