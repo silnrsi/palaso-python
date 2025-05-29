@@ -447,6 +447,45 @@ for label, words, lang, feats, rtl in reader :
                 gls[-1][-1] = ('_adv_', gls[-1][-1][1], gls[-1][-1][2])
             if gls[-1] != gls[0]:
                 logme = True
+
+                # For customized findng of differences,
+                # comment out the above line and uncomment the following if/else/for/if block.
+
+                # glyphsA = gls[-1]
+                # glyphsB = gls[0]
+
+                # if len(glyphsA) != len(glyphsB):
+                #     # Different number of glyphs in the string, could be caused by
+                #     # a ligature that is formed in one font but not another.
+                #     logme = True
+                # else:
+                #     for glyph_index in range(len(glyphsA)):
+                #         glyphA = glyphsA[glyph_index]
+                #         glyphB = glyphsB[glyph_index]
+
+                #         nameA = glyphA[0]
+                #         nameB = glyphB[0]
+                #         if nameA != nameB:
+                #             # Different glyph names, could be caused by
+                #             # different substitution rules in the two fonts.
+                #             logme = True
+                #             break
+
+                #         xA = glyphA[1]
+                #         xB = glyphB[1]
+                #         if xA != xB: # abs(xA - xB) > 50:
+                #             # Compare the x positions of the glyphs.
+                #             # The commented out condition above implements
+                #             # a threshold to ignore small differences.
+                #             logme = True
+                #             break
+
+                #         yA = glyphA[2]
+                #         yB = glyphB[2]
+                #         if yA != yB:
+                #             # Compare the y positions of the glyphs.
+                #             logme = True
+                #             break
         if logme or opts.nocompare:
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts, versions)
