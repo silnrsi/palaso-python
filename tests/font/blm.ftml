@@ -4,23 +4,84 @@
   <head>
     <comment>Background colors: light red: a character is missing from UFO; else light orange: includes a character from Unicode version 15.0 or later; else light green: a character is new in this version of the font</comment>
     <fontscale>250</fontscale>
-    <fontsrc label="4.2">url(../references/v4.200/Lateef-Regular.ttf)</fontsrc>
-    <fontsrc label="ref">url(../references/Lateef-Regular.ttf)</fontsrc>
-    <title>Direction Test</title>
-    <widths string="30%"/>
+    <fontsrc label="Harmattan GR Ref">url(../references/Harmattan-Regular.ttf)</fontsrc>
+    <fontsrc label="Harmattan OT Ref">url(../references/Harmattan-Regular_ot_arab.ttf)</fontsrc>
+    <fontsrc label="Harmattan GR">url(../results/Harmattan-Regular.ttf)</fontsrc>
+    <fontsrc label="Harmattan OT">url(../results/tests/ftml/fonts/Harmattan-Regular_ot_arab.ttf)</fontsrc>
+    <title>BLM</title>
+    <widths string="20%"/>
   </head>
-  <testgroup>
-    <test label="b-l-m 1-2-3 (RTL)" rtl="True">
-      <string>\u0628\u0644\u0645 \u06f1\u06f2\u06f3</string>
+  <testgroup background="#f0f0f0" label="Rendering Check">
+    <test label="check">
+      <string>RenderingUnknown</string>
     </test>
-    <test label="b-l-m 1-2-3">
-      <string>\u0628\u0644\u0645 \u06f1\u06f2\u06f3</string>
+  </testgroup>
+  <testgroup label="Arab RTL">
+    <test label="b-l-m arabic 1-2-3 {RTL}" rtl="True">
+      <string>\u0628\u0644\u0645 \u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F \u06f1\u06f2\u06f3</string>
     </test>
-    <test label="Blm 123 (RTL)" rtl="True">
-      <string>Blm 123</string>
+    <test label="(b-l-m] (arabic] (1-2-3] {RTL}" rtl="True">
+      <string>(\u0628\u0644\u0645] (\u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F] (\u06f1\u06f2\u06f3]</string>
     </test>
-    <test label="Blm 123">
-      <string>Blm 123</string>
+    <test label="(b-l-m] {RTL}" rtl="True">
+      <string>(\u0628\u0644\u0645]</string>
+    </test>
+    <test label="(arabic] {RTL}" rtl="True">
+      <string>(\u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F]</string>
+    </test>
+    <test label="(1-2-3] {RTL}" rtl="True">
+      <string>(\u06f1\u06f2\u06f3]</string>
+    </test>
+  </testgroup>
+  <testgroup label="Arab">
+    <test label="b-l-m arabic 1-2-3">
+      <string>\u0628\u0644\u0645 \u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F \u06f1\u06f2\u06f3</string>
+    </test>
+    <test label="(b-l-m] (arabic] (1-2-3]">
+      <string>(\u0628\u0644\u0645] (\u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F] (\u06f1\u06f2\u06f3]</string>
+    </test>
+    <test label="(b-l-m]">
+      <string>(\u0628\u0644\u0645]</string>
+    </test>
+    <test label="(arabic]">
+      <string>(\u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F]</string>
+    </test>
+    <test label="(1-2-3]">
+      <string>(\u06f1\u06f2\u06f3]</string>
+    </test>
+  </testgroup>
+  <testgroup label="Latn RTL">
+    <test label="Blm Arabic 123 {RTL}" rtl="True">
+      <string>Blm Arabic 123</string>
+    </test>
+    <test label="(Blm] (Arabic] (123] {RTL}" rtl="True">
+      <string>(Blm] (Arabic] (123]</string>
+    </test>
+    <test label="(Blm] {RTL}" rtl="True">
+      <string>(Blm]</string>
+    </test>
+    <test label="(Arabic] {RTL}" rtl="True">
+      <string>(Arabic]</string>
+    </test>
+    <test label="(123] {RTL}" rtl="True">
+      <string>(123]</string>
+    </test>
+  </testgroup>
+  <testgroup label="Latn">
+    <test label="Blm Arabic 123">
+      <string>Blm Arabic 123</string>
+    </test>
+    <test label="(Blm] (Arabic] (123]">
+      <string>(Blm] (Arabic] (123]</string>
+    </test>
+    <test label="(Blm]">
+      <string>(Blm]</string>
+    </test>
+    <test label="(Arabic]">
+      <string>(Arabic]</string>
+    </test>
+    <test label="(123]">
+      <string>(123]</string>
     </test>
   </testgroup>
 </ftml>

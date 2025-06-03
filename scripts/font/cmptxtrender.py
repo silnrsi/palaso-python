@@ -168,13 +168,14 @@ class HTMLLog(object) :
             res.append(u)
         return ["".join(x) for x in zip(*res)]
 
-    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases, lang, feats) :
+    def logentry(self, label, linenumber, wordnumber, string, gglyphs, bases, lang, feats, rtl) :
         # Language from command line arguments
         langstr = " lang='{}'".format(self.opts.lang) if self.opts.lang else ""
 
-        # Language and user features from FTML files
+        # Language, user features, and direction from FTML files
         features = [] # for formatting the string with features
         styles = [] # for displaying the styles (language and/or features) used
+        direction = 'dir=rtl ' if rtl else ''
         if lang:
             langstr = " lang='{}'".format(lang)
             styles.append(lang)
@@ -190,7 +191,7 @@ class HTMLLog(object) :
         if style == '' and langstr:
             style = self.opts.lang
 
-        self.out.write("  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td class='text1'{3}{6}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, "<br/>".join(x[0] for x in bases), label, featstr))
+        self.out.write("  <tr><td>{5} {0}.{1}</td><td class='eq'>{4}</td><td {7}class='text1'{3}{6}>{2}</td>\n".format(linenumber, wordnumber, string, langstr, "<br/>".join(x[0] for x in bases), label, featstr, direction))
         if len(gglyphs) < 2 :
             self.out.write("    <td class='eq'>{0}</td>\n".format("<br/>".join("{}:\t({},{})".format(x[0], ftostr(x[1]), ftostr(x[2])) for x in gglyphs[0])))
             self.out.write("    </tr>\n")
@@ -222,7 +223,7 @@ class HTMLLog(object) :
                         rprev = gglyphs[l][i-o[1]+o[3]]
             for inf in zip(*info) :
                 self.out.write("    <td class='eq'>{}</td>\n".format("<br/>".join(inf)))
-            self.out.write("    <td class='text{0}'{2}{3}>{1}</td>\n".format(l+1, string, langstr, featstr))
+            self.out.write("    <td {4}class='text{0}'{2}{3}>{1}</td>\n".format(l+1, string, langstr, featstr, direction))
             self.out.write("    <td>{0}</td>\n".format(style))
         self.out.write("  </tr>\n")
 
@@ -459,9 +460,8 @@ for label, words, lang, feats, rtl in reader :
                 #     # a ligature that is formed in one font but not another.
                 #     logme = True
                 # else:
-                #     for glyph_index in range(len(glyphsA)):
-                #         glyphA = glyphsA[glyph_index]
-                #         glyphB = glyphsB[glyph_index]
+                #     for glyph_pair in zip(glyphsA, glyphsB):
+                #         glyphA, glyphB = glyph_pair
 
                 #         nameA = glyphA[0]
                 #         nameB = glyphB[0]
@@ -490,7 +490,7 @@ for label, words, lang, feats, rtl in reader :
             if log is None :
                 log = outputtypes.get(opts.outputtype, HTMLLog)(outfile, fpaths, opts, opts.infonts, versions)
             bases = [(cmaplookup(tts[0], x), (0,0)) for x in s]
-            log.logentry(label, count, wcount, s, gls, bases, lang, feats)
+            log.logentry(label, count, wcount, s, gls, bases, lang, feats, rtl=rtl)
             errors += 1
 if log is not None : log.logend()
 outfile.close()
