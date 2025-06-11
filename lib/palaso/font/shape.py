@@ -97,11 +97,16 @@ class UHarfBuzzFont(Font) :
         buf = uhb.Buffer()
         buf.add_str(text)
 
-        # Not needed since we set the script and direction separately
-        # buf.guess_segment_properties()
+        buf.guess_segment_properties()
+
+        # Set direction
+        # if rtl:
+        #     buf.direction = 'rtl'
+        # else:
+        #     buf.guess_segment_properties()
 
         # Set script
-        buf.set_script_from_ot_tag(self.script if script is None else script)
+        # buf.set_script_from_ot_tag(self.script if script is None else script)
 
         # Set language
 
@@ -110,9 +115,6 @@ class UHarfBuzzFont(Font) :
 
         ## Simpler and gives better results
         buf.language = self.lang if lang is None else lang
-
-        # Set direction
-        buf.direction = 'rtl' if rtl else 'ltr'
 
         # Set features
         features = self.features if feats is None else feats
@@ -130,7 +132,7 @@ class UHarfBuzzFont(Font) :
             clus.append(info.cluster)
             x += position.x_advance
             y += position.y_advance
-        if rtl:
+        if buf.direction == 'rtl':
             temp = []
             last = 0
             currclus = -1

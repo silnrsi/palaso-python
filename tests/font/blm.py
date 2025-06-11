@@ -43,11 +43,16 @@ texts = [
 
 bookends = (False, True)
 
-for text in texts:
-    for bookend in bookends:
-        if bookend:
-            text = '(' + text + ']'
-        shape(text)
+# for text in texts:
+#     for bookend in bookends:
+#         if bookend:
+#             text = '(' + text + ']'
+#         shape(text)
 
-shape(texts[0], script='Arab', direction='ltr')
-shape(texts[2], script='Arab', direction='rtl')
+for text in texts:
+    for direction in ('rtl', 'ltr'):
+        for script in ('Arab', 'Latn'):
+            shape(text, script=script, direction=direction)
+
+shape(texts[0] + ' ' + texts[2])
+shape('\u0627\u064E\u0644\u0652\u0639\u064E\u0631\u064E\u0628\u0650\u064A\u064E\u0651\u0629\u064F')

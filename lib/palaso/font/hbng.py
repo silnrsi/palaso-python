@@ -67,7 +67,7 @@ fn('hb_buffer_get_length', c_int, c_void_p)
 fn('hb_buffer_get_glyph_infos', POINTER(GlyphInfo), c_void_p, POINTER(c_uint))
 fn('hb_buffer_get_glyph_positions', POINTER(GlyphPosition), c_void_p, POINTER(c_uint))
 fn('hb_buffer_has_positions', c_bool, c_void_p)
-# fn('hb_buffer_guess_segment_properties', None, c_void_p)
+fn('hb_buffer_guess_segment_properties', None, c_void_p)
 fn('hb_buffer_serialize', c_int, c_void_p, c_uint, c_uint, c_char_p, c_uint, POINTER(c_uint), c_void_p, c_uint, c_uint)
 fn('hb_buffer_set_message_func', None, c_void_p, fnmessage, c_void_p, fndestroy)
 
@@ -336,15 +336,18 @@ class Buffer(object) :
         length = len(self.text)
         self.buffer = hbng.hb_buffer_create(len(text))
         hbng.hb_buffer_add_utf8(self.buffer, self.text, length, 0, length)
-        if script is not None and script != 0:
-            tag = hbng.hb_tag_from_string(script.encode("utf_8"))
-            script = hbng.hb_ot_tag_to_script(tag) or -1
-            hbng.hb_buffer_set_script(self.buffer, script)
+        # if script is not None and script != 0:
+        #     tag = hbng.hb_tag_from_string(script.encode("utf_8"))
+        #     script = hbng.hb_ot_tag_to_script(tag) or -1
+        #     hbng.hb_buffer_set_script(self.buffer, script)
         if lang is not None and lang != 0:
             tlang = hbng.hb_language_from_string(lang.encode("utf_8"), len(lang))
             hbng.hb_buffer_set_language(self.buffer, tlang)
-        direction = 5 if rtl else 4
-        hbng.hb_buffer_set_direction(self.buffer, direction)
+        # if rtl:
+        #     hbng.hb_buffer_set_direction(self.buffer, 5)
+        # else:
+        #     hbng.hb_buffer_guess_segment_properties(self.buffer)
+        hbng.hb_buffer_guess_segment_properties(self.buffer)
         (major, minor, macro) = [int(s) for s in version_string.split('.')] if version_string else (0, 0, 0)
         if unicodefuncs :
             hbng.hb_buffer_set_unicode_funcs(unicodefuncs)
