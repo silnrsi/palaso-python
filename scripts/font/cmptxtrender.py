@@ -148,7 +148,7 @@ class HTMLLog(object) :
                 args.script if args.script != 0 else '', 
                 ", ".join(args.feat if args.feat is not None else [])))
         if args.label is not None and len(args.label) :
-            self.out.write("<tr><th></th><th>Original</th><th>{}</th>".format(args.label[0]))
+            self.out.write("<tr><th></th><th>input</th><th>{}</th>".format(args.label[0]))
             for i in range(1, len(args.label)) :
                 self.out.write("<th>{0}</th><th>{1}</th><th>{1}</th>".format(args.label[0], args.label[i]))
             self.out.write("<th>style</th>")
