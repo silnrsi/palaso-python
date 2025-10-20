@@ -8,20 +8,23 @@ To create an updated spreadsheet for new versions of Unicode, run
 
 Then with LibreOffice Calc, do the following:
 
-- Import CSV file, with following columns as Text
-- USV
-- Decomposition Mapping
-- Numeric Value
-- Bidi Mirroring Glyph
-- Uppercase Mapping
-- Lowercase Mapping
-- Titlecase Mapping
+- Import CSV file,
+(character set: UTF-8 and comma separated)
+with following columns as Text
+  - USV
+  - Decomposition Mapping
+  - Numeric Value
+  - Bidi Mirroring Glyph
+  - Uppercase Mapping
+  - Lowercase Mapping
+  - Titlecase Mapping
 
 - Left justify all columns headers
 - Left justify age column
 - Auto filter headings
 - Change font to Arial
 - Change language to US English
+- Set optimal column widths if needed
 - convert to Excel (soffice --convert-to xlsx ucd.ods)
 - In both Excel (for .xlsx) and LibreOffice Calc (for .ods)
   - Freeze columns (USV, Glyph, and Name) and row (headings)
