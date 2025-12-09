@@ -24,11 +24,10 @@ def main():
         parser.print_help(file=sys.stderr)
         sys.exit(1)
 
-    with defaultapp():
-        k = kmfl(sys.argv[1])
-        for ln in sys.stdin.readlines():
-            r = k.run_items(keysyms_items(ln.strip()))
-            print(f"{ln}\t{r}")
+    k = kmfl(sys.argv[1])
+    for ln in sys.stdin.readlines():
+        r = k.run_items(keysyms_items(ln.strip()))
+        print(f"{ln}\t{r}")
 
 
 if __name__ == "__main__":

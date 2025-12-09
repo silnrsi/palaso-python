@@ -158,8 +158,8 @@ def process_rule(lhs, rhs, presets, iskey = True, contextref = False) :
 
 
 def main():
-    parser = OptionParser(usage="Usage: %prog [options] kmnfile")
-    parser.add_option("-l","--lang",help="Language tag for this LDML")
+    parser = ArgumentParser(usage="Usage: %prog [options] kmnfile")
+    parser.add_argument("-l","--lang",help="Language tag for this LDML")
 
     (opts, argv) = parser.parse_args()
     id = {}
