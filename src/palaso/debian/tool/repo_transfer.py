@@ -2,7 +2,12 @@
 
 import urllib.request, urllib.parse, urllib.error, configparser, os, re
 from optparse import OptionParser
-from palaso.debian.sources import source_collection, getdistro, getbasever
+try:
+    from palaso.debian.sources import source_collection, getdistro, getbasever
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[debian]' to use this command")
+    raise
 
 
 def main():

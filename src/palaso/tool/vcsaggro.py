@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-from mercurial import ui, commands
-from mercurial import hg as _hg
-from mercurial.utils.dateutil import datestr
 import os, subprocess, re
+try:
+    from mercurial import ui, commands
+    from mercurial import hg as _hg
+    from mercurial.utils.dateutil import datestr
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[vcs]' to use this command")
+    raise
 
 def backquote(cmd) :
     return subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True).communicate()[0].strip()

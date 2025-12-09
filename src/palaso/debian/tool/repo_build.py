@@ -10,12 +10,17 @@ import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from optparse import OptionParser
-from palaso.debian.sources import (
-    source_collection,
-    package_collection,
-    arch_expects_bin,
-    getdistro, getarch,
-    getbasever)
+try:
+    from palaso.debian.sources import (
+        source_collection,
+        package_collection,
+        arch_expects_bin,
+        getdistro, getarch,
+        getbasever)
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[debian]' to use this command")
+    raise
 from time import time, sleep
 
 

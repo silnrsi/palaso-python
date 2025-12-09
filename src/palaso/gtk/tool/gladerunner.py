@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
-import sys
-from palaso.gtk.actionpack import Simple
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    from gi.repository import Gtk
+    import sys
+    from palaso.gtk.actionpack import Simple
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[gtk]' to use this command")
+    raise
 
 
 class App :

@@ -6,8 +6,13 @@ from collections import UserString
 from functools import reduce
 from fontTools import ttLib
 from palaso.font.shape import GrFont
-from palaso.font.grstrings import makestring, parseftml
-from palaso.font.glyphstring import Collection, String, RuleSet
+try:
+    from palaso.font.grstrings import makestring, parseftml
+    from palaso.font.glyphstring import Collection, String, RuleSet
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[sklearn]' to use this command")
+    raise
 
 def read_stringsFile(infile, cmap):
     rmap = {n:i for i,n in enumerate(cmap)}

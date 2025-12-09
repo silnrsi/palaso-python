@@ -2,9 +2,10 @@ import re, itertools
 import os, collections
 try:
     from palaso.kmfl import kmfl
-    kmflorobject = kmfl
-except ImportError:
-    kmflorobject = object
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[kmn]' to use this command")
+    raise
 
 keyboard_template = os.path.join(os.path.dirname(__file__), 'keyboard.svg')
 
@@ -476,7 +477,7 @@ class Key(int) :
         return item_to_key(self)
 
 
-class Keyman(kmflorobject) :
+class Keyman(kmfl) :
     def create_sequences(self, input, mode = 'all', cache = None, history=None) :
         """ Given an input string of items, return all the strings of items that
             would produce this input sequence if executed

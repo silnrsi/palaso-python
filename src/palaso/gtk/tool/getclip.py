@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-import gi
-gi.require_version('Gtk','3.0')
-from gi.repository import Gtk, Gdk
-import pprint
 import sys
+import pprint
 from subprocess import Popen, PIPE
+try:
+    import gi
+    gi.require_version('Gtk','3.0')
+    from gi.repository import Gtk, Gdk
+except ModuleNotFoundError as e:
+    e.with_traceback(None)
+    e.add_note("Please install 'palaso[gtk]' to use this command")
+    raise
 
 
 def main():
