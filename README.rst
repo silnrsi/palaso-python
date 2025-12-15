@@ -14,8 +14,7 @@ This includes modules for:
 This is a standard python setuptools project, with debian packaging in the
 ``debian/master`` branch.
 
-Several packages have been promoted to the own external repositories these 
-included:
+Several packages have been promoted to their own external repositories, including:
 
 * The Smith font & keyboard build system: https://github.com/silnrsi/smith
 * palaso.sldr & scripts have moved to: https://github.com/silnrsi/sldrtools
