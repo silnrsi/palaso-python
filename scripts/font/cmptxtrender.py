@@ -422,7 +422,7 @@ for i in range(len(opts.infonts)) :
     shaper = make_shaper(opts.engine[i], opts.infonts[i], 0, opts.rtl, feats, opts.script[i], opts.lang)
     fonts.append(shaper)
     versions.append(shaper.version())
-    tts.append(TTFont(opts.infonts[i].encode('utf_8')))
+    tts.append(TTFont(opts.infonts[i]))
 reader = texttypes[opts.texttype](opts.text, spliton, opts.rtl)
 
 count = 0
