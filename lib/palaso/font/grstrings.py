@@ -42,7 +42,7 @@ def makestring(face, text):
     return s
 
 def parseFeat(f:str):
-    m = re.match(r"""(['"])([a-zA-Z0-9]{4,4})\\1(?:\s+(\d+|on|off))?$""", f)
+    m = re.match(r"""(['"])([a-zA-Z0-9]{4,4})\1(?:\s+(\d+|on|off))?$""", f)
     if not m:
         raise ValueError(f'Invalid feature syntax: {f}')
     tag, value = m.group(2,3)
