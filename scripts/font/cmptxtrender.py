@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import codecs
 from palaso.font.shape import make_shaper
 from difflib import SequenceMatcher
 from fontTools.ttLib import TTFont
@@ -297,7 +296,7 @@ outputtypes = {
 }
 
 def LineReader(infile, spliton=None, rtl=False):
-    f = codecs.open(infile, encoding="utf_8")
+    f = open(infile)
     for l in f.readlines() :
         #l = l.rstrip("\n")
         l = l[:-1]
@@ -376,13 +375,7 @@ if not opts.rtl : opts.rtl = 0
 if not opts.engine or not len(opts.engine) : opts.engine = ['gr']
 if not os.getenv('CTR_UHB') == '0':
     opts.engine = [engine.replace('ot', 'uhb') for engine in opts.engine]
-if sys.version_info.major > 2:
-    outfile = open(opts.output, "w") if opts.output else sys.stdout
-elif opts.output :
-    outfile = codecs.open(opts.output, mode="w", encoding="utf_8")
-else :
-#    outfile = codecs.EncodedFile(sys.stdout, "unicode_internal", file_encoding="utf_8")
-    outfile = codecs.getwriter("utf_8")(sys.stdout)
+outfile = open(opts.output, "w") if opts.output else sys.stdout
 
 if not opts.label : opts.label = ["Input font{}".format(x+1) for x in range(len(opts.infonts))]
 if not opts.outputtype : opts.outputtype = 'html'
