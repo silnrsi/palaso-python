@@ -453,8 +453,6 @@ class UCD(list):
     def enumstr(self, key, v):
         """ Returns the string for an enum value given enum name and value """
         key = resolve_key(key)
-        if key not in self.enums:
-            raise KeyError(f"Unknown or ambiguous property: {key}")
         if key in self.enums:
             m = self.enums[key]
             return m[v] if v < len(m) else v
