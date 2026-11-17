@@ -31,7 +31,7 @@ with following columns as Text
 - Upload to https://github.com/silnrsi/unicode-resources/tree/main/ucd-spreadsheet
 """
 
-from palaso.unicode.ucd import UCD
+from ucdinfo.ucd import UCD
 import csv
 import sys
 import argparse
